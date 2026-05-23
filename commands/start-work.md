@@ -1,58 +1,33 @@
 ---
-description: (builtin) Start work session from a plan
-agent: Orchestrator
+description: Resume or start a GSD-backed work session
+agent: alloy-orchestrator
 ---
 
-You are starting a work session.
+# /start-work
 
-## ARGUMENTS
+Use this command to resume planned work from GSD state.
 
-- `/start-work [plan-name] [--worktree <path>]`
-  - `plan-name` (optional): name or partial match of the plan to start
-  - `--worktree <path>` (optional): absolute path to an existing git worktree to work in
+## Arguments
 
-## WHAT TO DO
+`/start-work [phase-or-card] [--worktree <absolute-path>]`
 
-1. **Find available plans**: Search for plan files at `.sisyphus/plans/` or `task_plan.md`
+## Workflow
 
-2. **Check for active state**: Read `.sisyphus/boulder.json` if it exists
+1. Inspect `.planning/` in the current project.
+2. If no GSD state exists, ask whether to run `/gsd-discuss-phase` or `/gsd-plan-phase`.
+3. If a plan exists, find the first incomplete phase/card.
+4. If a worktree is needed and not already active, use the Alloy branch/worktree naming convention from the orchestrator prompt.
+5. Resume at the first missing step:
+   - missing requirements or fuzzy scope: `/gsd-discuss-phase`
+   - missing plan: `/gsd-plan-phase`
+   - plan exists but work incomplete: `/gsd-execute-phase`
+   - implementation done but not reviewed: `/gsd-code-review`
+   - review BLOCK findings exist: `/gsd-code-review-fix`
+   - review is clear but not verified: `/gsd-verify-work`
 
-3. **Decision logic**:
-   - If `.sisyphus/boulder.json` exists AND plan has unchecked cards:
-     - **APPEND** current session to session_ids
-     - Continue work from last unchecked card
-   - If no active plan OR all cards complete:
-     - List available plan files
-     - If ONE plan: auto-select it
-     - If MULTIPLE plans: show list with timestamps, ask user to select
+## Rules
 
-4. **Worktree Setup** (when `worktree_path` not already set in boulder.json):
-   1. `git worktree list --porcelain` — see available worktrees
-   2. Create: `git worktree add <absolute-path> <branch-or-HEAD>`
-   3. Update boulder.json to add `"worktree_path": "<absolute-path>"`
-   4. All work happens inside that worktree directory
-
-5. **Create/Update boulder.json**:
-   ```json
-   {
-     "active_plan": "/absolute/path/to/task_plan.md",
-     "started_at": "ISO_TIMESTAMP",
-     "session_ids": ["session_id_1", "session_id_2"],
-     "plan_name": "plan-name",
-     "worktree_path": "/absolute/path/to/git/worktree"
-   }
-   ```
-
-6. **Read the plan file** and start executing cards using the Orchestrator workflow:
-   - For each unchecked card: @Fixer (TDD) → @code-reviewer (validate)
-   - Mark ✅ as each card completes
-   - Track progress in progress.md
-
-## CRITICAL
-
-- The session_id is injected by the hook - use it directly
-- Always update boulder.json BEFORE starting work
-- Always set worktree_path in boulder.json before executing any cards
-- Read the FULL plan file before delegating any cards
-- Follow Orchestrator pipeline (Phase 5: EXECUTE)
-- Trunk-based: squash all commits to 1 before completion
+- Use `alloy-tdd` for every implementation card.
+- Do not use legacy Sisyphus state.
+- Do not invent completed state; read GSD artifacts before resuming.
+- Report the exact next command or action you chose and why.

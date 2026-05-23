@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenCode Alloy Target Architecture</title>
+<style>
+  :root {
+    --bg: #f7f8fb;
+    --ink: #18202b;
+    --muted: #647085;
+    --panel: #ffffff;
+    --line: #d7dde8;
+    --core: #2563eb;
+    --skill: #0f766e;
+    --workflow: #7c3aed;
+    --model: #b45309;
+    --risk: #be123c;
+    --ok: #15803d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px;
+  }
+
+  h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.18; }
+  h2 { margin: 0 0 10px; font-size: 17px; }
+  h3 { margin: 0 0 8px; font-size: 14px; }
+  p { margin: 0; line-height: 1.55; }
+  code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #eef2ff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.92em;
+  }
+
+  .subtitle { margin-bottom: 18px; color: var(--muted); font-size: 14px; }
+  .grid { display: grid; gap: 14px; }
+  .topology { grid-template-columns: 1fr 1.25fr 1fr; align-items: stretch; }
+  .two { grid-template-columns: 1fr 1fr; }
+  .six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+    box-shadow: 0 1px 2px rgba(18, 32, 43, 0.06);
+  }
+
+  .node {
+    margin: 8px 0;
+    padding: 10px;
+    border: 1px solid #e1e6ef;
+    border-left: 5px solid var(--core);
+    border-radius: 7px;
+    background: #fbfcff;
+  }
+
+  .node b { display: block; margin-bottom: 4px; }
+  .small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .core { border-left-color: var(--core); }
+  .skill { border-left-color: var(--skill); }
+  .workflow { border-left-color: var(--workflow); }
+  .model { border-left-color: var(--model); }
+  .risk { border-left-color: var(--risk); }
+  .ok { border-left-color: var(--ok); }
+  .arrow { margin: 12px 0; color: #6b7280; font-weight: 700; text-align: center; }
+  .section { margin-top: 14px; }
+
+  .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .table th, .table td {
+    padding: 8px;
+    border-top: 1px solid #e1e6ef;
+    text-align: left;
+    vertical-align: top;
+  }
+  .table th { color: #475569; font-size: 12px; }
+
+  .badge {
+    display: inline-block;
+    margin: 2px 4px 2px 0;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid #d7dde8;
+    background: #f8fafc;
+    font-size: 12px;
+  }
+
+  @media (max-width: 980px) {
+    main { padding: 16px; }
+    .topology, .two, .six { grid-template-columns: 1fr; }
+  }
+</style>
+
+<body>
+<main>
+  <h1>OpenCode Alloy：目标架构</h1>
+  <p class="subtitle">Alloy 的核心是 profile 分发、repo-local 安装、Hybrid Vendor + Snapshot Overlay，以及把 OMO 的多模型角色思想吸收到 OpenCode native agents。</p>
+
+  <section class="grid topology">
+    <div class="panel">
+      <h2>1. Alloy 分发仓库</h2>
+      <div class="node core">
+        <b>opencode-alloy</b>
+        <span class="small">保存可复用能力，不保存业务 repo 的项目状态。</span>
+      </div>
+      <div class="node core">
+        <b>profiles/*.json</b>
+        <span class="small"><code>core</code>, <code>frontend</code>, <code>backend</code>, <code>infra</code>, <code>workflow-gsd</code>, <code>all</code></span>
+      </div>
+      <div class="node model">
+        <b>models/*.json</b>
+        <span class="small">把 planner/executor/reviewer/debugger/verifier 映射到 Copilot、OpenAI 或 local 模型。</span>
+      </div>
+      <div class="node workflow">
+        <b>vendor + overlays</b>
+        <span class="small">GSD 和第三方 Skill 展开进 repo，Alloy 修改只放 overlay，来源与 hash 写入 lock。</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>2. 业务 Repo 的本地安装</h2>
+      <div class="node core">
+        <b>setup.sh</b>
+        <span class="small"><code>bash setup.sh --profile frontend --target local --models github-copilot</code></span>
+      </div>
+      <div class="arrow">generates</div>
+      <div class="node ok">
+        <b>.opencode/</b>
+        <span class="small">只包含当前 repo 需要的 agents、skills、commands、MCP baseline、model mapping。</span>
+      </div>
+      <div class="arrow">loads</div>
+      <div class="node core">
+        <b>OpenCode runtime</b>
+        <span class="small">读取 project-local config；global OpenCode 不被 profile 污染。</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>3. 默认不装的能力</h2>
+      <div class="node risk">
+        <b>OMO Slim runtime</b>
+        <span class="small">默认不 vendor、不安装。只保留 <code>experimental/omo-slim</code> 样例。</span>
+      </div>
+      <div class="node risk">
+        <b>npx skills add</b>
+        <span class="small">默认路径不联网；需要的 Skill 由 repo 直接分发。</span>
+      </div>
+      <div class="node risk">
+        <b>skills:["*"]</b>
+        <span class="small">禁止使用，避免 repo 隔离被全局 Skill 池穿透。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section panel">
+    <h2>Profile 到 Repo 的分发</h2>
+    <table class="table">
+      <tr><th>Repo 类型</th><th>安装命令</th><th>得到的能力</th><th>不会得到</th></tr>
+      <tr><td>Frontend</td><td><code>--profile frontend</code></td><td>core + UI/browser verification skills</td><td>backend/infra skills, GSD commands, OMO</td></tr>
+      <tr><td>Backend</td><td><code>--profile backend</code></td><td>core + Kotlin/JPA + Postgres skills</td><td>frontend/infra skills, GSD commands, OMO</td></tr>
+      <tr><td>Infra</td><td><code>--profile infra</code></td><td>core + Terraform/OpenTofu skill</td><td>frontend/backend skills, GSD commands, OMO</td></tr>
+      <tr><td>Workflow-heavy</td><td><code>--profile workflow-gsd</code></td><td>core + vendored GSD snapshot + overlay</td><td>OMO runtime by default</td></tr>
+    </table>
+  </section>
+
+  <section class="grid two section">
+    <div class="panel">
+      <h2>Alloy Agent Matrix</h2>
+      <div class="grid six">
+        <div class="node core"><b>orchestrator</b><span class="small">分类和路由</span></div>
+        <div class="node model"><b>planner</b><span class="small">计划和 GSD review</span></div>
+        <div class="node skill"><b>executor</b><span class="small">小任务 + alloy-tdd</span></div>
+        <div class="node model"><b>reviewer</b><span class="small">代码审查和 claims</span></div>
+        <div class="node skill"><b>debugger</b><span class="small">systematic debugging</span></div>
+        <div class="node ok"><b>verifier</b><span class="small">完成前证据验证</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>GSD / OMO / Claims</h2>
+      <table class="table">
+        <tr><th>层</th><th>Alloy 决策</th><th>修改方式</th></tr>
+        <tr><td>GSD</td><td>只在 workflow profile 中作为项目本地 workflow engine</td><td>snapshot + overlay，不改 vendor 原件</td></tr>
+        <tr><td>OMO Slim</td><td>吸收角色思想，不默认吸收 runtime</td><td>native Alloy agents + model maps</td></tr>
+        <tr><td>Claims</td><td>由 reviewer/verifier 负责事实和完成证据检查</td><td>agent prompt + audit policy</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section class="section panel">
+    <h2>Skill 融合</h2>
+    <span class="badge">team-tdd → alloy-tdd</span>
+    <span class="badge">Superpowers TDD → alloy-tdd</span>
+    <span class="badge">Superpowers brainstorming → alloy-brainstorm</span>
+    <span class="badge">Superpowers systematic-debugging → alloy-debug</span>
+    <span class="badge">OMO plan-reviewer/executor/code-reviewer → native Alloy agents</span>
+  </section>
+</main>
+</body>
+</html>

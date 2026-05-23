@@ -1,6 +1,6 @@
-# AGENTS.md — Project Agent Instructions
+# AGENTS.md — OpenCode Alloy Project Instructions
 
-> Copy this file to your project root. Agents read it automatically at session start.
+> Install an Alloy profile into this repo with `bash setup.sh --profile <profile> --target local`, then adapt this file for repo-specific conventions.
 
 ## Project Context
 
@@ -11,8 +11,10 @@
 ## Conventions
 
 - **Branching**: Trunk-based. Feature branches squash to 1 commit.
-- **Testing**: TDD mandatory (team-tdd skill). RED → GREEN → REFACTOR.
+- **Testing**: TDD mandatory with the `alloy-tdd` skill. RED -> GREEN -> REFACTOR.
 - **Code size**: Functions ≤10 lines, Components ≤100 lines, Files ≤300 lines.
+- **Workflow**: Use direct Alloy execution for small bounded changes. Use GSD planning state only when this repo installed the `workflow-gsd` profile.
+- **External systems**: Use `gh`, `az devops`, and `psql` for GitHub, Azure DevOps, and Postgres workflows.
 
 ## Architecture
 

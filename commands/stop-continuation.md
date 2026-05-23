@@ -1,17 +1,16 @@
 ---
-description: (builtin) Stop all continuation mechanisms (ralph loop, todo continuation) for this session
+description: Stop Alloy workflow continuation for this session
 ---
 
-Stop all continuation mechanisms for the current session.
+# /stop-continuation
 
-This command will:
-1. Stop the todo-continuation-enforcer from automatically continuing incomplete tasks
-2. Cancel any active Ralph Loop
-3. Clear the boulder state for the current project
+Use this when the user wants to pause automated workflow progress and return to manual control.
 
-After running this command:
-- The session will not auto-continue when idle
-- You can manually continue work when ready
-- The stop state is per-session and clears when the session ends
+## What To Do
 
-Use this when you need to pause automated continuation and take manual control.
+1. Stop starting new GSD phases.
+2. Leave existing `.planning` artifacts intact.
+3. Summarize the current phase, latest completed step, and next safe resume command.
+4. Tell the user that `/start-work` can resume from GSD state later.
+
+Do not delete planning state or project files.

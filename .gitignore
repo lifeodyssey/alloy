@@ -1,4 +1,8 @@
 .remember/
 .claude/
 .sisyphus/
+.opencode/
+.codebuddy/
+AGENTS.md
 *.pid
+__pycache__/
