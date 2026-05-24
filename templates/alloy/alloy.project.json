@@ -1,0 +1,24 @@
+{
+  "repoKind": "frontend",
+  "packs": ["core", "frontend"],
+  "models": "github-copilot",
+  "mcp": {
+    "baseline": ["context7", "grep_app", "exa"],
+    "disabled": []
+  },
+  "workflow": {
+    "mode": "standard",
+    "tdd": "required_for_code",
+    "claims": true,
+    "review": "standard"
+  },
+  "runtimes": {
+    "node": true,
+    "bun": true,
+    "npx": false
+  },
+  "experimental": {
+    "gsdSnapshot": false,
+    "omoSlim": false
+  }
+}

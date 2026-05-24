@@ -1,6 +1,6 @@
 # AGENTS.md — OpenCode Alloy Project Instructions
 
-> Install an Alloy profile into this repo with `bash setup.sh --profile <profile> --target local`, then adapt this file for repo-specific conventions.
+> Install an Alloy pack into this repo with `bash setup.sh --pack <pack> --target local`, then adapt this file for repo-specific conventions. `--profile` remains as a deprecated alias.
 
 ## Project Context
 
@@ -13,7 +13,7 @@
 - **Branching**: Trunk-based. Feature branches squash to 1 commit.
 - **Testing**: TDD mandatory with the `alloy-tdd` skill. RED -> GREEN -> REFACTOR.
 - **Code size**: Functions ≤10 lines, Components ≤100 lines, Files ≤300 lines.
-- **Workflow**: Use direct Alloy execution for small bounded changes. Use GSD planning state only when this repo installed the `workflow-gsd` profile.
+- **Workflow**: Use `.alloy/` tasks, claims, evidence, and gates for bounded changes. Use GSD planning state only when this repo installed the legacy `workflow-gsd` pack.
 - **External systems**: Use `gh`, `az devops`, and `psql` for GitHub, Azure DevOps, and Postgres workflows.
 
 ## Architecture

@@ -22,6 +22,7 @@ SCAN_DIRS = (
     "agents",
     "commands",
     "skills",
+    "packs",
     "profiles",
     "models",
     "overlays",
@@ -216,7 +217,7 @@ def audit_repository(root: Path) -> list[Finding]:
                         source="wildcard skill pool",
                         path=path.relative_to(root),
                         line=number,
-                        recommendation="List profile skills explicitly; do not pierce repo isolation.",
+                        recommendation="List pack skills explicitly; do not pierce repo isolation.",
                         fail=True,
                     )
                 )
@@ -384,7 +385,7 @@ def render_report(
             "## Policy",
             "",
             "- `alloy-tdd`, `alloy-brainstorm`, and `alloy-debug` are Alloy-owned entrypoints.",
-            "- GSD is project-local and installed only through the `workflow-gsd` or `all` profile.",
+            "- GSD is project-local and installed only through the `workflow-gsd` pack or explicit `--with gsd` opt-in.",
             "- OMO Slim is experimental only; default configs must not include the plugin or wildcard skill pools.",
             "- GitHub, Azure DevOps, and Postgres workflows use `gh`, `az devops`, and `psql`.",
             "",

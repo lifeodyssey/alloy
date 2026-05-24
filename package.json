@@ -1,0 +1,17 @@
+{
+  "name": "opencode-alloy",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "alloy": "./bin/alloy.mjs"
+  },
+  "scripts": {
+    "test": "python3 -m unittest scripts.test_alloy_installer",
+    "check": "node --check bin/alloy.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.1.0"
+  }
+}
