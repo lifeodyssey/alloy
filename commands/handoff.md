@@ -13,7 +13,7 @@ Inspect, when available:
 - The latest user request and constraints from this conversation.
 - Current `git status --short`.
 - Recent `git diff --stat`.
-- Relevant GSD `.planning` artifacts.
+- Relevant `.alloy/state/*.jsonl` records and `.alloy/projections/*.md` artifacts.
 - Files changed or discussed in this session.
 - Verification already run and remaining gaps.
 

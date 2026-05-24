@@ -1,17 +1,5 @@
 [
   {
-    "name": "gsd-opencode",
-    "kind": "workflow-runtime",
-    "source": "https://github.com/rokicool/gsd-opencode",
-    "version": "1.38.5",
-    "license": "MIT",
-    "sha256": "79274f1f101e8a13738c50919720319a71cd5741a71e3e18d1eea911198c6203",
-    "paths": [
-      "vendor/gsd-opencode/1.38.5"
-    ],
-    "vendoredAt": "2026-05-24"
-  },
-  {
     "name": "superpowers-brainstorming",
     "kind": "skill",
     "source": "https://github.com/obra/superpowers",

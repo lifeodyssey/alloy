@@ -1,33 +1,33 @@
 ---
-description: Resume or start a GSD-backed work session
+description: Resume or start an Alloy workflow session
 agent: alloy-orchestrator
 ---
 
 # /start-work
 
-Use this command to resume planned work from GSD state.
+Use this command to resume planned work from Alloy state.
 
 ## Arguments
 
-`/start-work [phase-or-card] [--worktree <absolute-path>]`
+`/start-work [task-or-card] [--worktree <absolute-path>]`
 
 ## Workflow
 
-1. Inspect `.planning/` in the current project.
-2. If no GSD state exists, ask whether to run `/gsd-discuss-phase` or `/gsd-plan-phase`.
-3. If a plan exists, find the first incomplete phase/card.
+1. Inspect `.alloy/state/tasks.jsonl`, `.alloy/state/evidence.jsonl`, and `.alloy/projections/current-plan.md`.
+2. If no Alloy task exists, create one with `alloy state add-task` or ask for the missing work item.
+3. If a plan exists, find the first incomplete card or missing gate.
 4. If a worktree is needed and not already active, use the Alloy branch/worktree naming convention from the orchestrator prompt.
 5. Resume at the first missing step:
-   - missing requirements or fuzzy scope: `/gsd-discuss-phase`
-   - missing plan: `/gsd-plan-phase`
-   - plan exists but work incomplete: `/gsd-execute-phase`
-   - implementation done but not reviewed: `/gsd-code-review`
-   - review BLOCK findings exist: `/gsd-code-review-fix`
-   - review is clear but not verified: `/gsd-verify-work`
+   - fuzzy scope: use `alloy-brainstorm` and update the current plan
+   - missing plan: write or update `.alloy/projections/current-plan.md`
+   - work incomplete: execute the next bounded card with `alloy-tdd`
+   - implementation done but not reviewed: ask `@alloy-reviewer`
+   - review BLOCK findings exist: fix them with explicit evidence
+   - review is clear but not verified: ask `@alloy-verifier` and run `alloy gate check`
 
 ## Rules
 
 - Use `alloy-tdd` for every implementation card.
-- Do not use legacy Sisyphus state.
-- Do not invent completed state; read GSD artifacts before resuming.
+- Do not use legacy Sisyphus or GSD state.
+- Do not invent completed state; read Alloy artifacts before resuming.
 - Report the exact next command or action you chose and why.

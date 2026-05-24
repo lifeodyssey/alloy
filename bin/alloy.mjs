@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { createHash, randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto"
 import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, copyFileSync, chmodSync, appendFileSync, accessSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -7,8 +7,6 @@ import { spawnSync } from "node:child_process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
-const GSD_VERSION = "1.38.5"
-const GSD_VENDOR = join(REPO_ROOT, "vendor", "gsd-opencode", GSD_VERSION)
 const OPENCODE_PLUGIN_VERSION = "1.15.10"
 const ZOD_VERSION = "4.4.3"
 
@@ -34,20 +32,13 @@ const MANAGED_NAMES = [
   "agents",
   "commands",
   "skills",
-  "vendor",
-  "get-shit-done",
-  "bin",
-  "rules",
-  "oh-my-opencode-slim.json",
 ]
 
 const DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]
 const DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]
 const PACK_ALIASES = {
   default: "core",
-  team: "workflow-gsd",
-  gsd: "workflow-gsd",
-  "legacy-gsd": "workflow-gsd",
+  team: "core",
   profile: "core",
 }
 const DEFAULT_PROJECT_CONFIG = ".alloy/alloy.project.json"
@@ -81,8 +72,6 @@ function parseArgs(argv) {
     pack: "core",
     target: "local",
     models: undefined,
-    withItems: [],
-    withoutItems: [],
     dryRun: false,
     json: false,
     workspace: "alloy.workspace.json",
@@ -129,13 +118,8 @@ function parseArgs(argv) {
         if (consumeValue) i += 1
         break
       case "with":
-        options.withItems.push(...splitCsv(value))
-        if (consumeValue) i += 1
-        break
       case "without":
-        options.withoutItems.push(...splitCsv(value))
-        if (consumeValue) i += 1
-        break
+        throw new Error("--with/--without were removed in Alloy v2; choose a pack or edit .alloy/alloy.project.json")
       case "evidenceId":
         options.evidenceIds ??= []
         options.evidenceIds.push(value)
@@ -245,9 +229,7 @@ function listFiles(base) {
 function loadPack(id) {
   const normalized = PACK_ALIASES[id] ?? id
   const packPath = join(REPO_ROOT, "packs", `${normalized}.json`)
-  const profilePath = join(REPO_ROOT, "profiles", `${normalized}.json`)
   if (pathExists(packPath)) return readJson(packPath)
-  if (pathExists(profilePath)) return readJson(profilePath)
   throw new Error(`Unknown pack: ${id}`)
 }
 
@@ -256,8 +238,6 @@ function mergePack(base, extra) {
   for (const key of ["skills", "agents", "commands", "mcp", "modelRoles"]) {
     merged[key] = unique([...(base[key] ?? []), ...(extra[key] ?? [])])
   }
-  merged.includeGsd = Boolean(base.includeGsd || extra.includeGsd)
-  merged.includeExperimentalOmo = Boolean(base.includeExperimentalOmo || extra.includeExperimentalOmo)
   merged.description = `${base.description ?? ""} + ${extra.id}`
   return merged
 }
@@ -272,20 +252,6 @@ function buildPack(options, projectDir = process.cwd()) {
   if (!packIds.length) packIds = ["core"]
   let pack = loadPack(packIds[0])
   for (const extra of packIds.slice(1)) pack = mergePack(pack, loadPack(extra))
-  for (const item of options.withItems ?? []) {
-    if (item === "omo") {
-      pack.includeExperimentalOmo = true
-    } else if (item === "gsd") {
-      pack = mergePack(pack, loadPack("workflow-gsd"))
-    } else {
-      pack = mergePack(pack, loadPack(item))
-    }
-  }
-  for (const item of options.withoutItems ?? []) {
-    if (item === "omo") pack.includeExperimentalOmo = false
-    else if (item === "gsd" || item === "workflow-gsd") pack.includeGsd = false
-    else throw new Error(`Unknown --without item: ${item}`)
-  }
   return { pack, project }
 }
 
@@ -318,7 +284,6 @@ function defaultProjectConfig(pack, modelName) {
     mcp: { baseline: ["context7", "grep_app", "exa"], disabled: [] },
     workflow: { mode: "standard", tdd: "required_for_code", claims: true, review: "standard" },
     runtimes: { node: true, bun: true, npx: false },
-    experimental: { gsdSnapshot: Boolean(pack.includeGsd), omoSlim: Boolean(pack.includeExperimentalOmo) },
   }
 }
 
@@ -342,16 +307,8 @@ function resolveConfig(options, projectDir = process.cwd()) {
     mcp: Object.fromEntries(mcpNames.filter((name) => MCP_CONFIGS[name]).map((name) => [name, MCP_CONFIGS[name]])),
     runtimes: project?.runtimes ?? { node: true, bun: true, npx: false },
     configPath: options.config ?? DEFAULT_PROJECT_CONFIG,
-    includeGsd: resolveExperimentalFlag(pack.includeGsd, project?.experimental?.gsdSnapshot, options, "gsd"),
-    includeExperimentalOmo: resolveExperimentalFlag(pack.includeExperimentalOmo, project?.experimental?.omoSlim, options, "omo"),
   }
   return resolved
-}
-
-function resolveExperimentalFlag(packValue, projectValue, options, key) {
-  if ((options.withoutItems ?? []).includes(key) || (key === "gsd" && (options.withoutItems ?? []).includes("workflow-gsd"))) return false
-  if ((options.withItems ?? []).includes(key) || (key === "gsd" && (options.withItems ?? []).includes("workflow-gsd"))) return true
-  return Boolean(packValue || projectValue)
 }
 
 function ensureAlloyProject(projectDir, resolved, dryRun = false, configPath) {
@@ -445,10 +402,6 @@ function installCommand(options, projectDir = process.cwd()) {
   backupManaged(resolved.targetDir, options.dryRun)
   installCoreFiles(resolved, options.dryRun)
   installPlugin(resolved, options.dryRun)
-  if (resolved.includeGsd) installGsd(resolved, options.dryRun)
-  else removeGsd(resolved.targetDir, options.dryRun)
-  if (resolved.includeExperimentalOmo) installOmo(resolved, options.dryRun)
-  else removePath(join(resolved.targetDir, "oh-my-opencode-slim.json"), options.dryRun)
   writeOpenCodeConfig(resolved, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
   if (options.dryRun) {
@@ -489,90 +442,6 @@ function installPlugin(resolved, dryRun = false) {
   console.log("")
 }
 
-function installGsd(resolved, dryRun = false) {
-  console.log("Legacy GSD workflow snapshot")
-  logAction(`Copy vendored GSD snapshot gsd-opencode@${GSD_VERSION}`, dryRun)
-  copyDir(join(GSD_VENDOR, "commands"), join(resolved.targetDir, "commands", "gsd"), dryRun)
-  for (const file of readdirSync(join(GSD_VENDOR, "agents")).filter((name) => name.endsWith(".md"))) {
-    copyFile(join(GSD_VENDOR, "agents", file), join(resolved.targetDir, "agents", file), dryRun)
-  }
-  for (const skill of readdirSync(join(GSD_VENDOR, "skills"))) {
-    const source = join(GSD_VENDOR, "skills", skill)
-    if (statSync(source).isDirectory()) copyDir(source, join(resolved.targetDir, "skills", skill), dryRun)
-  }
-  copyDir(join(GSD_VENDOR, "get-shit-done"), join(resolved.targetDir, "get-shit-done"), dryRun)
-  copyDir(join(GSD_VENDOR, "sdk"), join(resolved.targetDir, "vendor", "gsd-opencode", GSD_VERSION, "sdk"), dryRun)
-  writeGsdWrappers(resolved.targetDir, dryRun)
-  applyGsdOverlays(resolved.targetDir, dryRun)
-  console.log("")
-}
-
-function writeGsdWrappers(targetDir, dryRun = false) {
-  const wrapper = `#!/usr/bin/env bash
-set -euo pipefail
-OPENCODE_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-export ALLOY_GSD_SDK_DIST="$OPENCODE_DIR/vendor/gsd-opencode/${GSD_VERSION}/sdk/dist"
-export ALLOY_GSD_TOOLS="$OPENCODE_DIR/get-shit-done/bin/gsd-tools.cjs"
-exec node "$OPENCODE_DIR/bin/gsd-sdk-query-shim.mjs" "$@"
-`
-  const tools = `#!/usr/bin/env bash
-set -euo pipefail
-OPENCODE_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-exec node "$OPENCODE_DIR/get-shit-done/bin/gsd-tools.cjs" "$@"
-`
-  const ocTools = `#!/usr/bin/env bash
-set -euo pipefail
-OPENCODE_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-exec node "$OPENCODE_DIR/get-shit-done/bin/gsd-oc-tools.cjs" "$@"
-`
-  copyFile(join(REPO_ROOT, "overlays", "gsd", "bin", "gsd-sdk-query-shim.mjs"), join(targetDir, "bin", "gsd-sdk-query-shim.mjs"), dryRun, 0o755)
-  writeText(join(targetDir, "bin", "gsd-sdk"), wrapper, dryRun, 0o755)
-  writeText(join(targetDir, "bin", "gsd-tools"), tools, dryRun, 0o755)
-  writeText(join(targetDir, "bin", "gsd-oc-tools"), ocTools, dryRun, 0o755)
-}
-
-function applyGsdOverlays(targetDir, dryRun = false) {
-  logAction("Apply overlays/gsd", dryRun)
-  if (dryRun) return
-  const targetAbs = resolve(targetDir)
-  const replacements = {
-    "@$HOME/.config/opencode/get-shit-done": `@${targetAbs}/get-shit-done`,
-    "$HOME/.config/opencode/get-shit-done": `${targetAbs}/get-shit-done`,
-    "$HOME/.config/opencode/gsd-local-patches": `${targetAbs}/gsd-local-patches`,
-    "gsd-sdk": `${targetAbs}/bin/gsd-sdk`,
-  }
-  for (const base of [join(targetDir, "commands", "gsd"), join(targetDir, "agents")]) {
-    for (const path of listFiles(base).filter((file) => file.endsWith(".md"))) {
-      let text = readFileSync(path, "utf8")
-      for (const [oldText, newText] of Object.entries(replacements)) text = text.split(oldText).join(newText)
-      writeFileSync(path, text, "utf8")
-    }
-  }
-  const addendum = readFileSync(join(REPO_ROOT, "overlays", "gsd", "agent-addendum.md"), "utf8").trim()
-  const marker = "<!-- ALLOY_GSD_OVERLAY -->"
-  for (const path of listFiles(join(targetDir, "agents")).filter((file) => file.endsWith(".md") && /gsd-[^/]+\.md$/.test(file))) {
-    const text = readFileSync(path, "utf8")
-    if (!text.includes(marker)) writeFileSync(path, `${text.trim()}\n\n${marker}\n${addendum}\n`, "utf8")
-  }
-  const rules = join(REPO_ROOT, "overlays", "gsd", "rules")
-  if (pathExists(rules)) copyDir(rules, join(targetDir, "rules"))
-}
-
-function removeGsd(targetDir, dryRun = false) {
-  for (const rel of ["commands/gsd", "get-shit-done", "vendor/gsd-opencode", "rules"]) removePath(join(targetDir, rel), dryRun)
-  for (const file of listFiles(join(targetDir, "agents")).filter((path) => /gsd-[^/]+\.md$/.test(path))) removePath(file, dryRun)
-  for (const dir of pathExists(join(targetDir, "skills")) ? readdirSync(join(targetDir, "skills")) : []) {
-    if (dir.startsWith("gsd-")) removePath(join(targetDir, "skills", dir), dryRun)
-  }
-  for (const name of ["gsd-sdk", "gsd-tools", "gsd-oc-tools", "gsd-sdk-query-shim.mjs"]) removePath(join(targetDir, "bin", name), dryRun)
-}
-
-function installOmo(resolved, dryRun = false) {
-  console.log("Experimental OMO Slim")
-  copyFile(join(REPO_ROOT, "experimental", "omo-slim", "oh-my-opencode-slim.json"), join(resolved.targetDir, "oh-my-opencode-slim.json"), dryRun)
-  console.log("")
-}
-
 function cleanupDeprecated(targetDir, dryRun = false) {
   console.log("Cleanup")
   for (const skill of DEPRECATED_SKILLS) removePath(join(targetDir, "skills", skill), dryRun)
@@ -588,7 +457,6 @@ function writeOpenCodeConfig(resolved, dryRun = false) {
     agent: agentModelConfig(resolved.models),
     mcp: resolved.mcp,
   }
-  if (resolved.includeExperimentalOmo) config.plugin = ["oh-my-opencode-slim@1.1.1"]
   writeJson(join(resolved.targetDir, "opencode.json"), config, dryRun)
 }
 
@@ -606,11 +474,9 @@ function agentModelConfig(models) {
 function auditTarget(resolved, projectDir) {
   const failures = validatePackRefs(resolved.pack)
   failures.push(...validateTargetFiles(resolved))
-  if (resolved.includeExperimentalOmo === false) {
-    const configPath = join(resolved.targetDir, "opencode.json")
-    const config = pathExists(configPath) ? readJson(configPath) : {}
-    if (JSON.stringify(config.plugin ?? []).includes("oh-my-opencode-slim")) failures.push("Default target config contains OMO Slim plugin")
-  }
+  const configPath = join(resolved.targetDir, "opencode.json")
+  const config = pathExists(configPath) ? readJson(configPath) : {}
+  if (JSON.stringify(config.plugin ?? []).includes("oh-my-opencode-slim")) failures.push("Alloy installs must not include OMO Slim plugin")
   if (!pathExists(projectConfigPath(projectDir, resolved.configPath))) failures.push(`Missing ${resolved.configPath}`)
   if (failures.length) {
     for (const failure of failures) console.error(`FAIL: ${failure}`)
@@ -695,19 +561,6 @@ function validateVendorLock() {
     for (const rel of entry.paths ?? []) if (!pathExists(join(REPO_ROOT, rel))) failures.push(`vendor.lock.json ${label} missing path: ${rel}`)
   }
   return failures
-}
-
-function hashPath(path) {
-  const digest = createHash("sha256")
-  if (statSync(path).isDirectory()) {
-    for (const file of listFiles(path).sort()) {
-      digest.update(relative(path, file))
-      digest.update("\0")
-      digest.update(readFileSync(file))
-      digest.update("\0")
-    }
-  } else digest.update(readFileSync(path))
-  return digest.digest("hex")
 }
 
 function initCommand(options, projectDir = process.cwd()) {

@@ -17,7 +17,7 @@ permission:
 
 # Alloy Reviewer
 
-You review implemented code, not plans. For GSD work, align with `/gsd-code-review`. For non-GSD work, use this rubric directly.
+You review implemented code, not plans. Use this rubric directly and check that Alloy claims are backed by evidence.
 
 ## Review Framework
 

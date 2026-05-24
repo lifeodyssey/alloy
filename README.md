@@ -22,8 +22,8 @@ Defaults:
 - `.alloy/` is created for project config, Markdown policies, JSONL state, and projections
 - Node and Bun are required by default
 - no `npx skills add`
-- no default OMO Slim runtime or plugin
-- no default full GSD runtime
+- no OMO Slim runtime or plugin
+- no GSD runtime or `/gsd-*` commands
 - MCP baseline is `context7`, `grep_app`, and `exa`
 
 ## Packs
@@ -37,15 +37,14 @@ Packs replace the old user-facing "profile" concept. `--profile` still works as 
 | `backend` | API/service/data repos | core plus Kotlin/JPA and Postgres skills |
 | `infra` | Terraform/OpenTofu/cloud repos | core plus infra skill |
 | `workflow` | stateful Alloy workflow | alias-style pack for repos that want to name the standard `.alloy` workflow explicitly |
-| `all` | local power-user repo | every first-party and licensed third-party skill, without legacy GSD by default |
-| `workflow-gsd` | legacy planned work | core plus project-local vendored GSD commands/agents/workflows |
+| `all` | local power-user repo | every first-party and licensed third-party skill |
 
 Examples:
 
 ```bash
 bash setup.sh --pack frontend --target local --models github-copilot
 bash setup.sh --pack backend --target local --models openai
-bash setup.sh --pack workflow-gsd --target local --models github-copilot
+bash setup.sh --pack workflow --target local --models github-copilot
 ```
 
 ## Operating Model
@@ -64,8 +63,6 @@ flowchart TD
   G --> K["JSONL state ledgers"]
   G --> L["status/current-plan projections"]
   I --> K
-  M["legacy GSD snapshot"] -. "workflow-gsd only" .-> F
-  N["experimental OMO Slim"] -. "--with omo only" .-> F
 ```
 
 Boundaries:
@@ -73,7 +70,7 @@ Boundaries:
 - OpenCode is the runtime, agent host, tool host, MCP host, and plugin host.
 - Alloy SDK/CLI resolves config, installs files, records state, checks gates, and runs doctor.
 - Alloy plugin adapts OpenCode hooks into Alloy evidence, permission, and event ledgers.
-- GSD, OMO Slim, and Superpowers are upstream idea sources; they are not default runtimes.
+- GSD, OMO Slim, and Superpowers are upstream idea sources; GSD and OMO runtime/plugin paths are intentionally not exposed in Alloy v2.
 
 ## Project Model
 
@@ -119,27 +116,47 @@ Alloy-owned skills:
 - `alloy-tdd`: unified implementation loop, incorporating Superpowers TDD behavior
 - `alloy-brainstorm`: product/design/system brainstorming, sourced from Superpowers brainstorming
 - `alloy-debug`: systematic debugging, sourced from Superpowers systematic debugging
+- `git-master`: shared git workflow guardrails
+- `humanizer`: writing cleanup for human-facing docs and reports
+- `frontend-ui-ux`: UI implementation and design review guidance
+- `playwright-cli`: browser verification through CLI workflows
+
+Vendored third-party skills:
+
+- `vercel-react-best-practices`
+- `kotlin-backend-jpa-entity-mapping`
+- `postgres`
+- `design-postgres-tables`
+- `pgvector-semantic-search`
+- `terraform-skill`
 
 Pack skills are explicit. Alloy does not install `skills: ["*"]` defaults.
 
+Pack mapping:
+
+- `core`: `alloy-tdd`, `alloy-brainstorm`, `alloy-debug`, `git-master`, `humanizer`
+- `frontend`: core plus `frontend-ui-ux`, `playwright-cli`, `vercel-react-best-practices`
+- `backend`: core plus `kotlin-backend-jpa-entity-mapping`, `postgres`, `design-postgres-tables`, `pgvector-semantic-search`
+- `infra`: core plus `terraform-skill`
+- `workflow`: core skills with the `.alloy` state/gate/evidence workflow
+- `all`: every first-party and vendored third-party skill
+
 ## Vendor Policy
 
-Alloy uses Hybrid Vendor + Snapshot Overlay:
+Alloy uses a hybrid vendor model:
 
-- `vendor/` contains runtime or prompt content needed for offline installation.
-- `overlays/` contains Alloy modifications. We do not directly fork-edit upstream GSD prompt/runtime files.
+- `vendor/` contains selected third-party skill content needed for offline installation.
+- Alloy-owned behavior lives in `agents/`, `commands/`, `skills/`, `packs/`, `models/`, and `.alloy` templates.
 - `vendor.lock.json` records source, version, license, vendored paths, and hashes.
 - `third_party_notices/` explains bundled third-party content.
 
-GSD is locked at `gsd-opencode@1.38.5` and only installed for `workflow-gsd` or explicit `--with gsd` opt-in.
-
-OMO Slim is experimental. Its sample config lives under `experimental/omo-slim/` and is only copied with `--with omo`.
+GSD and OMO Slim are no longer vendored or installable through Alloy. Their useful ideas were folded into Alloy agents, model roles, policies, skills, and gates.
 
 ## Checks
 
 ```bash
 bash setup.sh --dry-run --pack core --target local
-bash setup.sh --dry-run --pack workflow-gsd --target local
+bash setup.sh --dry-run --pack workflow --target local
 bash setup.sh --doctor --pack core --target local
 npm test
 ```

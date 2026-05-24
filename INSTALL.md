@@ -40,18 +40,7 @@ Expected:
 - shows `.alloy/`, `.opencode/agents`, `.opencode/skills`, `.opencode/plugins/alloy.ts`, and `.opencode/opencode.json`
 - does not print `npx skills add`
 - does not print `bunx oh-my-opencode-slim install`
-
-For legacy GSD:
-
-```bash
-bash setup.sh --dry-run --pack workflow-gsd --target local --models github-copilot
-```
-
-Expected:
-
-- shows `Copy vendored GSD snapshot gsd-opencode@1.38.5`
-- shows `Apply overlays/gsd`
-- shows GSD commands under `.opencode/commands/gsd`
+- does not show GSD runtime, GSD commands, OMO Slim config, or OMO plugin entries
 
 ## 3. Install
 
@@ -73,17 +62,10 @@ bash setup.sh --pack frontend --target local
 bash setup.sh --pack backend --target local
 bash setup.sh --pack infra --target local
 bash setup.sh --pack workflow --target local
-bash setup.sh --pack workflow-gsd --target local
 bash setup.sh --pack all --target local
 ```
 
 `--profile` remains as a deprecated alias for `--pack` during migration.
-
-Use `--with gsd` to add the legacy GSD snapshot to another pack:
-
-```bash
-bash setup.sh --pack core --target local --with gsd
-```
 
 ## 5. Alloy State and Gates
 
@@ -119,13 +101,11 @@ node bin/alloy.mjs sync --workspace alloy.workspace.json --dry-run
 
 Sync installs project-local `.opencode/` configs and does not write global OpenCode config by default.
 
-## 7. Experimental OMO Slim
+## 7. Removed Runtime Paths
 
-```bash
-bash setup.sh --pack core --target local --with omo
-```
+Alloy v2 does not expose GSD or OMO Slim install switches. Old migration flags now fail fast instead of installing either runtime.
 
-This only copies `experimental/omo-slim/oh-my-opencode-slim.json` and adds the pinned plugin entry. It does not run the upstream OMO installer.
+The GSD/OMO ideas are now represented by Alloy-native agents, skills, model-role maps, Markdown policies, JSONL state, and gate checks.
 
 ## 8. Doctor
 
@@ -140,7 +120,8 @@ Doctor checks:
 - `.opencode/package.json` and `.opencode/plugins/alloy.ts` exist
 - installed plugin dependency versions match Alloy's pinned versions when dependencies are present
 - `vendor.lock.json` references existing vendored paths
-- no default OMO Slim plugin unless requested
+- no OMO Slim plugin
+- no GSD command/runtime paths
 
 If plugin dependencies are not installed yet, doctor prints the exact command:
 
@@ -151,10 +132,6 @@ cd .opencode && bun install
 OpenCode may also run Bun install automatically at startup.
 
 ## 9. Troubleshooting
-
-### GSD Query Shim
-
-Alloy vendors GSD `dist` and `get-shit-done`, not the upstream SDK `node_modules` tree. The generated `.opencode/bin/gsd-sdk` supports `gsd-sdk query ...` through an Alloy shim. GSD `run`, `init`, and `auto` are intentionally not the default path; use the vendored `/gsd-*` OpenCode commands only in the `workflow-gsd` legacy pack or explicit `--with gsd` installs.
 
 ### MCP Access
 

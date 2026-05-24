@@ -123,7 +123,6 @@ class AlloyInstallerTest(unittest.TestCase):
                         "mcp": {"baseline": ["context7"], "disabled": []},
                         "workflow": {"mode": "standard", "tdd": "required_for_code", "claims": True, "review": "standard"},
                         "runtimes": {"node": True, "bun": True, "npx": False},
-                        "experimental": {"gsdSnapshot": False, "omoSlim": False},
                     }
                 )
             )
@@ -133,32 +132,19 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(resolved["modelName"], "openai")
         self.assertEqual(list(resolved["mcp"].keys()), ["context7"])
 
-    def test_workflow_gsd_is_legacy_project_local_and_query_shim_works(self):
+    def test_removed_gsd_and_omo_paths_fail_fast(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            run_setup(cwd, "--pack", "workflow-gsd", "--target", "local")
-            result = subprocess.run(
-                [str(cwd / ".opencode" / "bin" / "gsd-sdk"), "query", "generate-slug", "Alloy Smoke"],
-                cwd=cwd,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
-            plan_phase = (cwd / ".opencode" / "commands" / "gsd" / "gsd-plan-phase.md").read_text()
-            config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
+            with_gsd = run_setup(cwd, "--pack", "core", "--target", "local", "--with", "gsd", check=False)
+            with_omo = run_setup(cwd, "--pack", "core", "--target", "local", "--with", "omo", check=False)
+            workflow_gsd = run_setup(cwd, "--pack", "workflow-gsd", "--target", "local", check=False)
 
-        self.assertEqual(json.loads(result.stdout), {"slug": "alloy-smoke"})
-        self.assertIn(".opencode/get-shit-done/workflows/plan-phase.md", plan_phase)
-        self.assertNotIn("$HOME/.config/opencode", plan_phase)
-        self.assertNotIn("plugin", config)
-
-    def test_with_gsd_opt_in_adds_legacy_snapshot(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            run_setup(cwd, "--pack", "core", "--target", "local", "--with", "gsd")
-
-            self.assertTrue((cwd / ".opencode" / "commands" / "gsd" / "gsd-plan-phase.md").exists())
-            self.assertTrue((cwd / ".opencode" / "bin" / "gsd-sdk").exists())
+        self.assertNotEqual(with_gsd.returncode, 0)
+        self.assertIn("--with/--without were removed", with_gsd.stderr)
+        self.assertNotEqual(with_omo.returncode, 0)
+        self.assertIn("--with/--without were removed", with_omo.stderr)
+        self.assertNotEqual(workflow_gsd.returncode, 0)
+        self.assertIn("Unknown pack: workflow-gsd", workflow_gsd.stderr)
 
     def test_all_pack_does_not_install_legacy_gsd_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -168,18 +154,16 @@ class AlloyInstallerTest(unittest.TestCase):
             self.assertFalse((cwd / ".opencode" / "commands" / "gsd").exists())
             self.assertFalse((cwd / ".opencode" / "bin" / "gsd-sdk").exists())
 
-    def test_omo_is_experimental_opt_in_only(self):
+    def test_no_omo_plugin_or_gsd_commands_are_installed(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             run_setup(cwd, "--pack", "core", "--target", "local")
-            base_config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
-            self.assertNotIn("plugin", base_config)
-            self.assertFalse((cwd / ".opencode" / "oh-my-opencode-slim.json").exists())
+            config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
 
-            run_setup(cwd, "--pack", "core", "--target", "local", "--with", "omo")
-            omo_config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
-
-        self.assertIn("oh-my-opencode-slim@1.1.1", omo_config["plugin"])
+        self.assertNotIn("plugin", config)
+        self.assertFalse((cwd / ".opencode" / "oh-my-opencode-slim.json").exists())
+        self.assertFalse((cwd / ".opencode" / "commands" / "gsd").exists())
+        self.assertFalse((cwd / ".opencode" / "bin" / "gsd-sdk").exists())
 
     def test_state_and_gate_block_then_pass_with_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -237,7 +221,6 @@ class AlloyInstallerTest(unittest.TestCase):
                         "mcp": {"baseline": ["context7"], "disabled": []},
                         "workflow": {"mode": "standard", "tdd": "required_for_code", "claims": True, "review": "standard"},
                         "runtimes": {"node": True, "bun": True, "npx": False},
-                        "experimental": {"gsdSnapshot": False, "omoSlim": False},
                     }
                 )
             )
@@ -263,32 +246,6 @@ class AlloyInstallerTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--target must be local or global", result.stderr)
-
-    def test_without_overrides_project_experimental_flags(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            alloy_dir = cwd / ".alloy"
-            alloy_dir.mkdir()
-            (alloy_dir / "alloy.project.json").write_text(
-                json.dumps(
-                    {
-                        "repoKind": "frontend",
-                        "packs": ["core"],
-                        "models": "github-copilot",
-                        "mcp": {"baseline": ["context7"], "disabled": []},
-                        "workflow": {"mode": "standard", "tdd": "required_for_code", "claims": True, "review": "standard"},
-                        "runtimes": {"node": True, "bun": True, "npx": False},
-                        "experimental": {"gsdSnapshot": True, "omoSlim": True},
-                    }
-                )
-            )
-            run_setup(cwd, "--target", "local", "--without", "gsd,omo")
-            config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
-
-            self.assertFalse((cwd / ".opencode" / "commands" / "gsd").exists())
-            self.assertFalse((cwd / ".opencode" / "oh-my-opencode-slim.json").exists())
-            self.assertNotIn("plugin", config)
-
 
 if __name__ == "__main__":
     unittest.main()

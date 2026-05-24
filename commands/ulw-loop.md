@@ -1,5 +1,5 @@
 ---
-description: Continue GSD review/fix/verify loops until completion or escalation
+description: Continue Alloy review/fix/verify loops until completion or escalation
 agent: alloy-orchestrator
 ---
 
@@ -9,12 +9,12 @@ Use this when a task is already in progress and should continue through review a
 
 ## Loop
 
-1. Read the current GSD `.planning` state and latest artifacts.
-2. If implementation is incomplete, run `/gsd-execute-phase`.
-3. If implementation is complete but review is missing, run `/gsd-code-review`.
-4. If BLOCK findings exist, run `/gsd-code-review-fix`.
-5. If review is clear, run `/gsd-verify-work`.
-6. Stop when verification is complete.
+1. Read the current `.alloy` task, evidence, claims, and plan artifacts.
+2. If implementation is incomplete, execute the next bounded card with `alloy-tdd`.
+3. If implementation is complete but review is missing, ask `@alloy-reviewer`.
+4. If BLOCK findings exist, fix them and record evidence.
+5. If review is clear, ask `@alloy-verifier` and run `alloy gate check`.
+6. Stop when verification is complete and gates pass.
 
 ## Escalation
 

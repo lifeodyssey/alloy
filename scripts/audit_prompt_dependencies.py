@@ -23,10 +23,7 @@ SCAN_DIRS = (
     "commands",
     "skills",
     "packs",
-    "profiles",
     "models",
-    "overlays",
-    "experimental",
 )
 
 
@@ -73,15 +70,15 @@ class DependencyRow:
 
 
 RULES = (
-    Rule(".sisyphus", "workflow", "legacy Sisyphus state", "Replace with GSD .planning state."),
-    Rule("boulder.json", "workflow", "legacy Sisyphus state", "Replace with GSD .planning state."),
-    Rule("call_omo_agent", "tool", "OMO-only tool API", "Use native OpenCode agents or GSD commands."),
-    Rule("@Oracle", "agent", "old OMO built-in alias", "Use @alloy-planner or GSD plan review."),
-    Rule("@Fixer", "agent", "old OMO built-in alias", "Use @alloy-executor or GSD execute phase."),
+    Rule(".sisyphus", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy` state and projections."),
+    Rule("boulder.json", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy` state and projections."),
+    Rule("call_omo_agent", "tool", "OMO-only tool API", "Use native Alloy/OpenCode agents."),
+    Rule("@Oracle", "agent", "old OMO built-in alias", "Use @alloy-planner."),
+    Rule("@Fixer", "agent", "old OMO built-in alias", "Use @alloy-executor."),
     Rule("agent: Orchestrator", "agent", "missing legacy command agent", "Use agent: alloy-orchestrator."),
-    Rule("@plannotator/opencode", "plugin", "removed plugin", "Use GSD plan review artifacts instead."),
-    Rule("opencode-ralph-loop", "plugin", "removed plugin", "Use GSD verify/review loops."),
-    Rule("/ralph", "command", "removed command", "Use GSD verify/review loops."),
+    Rule("@plannotator/opencode", "plugin", "removed plugin", "Use Alloy plan/review/gate artifacts instead."),
+    Rule("opencode-ralph-loop", "plugin", "removed plugin", "Use Alloy review and verification gates."),
+    Rule("/ralph", "command", "removed command", "Use Alloy review and verification gates."),
     Rule("team-tdd", "skill", "renamed TDD skill", "Use alloy-tdd only."),
     Rule("frontend-tdd", "skill", "merged TDD skill", "Use alloy-tdd only."),
     Rule("backend-tdd", "skill", "merged TDD skill", "Use alloy-tdd only."),
@@ -109,7 +106,7 @@ DEPENDENCIES = (
         "skill",
         "vercel-labs/agent-skills",
         "skill",
-        "optional: install with --with frontend",
+        "install through the frontend or all pack",
     ),
     Dependency(
         "next-best-practices",
@@ -117,25 +114,25 @@ DEPENDENCIES = (
         "skill",
         "vercel-labs/next-skills",
         "skill",
-        "optional: install with --with frontend",
+        "install through a frontend-derived pack if added",
     ),
-    Dependency("kotlin-springboot", "kotlin-springboot", "skill", "Kotlin/kotlin-agent-skills", "skill", "optional: install with --with kotlin"),
+    Dependency("kotlin-springboot", "kotlin-springboot", "skill", "Kotlin/kotlin-agent-skills", "skill", "install through a backend-derived pack if added"),
     Dependency(
         "kotlin-backend-jpa-entity-mapping",
         "kotlin-backend-jpa-entity-mapping",
         "skill",
         "Kotlin/kotlin-agent-skills",
         "skill",
-        "optional: install with --with kotlin",
+        "install through the backend or all pack",
     ),
-    Dependency("postgres", "postgres", "skill", "timescale/pg-aiguide", "skill", "optional: install with --with postgres", ("`postgres`",)),
+    Dependency("postgres", "postgres", "skill", "timescale/pg-aiguide", "skill", "install through the backend or all pack", ("`postgres`",)),
     Dependency(
         "design-postgres-tables",
         "design-postgres-tables",
         "skill",
         "timescale/pg-aiguide",
         "skill",
-        "optional: install with --with postgres",
+        "install through the backend or all pack",
     ),
     Dependency(
         "pgvector-semantic-search",
@@ -143,21 +140,12 @@ DEPENDENCIES = (
         "skill",
         "timescale/pg-aiguide",
         "skill",
-        "optional: install with --with postgres",
+        "install through the backend or all pack",
     ),
-    Dependency("terraform-skill", "terraform-skill", "skill", "antonbabenko/terraform-skill", "skill", "optional: install with --with terraform"),
+    Dependency("terraform-skill", "terraform-skill", "skill", "antonbabenko/terraform-skill", "skill", "install through the infra or all pack"),
     Dependency("context7", "context7", "mcp", "opencode.json", "mcp", "keep: default documentation MCP"),
     Dependency("grep_app", "grep_app", "mcp", "opencode.json", "mcp", "keep: default public code search MCP"),
     Dependency("exa", "exa", "mcp", "opencode.json", "mcp", "keep: default web search MCP"),
-    Dependency("/gsd-discuss-phase", "gsd-discuss-phase", "command", "GSD", "command", "keep: GSD requirements discussion"),
-    Dependency("/gsd-plan-phase", "gsd-plan-phase", "command", "GSD", "command", "keep: GSD planning"),
-    Dependency("/gsd-execute-phase", "gsd-execute-phase", "command", "GSD", "command", "keep: GSD execution"),
-    Dependency("/gsd-code-review", "gsd-code-review", "command", "GSD", "command", "keep: canonical code review"),
-    Dependency("/gsd-code-review-fix", "gsd-code-review-fix", "command", "GSD", "command", "keep: review fix loop"),
-    Dependency("/gsd-verify-work", "gsd-verify-work", "command", "GSD", "command", "keep: final verification"),
-    Dependency("/gsd-ui-phase", "gsd-ui-phase", "command", "GSD", "command", "keep: UI design phase"),
-    Dependency("/gsd-ui-review", "gsd-ui-review", "command", "GSD", "command", "keep: UI review"),
-    Dependency("/gsd-debug", "gsd-debug", "command", "GSD", "command", "keep: stateful debugging"),
     Dependency("@alloy-orchestrator", "alloy-orchestrator", "agent", "repo", "agent", "keep: Alloy routing agent"),
     Dependency("@alloy-planner", "alloy-planner", "agent", "repo", "agent", "keep: Alloy planning agent"),
     Dependency("@alloy-executor", "alloy-executor", "agent", "repo", "agent", "keep: Alloy execution agent"),
@@ -167,9 +155,6 @@ DEPENDENCIES = (
     Dependency("gh", "gh", "cli", "system", "cli", "keep: GitHub CLI replacement for GitHub MCP", ("`gh`", "gh CLI")),
     Dependency("az devops", "az", "cli", "system", "cli", "keep: Azure DevOps CLI replacement for Azure MCP", ("`az devops`", "az devops")),
     Dependency("psql", "psql", "cli", "system", "cli", "keep: Postgres CLI replacement for Postgres MCP", ("`psql`", "psql")),
-    Dependency("gsd-sdk", "gsd-sdk", "cli", "GSD", "cli", "keep: GSD SDK shim"),
-    Dependency("gsd-tools", "gsd-tools", "cli", "GSD", "cli", "keep: GSD tools shim"),
-    Dependency("gsd-oc-tools", "gsd-oc-tools", "cli", "GSD", "cli", "keep: GSD OpenCode tools shim"),
 )
 
 
@@ -272,7 +257,6 @@ def is_dependency_visible(dep: Dependency, opencode_dir: Path, config: dict, ski
     if dep.visibility == "command":
         return (
             (opencode_dir / "commands" / f"{dep.actual_name}.md").is_file()
-            or (opencode_dir / "commands" / "gsd" / f"{dep.actual_name}.md").is_file()
         )
     if dep.visibility == "agent":
         return (opencode_dir / "agents" / f"{dep.actual_name}.md").is_file()
@@ -385,8 +369,8 @@ def render_report(
             "## Policy",
             "",
             "- `alloy-tdd`, `alloy-brainstorm`, and `alloy-debug` are Alloy-owned entrypoints.",
-            "- GSD is project-local and installed only through the `workflow-gsd` pack or explicit `--with gsd` opt-in.",
-            "- OMO Slim is experimental only; default configs must not include the plugin or wildcard skill pools.",
+            "- GSD and OMO Slim runtimes are not installable through Alloy v2.",
+            "- Default configs must not include OMO plugins, GSD command paths, or wildcard skill pools.",
             "- GitHub, Azure DevOps, and Postgres workflows use `gh`, `az devops`, and `psql`.",
             "",
         ]

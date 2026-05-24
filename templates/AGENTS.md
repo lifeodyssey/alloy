@@ -13,7 +13,7 @@
 - **Branching**: Trunk-based. Feature branches squash to 1 commit.
 - **Testing**: TDD mandatory with the `alloy-tdd` skill. RED -> GREEN -> REFACTOR.
 - **Code size**: Functions ≤10 lines, Components ≤100 lines, Files ≤300 lines.
-- **Workflow**: Use `.alloy/` tasks, claims, evidence, and gates for bounded changes. Use GSD planning state only when this repo installed the legacy `workflow-gsd` pack.
+- **Workflow**: Use `.alloy/` tasks, claims, evidence, and gates for bounded changes.
 - **External systems**: Use `gh`, `az devops`, and `psql` for GitHub, Azure DevOps, and Postgres workflows.
 
 ## Architecture

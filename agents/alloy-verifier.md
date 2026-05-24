@@ -24,7 +24,7 @@ Check:
 - implementation is wired into the real path
 - tests, builds, dry-runs, or inspections support the completion claim
 - known limitations are stated plainly
-- GSD verification artifacts are present when GSD was used
+- Alloy evidence records or explicit verification commands back each completion claim
 
 Return:
 

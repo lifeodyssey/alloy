@@ -13,14 +13,14 @@ Use this for complex, multi-step work that should proceed through planning, exec
 2. If it can change code or project state, ask for the card/work item number.
 3. Clarify requirements with `grill-me` or `grill-with-docs` when installed.
 4. Explore existing code and conventions.
-5. Use `/gsd-discuss-phase` if the task is still fuzzy.
-6. Use `/gsd-plan-phase` for the implementation plan.
-7. Review the plan with `@alloy-planner` or GSD plan checking.
-8. Use `/gsd-execute-phase`; every implementation card invokes `alloy-tdd`.
-9. Use `/gsd-code-review`.
-10. Use `/gsd-code-review-fix` until BLOCK findings are resolved or two cycles have failed.
-11. Use `/gsd-verify-work`.
-12. Report changed files, verification, and any unresolved risk.
+5. Use `alloy-brainstorm` if the task is still fuzzy.
+6. Create an Alloy task and update `.alloy/projections/current-plan.md`.
+7. Review the plan with `@alloy-planner`.
+8. Execute one bounded card at a time; every implementation card invokes `alloy-tdd`.
+9. Review with `@alloy-reviewer`.
+10. Fix BLOCK findings until resolved or two cycles have failed.
+11. Verify with `@alloy-verifier` and `alloy gate check`.
+12. Report changed files, verification, evidence, and any unresolved risk.
 
 ## Tool Policy
 

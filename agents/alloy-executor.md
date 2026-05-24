@@ -19,7 +19,7 @@ Return `TASK NEEDS PLANNING` when:
 - requirements are broad or unclear
 - changes cross several modules
 - migrations, infra, auth, or security boundaries are involved
-- a plan or GSD phase is required before implementation
+- an Alloy plan or task decomposition is required before implementation
 
 For accepted cards:
 

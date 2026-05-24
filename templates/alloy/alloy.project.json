@@ -16,9 +16,5 @@
     "node": true,
     "bun": true,
     "npx": false
-  },
-  "experimental": {
-    "gsdSnapshot": false,
-    "omoSlim": false
   }
 }

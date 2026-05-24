@@ -16,10 +16,10 @@ Usage:
 3. Search definitions and references with `rg`, LSP, and `sg` when available.
 4. Map affected files, tests, public interfaces, and likely regression paths.
 5. For small refactors, invoke `alloy-tdd` and make one behavior-preserving change at a time.
-6. For broad refactors, run `/gsd-plan-phase` first, then `/gsd-execute-phase`.
+6. For broad refactors, create an Alloy task and plan, then execute one bounded card at a time.
 7. Run focused tests after each meaningful step.
-8. Run `/gsd-code-review` for GSD work or `@alloy-reviewer` for small non-GSD work.
-9. Run `/gsd-verify-work` or equivalent final verification.
+8. Run `@alloy-reviewer` for evidence-based review.
+9. Run `@alloy-verifier` and `alloy gate check` before final reporting.
 
 ## Safety
 

@@ -36,7 +36,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             (root / "agents").mkdir()
             (root / "agents" / "alloy-orchestrator.md").write_text(
                 "Invoke alloy-tdd, alloy-brainstorm, alloy-debug, @alloy-planner, "
-                "use context7, use exa, and run /gsd-plan-phase.",
+                "use context7, and use exa.",
                 encoding="utf-8",
             )
             (opencode / "skills" / "alloy-tdd").mkdir(parents=True)
@@ -47,8 +47,6 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             (opencode / "skills" / "alloy-debug" / "SKILL.md").write_text("# Alloy Debug")
             (opencode / "agents").mkdir(parents=True)
             (opencode / "agents" / "alloy-planner.md").write_text("# Alloy Planner")
-            (opencode / "commands" / "gsd").mkdir(parents=True)
-            (opencode / "commands" / "gsd" / "gsd-plan-phase.md").write_text("# plan")
             (opencode / "opencode.json").write_text(
                 '{"mcp":{"context7":{"enabled":true},"exa":{"enabled":true}},"plugin":[]}',
                 encoding="utf-8",
@@ -64,7 +62,6 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         self.assertTrue(by_ref["@alloy-planner"].opencode_visible)
         self.assertTrue(by_ref["context7"].opencode_visible)
         self.assertTrue(by_ref["exa"].opencode_visible)
-        self.assertTrue(by_ref["/gsd-plan-phase"].opencode_visible)
 
 
 if __name__ == "__main__":

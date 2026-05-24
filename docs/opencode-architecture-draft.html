@@ -106,7 +106,7 @@
 <body>
 <main>
   <h1>OpenCode Alloy：目标架构</h1>
-  <p class="subtitle">Alloy 的核心是 profile 分发、repo-local 安装、Hybrid Vendor + Snapshot Overlay，以及把 OMO 的多模型角色思想吸收到 OpenCode native agents。</p>
+  <p class="subtitle">Alloy v2 的核心是 pack 分发、repo-local 安装、MD-first workflow、JSONL state，以及把 GSD/OMO/Superpowers 的精华吸收到 OpenCode native agents、skills 和 gates。</p>
 
   <section class="grid topology">
     <div class="panel">
@@ -116,16 +116,16 @@
         <span class="small">保存可复用能力，不保存业务 repo 的项目状态。</span>
       </div>
       <div class="node core">
-        <b>profiles/*.json</b>
-        <span class="small"><code>core</code>, <code>frontend</code>, <code>backend</code>, <code>infra</code>, <code>workflow-gsd</code>, <code>all</code></span>
+        <b>packs/*.json</b>
+        <span class="small"><code>core</code>, <code>frontend</code>, <code>backend</code>, <code>infra</code>, <code>workflow</code>, <code>all</code></span>
       </div>
       <div class="node model">
         <b>models/*.json</b>
         <span class="small">把 planner/executor/reviewer/debugger/verifier 映射到 Copilot、OpenAI 或 local 模型。</span>
       </div>
       <div class="node workflow">
-        <b>vendor + overlays</b>
-        <span class="small">GSD 和第三方 Skill 展开进 repo，Alloy 修改只放 overlay，来源与 hash 写入 lock。</span>
+        <b>vendor/skills + lock</b>
+        <span class="small">精选第三方 Skill 展开进 repo，来源、license 与 hash 写入 vendor.lock.json。</span>
       </div>
     </div>
 
@@ -133,7 +133,7 @@
       <h2>2. 业务 Repo 的本地安装</h2>
       <div class="node core">
         <b>setup.sh</b>
-        <span class="small"><code>bash setup.sh --profile frontend --target local --models github-copilot</code></span>
+        <span class="small"><code>bash setup.sh --pack frontend --target local --models github-copilot</code></span>
       </div>
       <div class="arrow">generates</div>
       <div class="node ok">
@@ -148,10 +148,14 @@
     </div>
 
     <div class="panel">
-      <h2>3. 默认不装的能力</h2>
+      <h2>3. 不暴露的旧运行时</h2>
       <div class="node risk">
-        <b>OMO Slim runtime</b>
-        <span class="small">默认不 vendor、不安装。只保留 <code>experimental/omo-slim</code> 样例。</span>
+        <b>OMO Slim runtime/plugin</b>
+        <span class="small">不再提供旧 OMO opt-in。角色路由思想已进入 Alloy agents 和 model maps。</span>
+      </div>
+      <div class="node risk">
+        <b>GSD runtime/commands</b>
+        <span class="small">不再提供旧 GSD pack 或 opt-in。计划、执行、review、verify 被 Alloy state/gates 接管。</span>
       </div>
       <div class="node risk">
         <b>npx skills add</b>
@@ -165,13 +169,13 @@
   </section>
 
   <section class="section panel">
-    <h2>Profile 到 Repo 的分发</h2>
+    <h2>Pack 到 Repo 的分发</h2>
     <table class="table">
       <tr><th>Repo 类型</th><th>安装命令</th><th>得到的能力</th><th>不会得到</th></tr>
-      <tr><td>Frontend</td><td><code>--profile frontend</code></td><td>core + UI/browser verification skills</td><td>backend/infra skills, GSD commands, OMO</td></tr>
-      <tr><td>Backend</td><td><code>--profile backend</code></td><td>core + Kotlin/JPA + Postgres skills</td><td>frontend/infra skills, GSD commands, OMO</td></tr>
-      <tr><td>Infra</td><td><code>--profile infra</code></td><td>core + Terraform/OpenTofu skill</td><td>frontend/backend skills, GSD commands, OMO</td></tr>
-      <tr><td>Workflow-heavy</td><td><code>--profile workflow-gsd</code></td><td>core + vendored GSD snapshot + overlay</td><td>OMO runtime by default</td></tr>
+      <tr><td>Frontend</td><td><code>--pack frontend</code></td><td>core + UI/browser verification skills</td><td>backend/infra skills, GSD commands, OMO plugin</td></tr>
+      <tr><td>Backend</td><td><code>--pack backend</code></td><td>core + Kotlin/JPA + Postgres skills</td><td>frontend/infra skills, GSD commands, OMO plugin</td></tr>
+      <tr><td>Infra</td><td><code>--pack infra</code></td><td>core + Terraform/OpenTofu skill</td><td>frontend/backend skills, GSD commands, OMO plugin</td></tr>
+      <tr><td>Workflow</td><td><code>--pack workflow</code></td><td>core + Alloy task/state/evidence/gate workflow</td><td>GSD runtime, OMO plugin</td></tr>
     </table>
   </section>
 
@@ -180,7 +184,7 @@
       <h2>Alloy Agent Matrix</h2>
       <div class="grid six">
         <div class="node core"><b>orchestrator</b><span class="small">分类和路由</span></div>
-        <div class="node model"><b>planner</b><span class="small">计划和 GSD review</span></div>
+        <div class="node model"><b>planner</b><span class="small">计划和 Alloy gate strategy</span></div>
         <div class="node skill"><b>executor</b><span class="small">小任务 + alloy-tdd</span></div>
         <div class="node model"><b>reviewer</b><span class="small">代码审查和 claims</span></div>
         <div class="node skill"><b>debugger</b><span class="small">systematic debugging</span></div>
@@ -192,9 +196,9 @@
       <h2>GSD / OMO / Claims</h2>
       <table class="table">
         <tr><th>层</th><th>Alloy 决策</th><th>修改方式</th></tr>
-        <tr><td>GSD</td><td>只在 workflow profile 中作为项目本地 workflow engine</td><td>snapshot + overlay，不改 vendor 原件</td></tr>
-        <tr><td>OMO Slim</td><td>吸收角色思想，不默认吸收 runtime</td><td>native Alloy agents + model maps</td></tr>
-        <tr><td>Claims</td><td>由 reviewer/verifier 负责事实和完成证据检查</td><td>agent prompt + audit policy</td></tr>
+        <tr><td>GSD</td><td>不再作为运行时分发；吸收计划、执行、review、verify 的门控思想</td><td>Alloy CLI + state/evidence/gates</td></tr>
+        <tr><td>OMO Slim</td><td>不再作为 plugin 分发；吸收多模型角色与 per-agent routing</td><td>native Alloy agents + model maps</td></tr>
+        <tr><td>Claims</td><td>由 reviewer/verifier 和 gate check 负责事实和完成证据检查</td><td>JSONL evidence + agent prompt + audit policy</td></tr>
       </table>
     </div>
   </section>
