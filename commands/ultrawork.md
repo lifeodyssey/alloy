@@ -1,5 +1,5 @@
 ---
-description: Run the full Alloy workflow for a substantial task
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Run the full Alloy workflow for a substantial task
 agent: Orchestrator
 ---
 

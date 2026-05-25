@@ -1,5 +1,5 @@
 ---
-description: Resume or start an Alloy workflow session
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Resume or start an Alloy workflow session
 agent: Orchestrator
 ---
 
