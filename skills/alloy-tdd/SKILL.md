@@ -342,6 +342,6 @@ Load these only when the SKILL.md doesn't answer your specific question. Most TD
 Fuses:
 - **obra/superpowers** — Iron Law, RGR cycle, anti-rationalization table, Good/Bad examples (MIT)
 - **mattpocock/skills** — Vertical slicing, design-first workflow, integration-style philosophy, plus 5 deep references vendored under `references/` (MIT)
-- **opencode-team-config team-tdd legacy** — Stack Companions routing, evidence integration, code constraints
+- **opencode-team-config prior TDD guidance** — Stack Companions routing, evidence integration, code constraints
 
 See `/CREDITS.md` at repo root for full attribution.

@@ -13,11 +13,12 @@ const ZOD_VERSION = DEFAULTS.plugin.zod
 const MCP_CONFIGS = DEFAULTS.mcp
 
 const ROLE_TO_AGENT = {
-  planner: ["alloy-orchestrator", "alloy-planner"],
-  executor: ["alloy-executor"],
-  reviewer: ["alloy-reviewer"],
-  debugger: ["alloy-debugger"],
-  verifier: ["alloy-verifier"],
+  orchestrator: ["Orchestrator"],
+  planner: ["Architect"],
+  executor: ["Builder", "Fixer"],
+  reviewer: ["Reviewer"],
+  verifier: ["Tester"],
+  explorer: ["Explorer"],
 }
 
 const MANAGED_NAMES = [
@@ -32,6 +33,7 @@ const MANAGED_NAMES = [
 
 const DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]
 const DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]
+const RETIRED_ALLOY_AGENT_NAMES = ["orchestrator", "planner", "executor", "debugger", "reviewer", "verifier"].map((name) => `alloy-${name}`)
 const PACK_ALIASES = {
   default: "core",
   team: "core",
@@ -454,7 +456,7 @@ function installPlugin(resolved, dryRun = false) {
 function cleanupDeprecated(targetDir, dryRun = false) {
   console.log("Cleanup")
   for (const skill of DEPRECATED_SKILLS) removePath(join(targetDir, "skills", skill), dryRun)
-  for (const agent of DEPRECATED_AGENTS) removePath(join(targetDir, "agents", `${agent}.md`), dryRun)
+  for (const agent of [...DEPRECATED_AGENTS, ...RETIRED_ALLOY_AGENT_NAMES]) removePath(join(targetDir, "agents", `${agent}.md`), dryRun)
   console.log("")
 }
 
@@ -462,7 +464,7 @@ function writeOpenCodeConfig(resolved, dryRun = false) {
   const config = {
     "$schema": "https://opencode.ai/config.json",
     autoupdate: false,
-    default_agent: "alloy-orchestrator",
+    default_agent: "Orchestrator",
     agent: agentModelConfig(resolved.models),
     mcp: resolved.mcp,
   }

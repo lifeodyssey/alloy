@@ -1,6 +1,6 @@
 ---
 description: Plan and perform a safe refactor with codebase awareness
-agent: alloy-orchestrator
+agent: Orchestrator
 ---
 
 # /refactor
@@ -18,8 +18,8 @@ Usage:
 5. For small refactors, invoke `alloy-tdd` and make one behavior-preserving change at a time.
 6. For broad refactors, create an Alloy task and plan, then execute one bounded card at a time.
 7. Run focused tests after each meaningful step.
-8. Run `@alloy-reviewer` for evidence-based review.
-9. Run `@alloy-verifier` and `alloy gate check` before final reporting.
+8. Run `@Reviewer` for evidence-based review.
+9. Run `@Tester` and `alloy gate check` before final reporting.
 
 ## Safety
 

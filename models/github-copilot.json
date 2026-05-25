@@ -1,7 +1,8 @@
 {
+  "orchestrator": {"model": "github-copilot/claude-sonnet-4.6", "variant": "high", "fallback": "github-copilot/gpt-5.4"},
   "planner": {"model": "github-copilot/claude-sonnet-4.6", "variant": "high", "fallback": "github-copilot/gpt-5.4"},
   "executor": {"model": "github-copilot/gpt-5.3-codex", "variant": "medium", "fallback": "github-copilot/gpt-5.4-mini"},
   "reviewer": {"model": "github-copilot/gpt-5.4", "variant": "high", "fallback": "github-copilot/claude-sonnet-4.6"},
-  "debugger": {"model": "github-copilot/claude-opus-4.6", "variant": "high", "fallback": "github-copilot/claude-sonnet-4.6"},
-  "verifier": {"model": "github-copilot/gpt-5.4", "variant": "high", "fallback": "github-copilot/claude-sonnet-4.6"}
+  "verifier": {"model": "github-copilot/gpt-5.4", "variant": "high", "fallback": "github-copilot/claude-sonnet-4.6"},
+  "explorer": {"model": "github-copilot/claude-sonnet-4.6", "variant": "medium", "fallback": "github-copilot/gpt-5.4-mini"}
 }
