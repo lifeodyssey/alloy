@@ -2,9 +2,49 @@
   "id": "infra",
   "description": "OpenCode Alloy infra pack: core plus Terraform/OpenTofu guidance.",
   "target": "local",
-  "skills": ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer", "terraform-skill"],
-  "agents": ["alloy-orchestrator", "alloy-planner", "alloy-executor", "alloy-reviewer", "alloy-debugger", "alloy-verifier"],
-  "commands": ["handoff", "init-deep", "refactor", "start-work", "stop-continuation", "ultrawork", "ulw-loop"],
-  "mcp": ["context7", "grep_app", "exa"],
-  "modelRoles": ["planner", "executor", "reviewer", "debugger", "verifier"]
+  "skills": [
+    "alloy-tdd",
+    "alloy-brainstorm",
+    "alloy-debug",
+    "git-master",
+    "humanizer",
+    "terraform-skill"
+  ],
+  "agents": [
+    "Orchestrator",
+    "Explorer",
+    "Architect",
+    "Builder",
+    "Fixer",
+    "Reviewer",
+    "Tester"
+  ],
+  "commands": [
+    "autopilot",
+    "discuss",
+    "execute",
+    "handoff",
+    "init-deep",
+    "plan",
+    "refactor",
+    "spec",
+    "start-work",
+    "stop-continuation",
+    "ultrawork",
+    "ulw-loop",
+    "verify"
+  ],
+  "mcp": [
+    "context7",
+    "grep_app",
+    "exa"
+  ],
+  "modelRoles": [
+    "orchestrator",
+    "planner",
+    "executor",
+    "reviewer",
+    "verifier",
+    "explorer"
+  ]
 }

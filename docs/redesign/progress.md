@@ -104,9 +104,11 @@
 ### Next session checkpoints
 
 When resuming:
-1. Read `task_plan.md` for current state of decisions
-2. Read `findings.md` for research basis
-3. Continue from next unchecked Q in this file
+1. **First read `HANDOFF.md`** — full resume state from 2026-05-26 handoff
+2. Read `task_plan.md` for current state of decisions
+3. Read `findings.md` for research basis
+4. Read `iteration-v0.1.0-plan.md` for Wave 1-5 implementation plan
+5. Continue per HANDOFF.md "Resume plan" section
 
 ## Files created/modified this session
 

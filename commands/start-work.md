@@ -1,6 +1,6 @@
 ---
-description: Resume or start an Alloy workflow session
-agent: alloy-orchestrator
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Resume or start an Alloy workflow session
+agent: Orchestrator
 ---
 
 # /start-work
@@ -21,9 +21,9 @@ Use this command to resume planned work from Alloy state.
    - fuzzy scope: use `alloy-brainstorm` and update the current plan
    - missing plan: write or update `.alloy/projections/current-plan.md`
    - work incomplete: execute the next bounded card with `alloy-tdd`
-   - implementation done but not reviewed: ask `@alloy-reviewer`
+   - implementation done but not reviewed: ask `@Reviewer`
    - review BLOCK findings exist: fix them with explicit evidence
-   - review is clear but not verified: ask `@alloy-verifier` and run `alloy gate check`
+   - review is clear but not verified: ask `@Tester` and run `alloy gate check`
 
 ## Rules
 

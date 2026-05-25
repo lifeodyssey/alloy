@@ -1,6 +1,6 @@
 ---
-description: Run the full Alloy workflow for a substantial task
-agent: alloy-orchestrator
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Run the full Alloy workflow for a substantial task
+agent: Orchestrator
 ---
 
 # /ultrawork
@@ -15,11 +15,11 @@ Use this for complex, multi-step work that should proceed through planning, exec
 4. Explore existing code and conventions.
 5. Use `alloy-brainstorm` if the task is still fuzzy.
 6. Create an Alloy task and update `.alloy/projections/current-plan.md`.
-7. Review the plan with `@alloy-planner`.
+7. Review the plan with `@Architect`.
 8. Execute one bounded card at a time; every implementation card invokes `alloy-tdd`.
-9. Review with `@alloy-reviewer`.
+9. Review with `@Reviewer`.
 10. Fix BLOCK findings until resolved or two cycles have failed.
-11. Verify with `@alloy-verifier` and `alloy gate check`.
+11. Verify with `@Tester` and `alloy gate check`.
 12. Report changed files, verification, evidence, and any unresolved risk.
 
 ## Tool Policy

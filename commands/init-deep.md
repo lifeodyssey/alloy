@@ -1,5 +1,5 @@
 ---
-description: Generate or refresh hierarchical AGENTS.md project instructions
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Generate or refresh hierarchical AGENTS.md project instructions
 ---
 
 # /init-deep
