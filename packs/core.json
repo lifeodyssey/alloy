@@ -2,9 +2,54 @@
   "id": "core",
   "description": "OpenCode Alloy core pack: native Alloy agents, commands, core skills, Bun plugin support, and the minimal MCP baseline.",
   "target": "local",
-  "skills": ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"],
-  "agents": ["alloy-orchestrator", "alloy-planner", "alloy-executor", "alloy-reviewer", "alloy-debugger", "alloy-verifier"],
-  "commands": ["handoff", "init-deep", "refactor", "start-work", "stop-continuation", "ultrawork", "ulw-loop"],
-  "mcp": ["context7", "grep_app", "exa"],
-  "modelRoles": ["planner", "executor", "reviewer", "debugger", "verifier"]
+  "skills": [
+    "alloy-tdd",
+    "alloy-brainstorm",
+    "alloy-debug",
+    "alloy-plan",
+    "alloy-discuss",
+    "alloy-execute",
+    "alloy-verify",
+    "alloy-using",
+    "alloy-autopilot",
+    "alloy-map-codebase",
+    "alloy-qa",
+    "git-master",
+    "humanizer"
+  ],
+  "agents": [
+    "alloy-orchestrator",
+    "alloy-planner",
+    "alloy-executor",
+    "alloy-reviewer",
+    "alloy-debugger",
+    "alloy-verifier"
+  ],
+  "commands": [
+    "autopilot",
+    "discuss",
+    "execute",
+    "handoff",
+    "init-deep",
+    "plan",
+    "refactor",
+    "spec",
+    "start-work",
+    "stop-continuation",
+    "ultrawork",
+    "ulw-loop",
+    "verify"
+  ],
+  "mcp": [
+    "context7",
+    "grep_app",
+    "exa"
+  ],
+  "modelRoles": [
+    "planner",
+    "executor",
+    "reviewer",
+    "debugger",
+    "verifier"
+  ]
 }
