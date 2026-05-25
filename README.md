@@ -12,17 +12,19 @@ documented Plan → Execute → Verify pipeline.
 
 ## Quick Start
 
-Install the Alloy CLI once:
+Clone this repo, then run the installer from each target repository:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lifeodyssey/opencode-team-config/main/install.sh | bash # TODO: replace with real URL when published
+git clone https://github.com/lifeodyssey/opencode-team-config.git ~/src/opencode-team-config
+cd /path/to/target-repo
+bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
 ```
 
-Then initialize Alloy inside each target repository:
+Re-run the same command inside any repository that should receive Alloy:
 
 ```bash
 cd /path/to/target-repo
-alloy install
+bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
 ```
 
 The installer is designed around two tiers:

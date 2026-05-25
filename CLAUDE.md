@@ -17,7 +17,7 @@ bash setup.sh --pack core --target local --models github-copilot
 # Equivalent direct CLI
 node bin/alloy.mjs install --pack core --target local --models github-copilot
 
-# Dry run (must print: .alloy/, .opencode/agents, .opencode/skills, .opencode/plugins/alloy.ts; must NOT print npx skills add, bunx oh-my-opencode-slim install, or any GSD/OMO entry)
+# Dry run (must print: .alloy/, .opencode/agents, .opencode/skills, .opencode/plugins/alloy.ts; must NOT print non-deterministic per-skill install commands, bunx oh-my-opencode-slim install, or any GSD/OMO entry)
 bash setup.sh --dry-run --pack core --target local
 
 # Doctor (verifies pack resolution, Node/Bun availability, plugin versions, vendor.lock paths, no OMO/GSD residue)
@@ -99,7 +99,7 @@ MCP baseline is always `context7`, `grep_app`, `exa`. GitHub/Azure/Postgres use 
 
 These constraints are enforced by code and tests. Violating them will fail `npm test`, `bash setup.sh --doctor`, or `audit_prompt_dependencies.py`.
 
-- **No `npx skills add`**. Skills are installed by copying from `skills/` or `vendor/skills/` into the target `.opencode/skills/`.
+- **No non-deterministic per-skill install commands**. Skills are installed by copying from `skills/` or `vendor/skills/` into the target `.opencode/skills/`.
 - **No OMO Slim and no GSD runtime/commands**. The `--with`/`--without` flags are removed and now throw. `DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]` and `DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]` must not appear in prompts or packs.
 - **No global writes by default**. `--target local` (current repo `.opencode/`) is the default; `--target global` writes to `~/.config/opencode/` and should be used explicitly.
 - **MCP baseline is fixed** to `context7`, `grep_app`, `exa`. Do not introduce GitHub/Azure/Postgres MCP servers — use the CLI replacements.
