@@ -1,41 +1,5 @@
 [
   {
-    "name": "superpowers-brainstorming",
-    "kind": "skill",
-    "source": "https://github.com/obra/superpowers",
-    "version": "5.1.0",
-    "license": "MIT",
-    "sha256": "777249232b1364cf9ff72a1da4e2f5ecd34a06f854aeb47e3e74f21750447320",
-    "paths": [
-      "vendor/skills/superpowers/5.1.0/brainstorming"
-    ],
-    "vendoredAt": "2026-05-24"
-  },
-  {
-    "name": "superpowers-systematic-debugging",
-    "kind": "skill",
-    "source": "https://github.com/obra/superpowers",
-    "version": "5.1.0",
-    "license": "MIT",
-    "sha256": "732183efb5917482b44cdf71f2fdb800d516216fdc63fe60715a6f4d9361a8b4",
-    "paths": [
-      "vendor/skills/superpowers/5.1.0/systematic-debugging"
-    ],
-    "vendoredAt": "2026-05-24"
-  },
-  {
-    "name": "superpowers-test-driven-development",
-    "kind": "skill",
-    "source": "https://github.com/obra/superpowers",
-    "version": "5.1.0",
-    "license": "MIT",
-    "sha256": "dcde37bf9824dc2b4dcb9c2a715e1fad4024680a5ec1e8107f619fcd19f181c8",
-    "paths": [
-      "vendor/skills/superpowers/5.1.0/test-driven-development"
-    ],
-    "vendoredAt": "2026-05-24"
-  },
-  {
     "name": "vercel-react-best-practices",
     "kind": "skill",
     "source": "https://github.com/vercel-labs/agent-skills",
