@@ -1,5 +1,5 @@
 ---
-description: Plan and perform a safe refactor with codebase awareness
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Plan and perform a safe refactor with codebase awareness
 agent: alloy-orchestrator
 ---
 

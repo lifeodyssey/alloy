@@ -1,5 +1,5 @@
 ---
-description: Create a continuation summary for a new OpenCode session
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Create a continuation summary for a new OpenCode session
 ---
 
 # /handoff

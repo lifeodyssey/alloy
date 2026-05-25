@@ -2,9 +2,62 @@
   "id": "all",
   "description": "OpenCode Alloy all pack: every first-party and licensed third-party skill.",
   "target": "local",
-  "skills": ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "alloy-plan", "alloy-discuss", "alloy-execute", "alloy-verify", "alloy-using", "alloy-autopilot", "alloy-map-codebase", "alloy-qa", "git-master", "humanizer", "frontend-ui-ux", "playwright-cli", "vercel-react-best-practices", "kotlin-backend-jpa-entity-mapping", "postgres", "design-postgres-tables", "pgvector-semantic-search", "terraform-skill"],
-  "agents": ["alloy-orchestrator", "alloy-planner", "alloy-executor", "alloy-reviewer", "alloy-debugger", "alloy-verifier"],
-  "commands": ["handoff", "init-deep", "refactor", "start-work", "stop-continuation", "ultrawork", "ulw-loop"],
-  "mcp": ["context7", "grep_app", "exa"],
-  "modelRoles": ["planner", "executor", "reviewer", "debugger", "verifier"]
+  "skills": [
+    "alloy-tdd",
+    "alloy-brainstorm",
+    "alloy-debug",
+    "alloy-plan",
+    "alloy-discuss",
+    "alloy-execute",
+    "alloy-verify",
+    "alloy-using",
+    "alloy-autopilot",
+    "alloy-map-codebase",
+    "alloy-qa",
+    "git-master",
+    "humanizer",
+    "frontend-ui-ux",
+    "playwright-cli",
+    "vercel-react-best-practices",
+    "kotlin-backend-jpa-entity-mapping",
+    "postgres",
+    "design-postgres-tables",
+    "pgvector-semantic-search",
+    "terraform-skill"
+  ],
+  "agents": [
+    "alloy-orchestrator",
+    "alloy-planner",
+    "alloy-executor",
+    "alloy-reviewer",
+    "alloy-debugger",
+    "alloy-verifier"
+  ],
+  "commands": [
+    "autopilot",
+    "discuss",
+    "execute",
+    "handoff",
+    "init-deep",
+    "plan",
+    "refactor",
+    "spec",
+    "start-work",
+    "stop-continuation",
+    "ultrawork",
+    "ulw-loop",
+    "verify"
+  ],
+  "mcp": [
+    "context7",
+    "grep_app",
+    "exa"
+  ],
+  "modelRoles": [
+    "planner",
+    "executor",
+    "reviewer",
+    "debugger",
+    "verifier"
+  ]
 }
