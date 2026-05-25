@@ -11,6 +11,10 @@ export const DEFAULTS = JSON.parse(readFileSync(join(REPO_ROOT, "defaults.json")
 const OPENCODE_PLUGIN_VERSION = DEFAULTS.plugin["@opencode-ai/plugin"]
 const ZOD_VERSION = DEFAULTS.plugin.zod
 const MCP_CONFIGS = DEFAULTS.mcp
+const PACK_FIELDS = ["skills", "agents", "commands", "mcp", "modelRoles"]
+const SCOPE_KINDS = ["frontend", "backend", "infra"]
+let atomsCache
+let vendorSkillPathsCache
 
 const ROLE_TO_AGENT = {
   orchestrator: ["Orchestrator"],
@@ -224,19 +228,52 @@ function listFiles(base) {
   return files
 }
 
+export function loadAtoms() {
+  if (atomsCache) return atomsCache
+  const atomsPath = join(REPO_ROOT, "packs", "atoms.json")
+  if (!pathExists(atomsPath)) {
+    atomsCache = {}
+    return atomsCache
+  }
+  const data = readJson(atomsPath)
+  atomsCache = data.atoms ?? {}
+  return atomsCache
+}
+
 export function loadPack(id) {
   const normalized = PACK_ALIASES[id] ?? id
   const packPath = join(REPO_ROOT, "packs", `${normalized}.json`)
-  if (pathExists(packPath)) return readJson(packPath)
+  if (pathExists(packPath)) return expandPack(readJson(packPath))
   throw new Error(`Unknown pack: ${id}`)
 }
 
 export function mergePack(base, extra) {
+  const left = expandPack(base)
+  const right = expandPack(extra)
+  const merged = mergePackFields(left, right)
+  merged.id = left.id ?? right.id
+  merged.target = left.target ?? right.target
+  merged.description = `${left.description ?? ""} + ${right.id}`
+  return merged
+}
+
+function expandPack(pack, atoms = loadAtoms()) {
+  const { extends: atomNames = [], ...inlineFields } = pack
+  let expanded = { ...inlineFields }
+  for (const key of PACK_FIELDS) delete expanded[key]
+  for (const atomName of atomNames) {
+    const atom = atoms[atomName]
+    if (!atom) throw new Error(`Unknown atom "${atomName}" in pack ${pack.id ?? "<inline>"}`)
+    expanded = mergePackFields(expanded, atom)
+  }
+  return mergePackFields(expanded, inlineFields)
+}
+
+function mergePackFields(base, extra) {
   const merged = { ...base }
-  for (const key of ["skills", "agents", "commands", "mcp", "modelRoles"]) {
+  for (const key of PACK_FIELDS) {
     merged[key] = unique([...(base[key] ?? []), ...(extra[key] ?? [])])
   }
-  merged.description = `${base.description ?? ""} + ${extra.id}`
   return merged
 }
 
@@ -274,7 +311,7 @@ function projectConfigPath(projectDir, configPath) {
 }
 
 export function defaultProjectConfig(pack, modelName) {
-  const repoKind = pack.id === "backend" ? "backend" : pack.id === "infra" ? "infra" : "frontend"
+  const repoKind = defaultRepoKindForPack(pack)
   return {
     repoKind,
     packs: [pack.id],
@@ -283,6 +320,53 @@ export function defaultProjectConfig(pack, modelName) {
     workflow: { mode: "standard", tdd: "required_for_code", claims: true, review: "standard" },
     runtimes: { node: true, bun: true, npx: false },
   }
+}
+
+function defaultRepoKindForPack(pack) {
+  return pack.id === "backend" ? "backend" : pack.id === "infra" ? "infra" : "frontend"
+}
+
+function resolveSkillSources(skills, repoKind) {
+  return Object.fromEntries(
+    skills
+      .map((skill) => [skill, findSkillSourcePath(skill, repoKind)])
+      .filter(([, source]) => Boolean(source)),
+  )
+}
+
+function findSkillSourcePath(skill, repoKind) {
+  for (const candidate of skillSourceCandidates(skill, repoKind)) {
+    if (pathExists(join(candidate, "SKILL.md"))) return candidate
+  }
+  return null
+}
+
+function skillSourceCandidates(skill, repoKind) {
+  const scopeKinds = unique([repoKind, ...SCOPE_KINDS].filter(Boolean))
+  return [
+    join(REPO_ROOT, "universal", "skills", skill),
+    ...scopeKinds.map((kind) => join(REPO_ROOT, "scopes", kind, "skills", skill)),
+    join(REPO_ROOT, "skills", skill),
+    ...scopeKinds.map((kind) => join(REPO_ROOT, "vendor", "skills", "scopes", kind, skill)),
+    join(REPO_ROOT, "vendor", "skills", "external", skill),
+    ...vendorSkillPathsFor(skill),
+  ]
+}
+
+function vendorSkillPathsFor(skill) {
+  if (!vendorSkillPathsCache) vendorSkillPathsCache = loadVendorSkillPaths()
+  return vendorSkillPathsCache.get(skill) ?? []
+}
+
+function loadVendorSkillPaths() {
+  const lockPath = join(REPO_ROOT, "vendor.lock.json")
+  const paths = new Map()
+  if (!pathExists(lockPath)) return paths
+  for (const entry of readJson(lockPath)) {
+    if (entry.kind !== "skill" || !entry.name) continue
+    paths.set(entry.name, (entry.paths ?? []).map((rel) => join(REPO_ROOT, rel)))
+  }
+  return paths
 }
 
 export function detectMcpConflicts(project, packMcp) {
@@ -301,19 +385,22 @@ export function resolveConfig(options, projectDir = process.cwd()) {
   const { pack, project } = buildPack(options, projectDir)
   const modelName = options.models ?? project?.models ?? "github-copilot"
   const models = loadModelMap(modelName)
+  const resolvedProject = project ?? defaultProjectConfig(pack, modelName)
   const targetDir = options.target === "global" ? join(process.env.HOME, ".config", "opencode") : join(projectDir, ".opencode")
   const disabledMcp = new Set(project?.mcp?.disabled ?? [])
   const mcpNames = unique(project?.mcp?.baseline ?? pack.mcp ?? []).filter((name) => !disabledMcp.has(name))
   for (const warning of detectMcpConflicts(project, pack.mcp)) console.warn(`WARN: ${warning}`)
+  const skills = pack.skills ?? []
   const resolved = {
-    project: project ?? defaultProjectConfig(pack, modelName),
+    project: resolvedProject,
     pack,
     models,
     modelName,
     target: options.target,
     targetDir,
     agents: pack.agents ?? [],
-    skills: pack.skills ?? [],
+    skills,
+    skillSources: resolveSkillSources(skills, resolvedProject.repoKind),
     commands: pack.commands ?? [],
     mcp: Object.fromEntries(mcpNames.filter((name) => MCP_CONFIGS[name]).map((name) => [name, MCP_CONFIGS[name]])),
     runtimes: project?.runtimes ?? { node: true, bun: true, npx: false },
@@ -430,9 +517,9 @@ function installCoreFiles(resolved, dryRun = false) {
   for (const agent of resolved.agents) copyFile(join(REPO_ROOT, "agents", `${agent}.md`), join(resolved.targetDir, "agents", `${agent}.md`), dryRun)
   for (const command of resolved.commands) copyFile(join(REPO_ROOT, "commands", `${command}.md`), join(resolved.targetDir, "commands", `${command}.md`), dryRun)
   for (const skill of resolved.skills) {
-    const local = join(REPO_ROOT, "skills", skill)
-    const external = join(REPO_ROOT, "vendor", "skills", "external", skill)
-    copyDir(pathExists(local) ? local : external, join(resolved.targetDir, "skills", skill), dryRun)
+    const source = resolved.skillSources[skill]
+    if (!source) throw new Error(`Missing source directory for skill: ${skill}`)
+    copyDir(source, join(resolved.targetDir, "skills", skill), dryRun)
   }
   console.log("")
 }
@@ -485,7 +572,7 @@ function agentModelConfig(models) {
 }
 
 function auditTarget(resolved, projectDir) {
-  const failures = validatePackRefs(resolved.pack)
+  const failures = validatePackRefs(resolved.pack, resolved.project.repoKind)
   failures.push(...validateTargetFiles(resolved))
   const configPath = join(resolved.targetDir, "opencode.json")
   const config = pathExists(configPath) ? readJson(configPath) : {}
@@ -498,12 +585,12 @@ function auditTarget(resolved, projectDir) {
   return 0
 }
 
-function validatePackRefs(pack) {
+function validatePackRefs(pack, repoKind = defaultRepoKindForPack(pack)) {
   const failures = []
   for (const agent of pack.agents ?? []) if (!pathExists(join(REPO_ROOT, "agents", `${agent}.md`))) failures.push(`pack ${pack.id} references missing agent: ${agent}`)
   for (const command of pack.commands ?? []) if (!pathExists(join(REPO_ROOT, "commands", `${command}.md`))) failures.push(`pack ${pack.id} references missing command: ${command}`)
   for (const skill of pack.skills ?? []) {
-    if (!pathExists(join(REPO_ROOT, "skills", skill, "SKILL.md")) && !pathExists(join(REPO_ROOT, "vendor", "skills", "external", skill, "SKILL.md"))) {
+    if (!findSkillSourcePath(skill, repoKind)) {
       failures.push(`pack ${pack.id} references missing skill: ${skill}`)
     }
   }
@@ -525,7 +612,7 @@ function doctorCommand(options, projectDir = process.cwd()) {
   const resolved = resolveConfig(options, projectDir)
   const failures = []
   const warnings = []
-  failures.push(...validatePackRefs(resolved.pack))
+  failures.push(...validatePackRefs(resolved.pack, resolved.project.repoKind))
   if (resolved.runtimes.node && !which("node")) failures.push("Node.js is required for Alloy SDK")
   if (resolved.runtimes.bun && !which("bun")) failures.push("Bun is required for Alloy OpenCode plugin dependencies")
   if (!which("opencode")) warnings.push("opencode is not on PATH; install OpenCode before using generated configs")

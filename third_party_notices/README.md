@@ -7,6 +7,6 @@ The authoritative source, version, license, hash, and vendored paths for each sn
 Policy:
 
 - Do not edit files under `vendor/` directly.
-- Put Alloy changes in `agents/`, `commands/`, `skills/`, `packs/`, `models/`, or templates.
+- Put Alloy changes in `agents/`, `commands/`, `universal/skills/`, `scopes/<kind>/skills/`, `packs/`, `models/`, or templates.
 - Refresh vendored content only through a deliberate vendor refresh workflow.
 - If a dependency has unclear redistribution terms, do not add it to default packs until the license is verified.

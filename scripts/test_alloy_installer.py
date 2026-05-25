@@ -147,6 +147,65 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(resolved["modelName"], "openai")
         self.assertEqual(list(resolved["mcp"].keys()), ["context7"])
 
+    def test_extends_merges_atoms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            resolved = parse_json(run_alloy(Path(tmp), "resolve", "--pack", "frontend", "--json").stdout)
+
+        inline_equivalent_skills = [
+            "alloy-tdd",
+            "alloy-brainstorm",
+            "alloy-debug",
+            "alloy-plan",
+            "alloy-discuss",
+            "alloy-execute",
+            "alloy-verify",
+            "alloy-using",
+            "alloy-autopilot",
+            "alloy-map-codebase",
+            "alloy-qa",
+            "git-master",
+            "humanizer",
+            "frontend-ui-ux",
+            "playwright-cli",
+            "vercel-react-best-practices",
+        ]
+        inline_equivalent_agents = ["Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"]
+        inline_equivalent_commands = [
+            "autopilot",
+            "discuss",
+            "execute",
+            "plan",
+            "spec",
+            "verify",
+            "handoff",
+            "init-deep",
+            "refactor",
+            "start-work",
+            "stop-continuation",
+            "ultrawork",
+            "ulw-loop",
+        ]
+
+        self.assertEqual(resolved["pack"]["skills"], inline_equivalent_skills)
+        self.assertEqual(resolved["pack"]["agents"], inline_equivalent_agents)
+        self.assertEqual(resolved["pack"]["commands"], inline_equivalent_commands)
+        self.assertEqual(resolved["pack"]["mcp"], ["context7", "grep_app", "exa"])
+
+    def test_scope_skills_load_from_new_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            resolved = parse_json(run_alloy(cwd, "resolve", "--pack", "frontend", "--json").stdout)
+            run_setup(cwd, "--pack", "frontend", "--target", "local")
+
+            frontend_source = Path(resolved["skillSources"]["frontend-ui-ux"])
+            vercel_source = Path(resolved["skillSources"]["vercel-react-best-practices"])
+            self.assertTrue(frontend_source.as_posix().endswith("scopes/frontend/skills/frontend-ui-ux"))
+            self.assertTrue(vercel_source.as_posix().endswith("vendor/skills/scopes/frontend/vercel-react-best-practices"))
+            self.assertTrue((frontend_source / "SKILL.md").is_file())
+            self.assertTrue((vercel_source / "SKILL.md").is_file())
+            self.assertTrue((cwd / ".opencode" / "skills" / "frontend-ui-ux" / "SKILL.md").is_file())
+            self.assertTrue((cwd / ".opencode" / "skills" / "vercel-react-best-practices" / "SKILL.md").is_file())
+
     def test_removed_gsd_and_omo_paths_fail_fast(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

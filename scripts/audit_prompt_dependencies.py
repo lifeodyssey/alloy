@@ -22,6 +22,8 @@ SCAN_DIRS = (
     "agents",
     "commands",
     "skills",
+    "universal",
+    "scopes",
     "packs",
     "models",
 )

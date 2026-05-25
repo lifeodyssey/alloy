@@ -2,51 +2,14 @@
   "id": "frontend",
   "description": "OpenCode Alloy frontend pack: core plus UI and browser verification skills.",
   "target": "local",
-  "skills": [
-    "alloy-tdd",
-    "alloy-brainstorm",
-    "alloy-debug",
-    "git-master",
-    "humanizer",
-    "frontend-ui-ux",
-    "playwright-cli",
-    "vercel-react-best-practices"
-  ],
-  "agents": [
-    "Orchestrator",
-    "Explorer",
-    "Architect",
-    "Builder",
-    "Fixer",
-    "Reviewer",
-    "Tester"
-  ],
-  "commands": [
-    "autopilot",
-    "discuss",
-    "execute",
-    "handoff",
-    "init-deep",
-    "plan",
-    "refactor",
-    "spec",
-    "start-work",
-    "stop-continuation",
-    "ultrawork",
-    "ulw-loop",
-    "verify"
-  ],
-  "mcp": [
-    "context7",
-    "grep_app",
-    "exa"
-  ],
-  "modelRoles": [
-    "orchestrator",
-    "planner",
-    "executor",
-    "reviewer",
-    "verifier",
-    "explorer"
+  "extends": [
+    "alloy-core-skills",
+    "alloy-baseline-skills",
+    "alloy-v3-agents",
+    "alloy-v3-modelRoles",
+    "alloy-sdd-commands",
+    "alloy-legacy-commands",
+    "mcp-baseline",
+    "frontend-skills"
   ]
 }
