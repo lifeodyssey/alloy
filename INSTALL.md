@@ -61,7 +61,6 @@ Local is the default because Alloy is designed for multi-repo separation.
 bash setup.sh --pack frontend --target local
 bash setup.sh --pack backend --target local
 bash setup.sh --pack infra --target local
-bash setup.sh --pack workflow --target local
 bash setup.sh --pack all --target local
 ```
 

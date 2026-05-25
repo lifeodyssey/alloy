@@ -1,0 +1,11 @@
+{
+  "plugin": {
+    "@opencode-ai/plugin": "1.15.10",
+    "zod": "4.4.3"
+  },
+  "mcp": {
+    "context7": {"type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true},
+    "grep_app": {"type": "remote", "url": "https://mcp.grep.app", "enabled": true},
+    "exa": {"type": "remote", "url": "https://mcp.exa.ai/mcp", "enabled": true}
+  }
+}

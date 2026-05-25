@@ -1,13 +1,15 @@
 {
   "name": "opencode-alloy",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
     "alloy": "./bin/alloy.mjs"
   },
   "scripts": {
-    "test": "python3 -m unittest scripts.test_alloy_installer",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test scripts/test_resolver.mjs",
+    "test:e2e": "python3 -m unittest scripts.test_alloy_installer",
     "check": "node --check bin/alloy.mjs"
   },
   "engines": {

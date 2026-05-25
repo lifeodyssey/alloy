@@ -7,14 +7,10 @@ import { spawnSync } from "node:child_process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
-const OPENCODE_PLUGIN_VERSION = "1.15.10"
-const ZOD_VERSION = "4.4.3"
-
-const MCP_CONFIGS = {
-  context7: { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true },
-  grep_app: { type: "remote", url: "https://mcp.grep.app", enabled: true },
-  exa: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: true },
-}
+export const DEFAULTS = JSON.parse(readFileSync(join(REPO_ROOT, "defaults.json"), "utf8"))
+const OPENCODE_PLUGIN_VERSION = DEFAULTS.plugin["@opencode-ai/plugin"]
+const ZOD_VERSION = DEFAULTS.plugin.zod
+const MCP_CONFIGS = DEFAULTS.mcp
 
 const ROLE_TO_AGENT = {
   planner: ["alloy-orchestrator", "alloy-planner"],
@@ -63,7 +59,7 @@ Aliases:
 `
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const commands = new Set(["init", "resolve", "install", "doctor", "state", "gate", "sync", "help"])
   let command = commands.has(argv[0]) ? argv.shift() : "install"
   const positionals = []
@@ -226,14 +222,14 @@ function listFiles(base) {
   return files
 }
 
-function loadPack(id) {
+export function loadPack(id) {
   const normalized = PACK_ALIASES[id] ?? id
   const packPath = join(REPO_ROOT, "packs", `${normalized}.json`)
   if (pathExists(packPath)) return readJson(packPath)
   throw new Error(`Unknown pack: ${id}`)
 }
 
-function mergePack(base, extra) {
+export function mergePack(base, extra) {
   const merged = { ...base }
   for (const key of ["skills", "agents", "commands", "mcp", "modelRoles"]) {
     merged[key] = unique([...(base[key] ?? []), ...(extra[key] ?? [])])
@@ -275,7 +271,7 @@ function projectConfigPath(projectDir, configPath) {
   return resolve(projectDir, configPath)
 }
 
-function defaultProjectConfig(pack, modelName) {
+export function defaultProjectConfig(pack, modelName) {
   const repoKind = pack.id === "backend" ? "backend" : pack.id === "infra" ? "infra" : "frontend"
   return {
     repoKind,
@@ -287,13 +283,26 @@ function defaultProjectConfig(pack, modelName) {
   }
 }
 
-function resolveConfig(options, projectDir = process.cwd()) {
+export function detectMcpConflicts(project, packMcp) {
+  const baseline = new Set(unique(project?.mcp?.baseline ?? packMcp ?? []))
+  const warnings = []
+  for (const name of project?.mcp?.disabled ?? []) {
+    if (!baseline.has(name)) warnings.push(`mcp.disabled lists "${name}" but it is not in mcp.baseline or the pack's MCP list — no-op`)
+  }
+  for (const name of project?.mcp?.baseline ?? []) {
+    if (!MCP_CONFIGS[name]) warnings.push(`mcp.baseline lists "${name}" which is not declared in defaults.json — will be dropped`)
+  }
+  return warnings
+}
+
+export function resolveConfig(options, projectDir = process.cwd()) {
   const { pack, project } = buildPack(options, projectDir)
   const modelName = options.models ?? project?.models ?? "github-copilot"
   const models = loadModelMap(modelName)
   const targetDir = options.target === "global" ? join(process.env.HOME, ".config", "opencode") : join(projectDir, ".opencode")
   const disabledMcp = new Set(project?.mcp?.disabled ?? [])
   const mcpNames = unique(project?.mcp?.baseline ?? pack.mcp ?? []).filter((name) => !disabledMcp.has(name))
+  for (const warning of detectMcpConflicts(project, pack.mcp)) console.warn(`WARN: ${warning}`)
   const resolved = {
     project: project ?? defaultProjectConfig(pack, modelName),
     pack,
@@ -529,6 +538,7 @@ function doctorCommand(options, projectDir = process.cwd()) {
   if (pathExists(resolved.targetDir)) failures.push(...validateTargetFiles(resolved))
   else failures.push(`Target directory does not exist: ${resolved.targetDir}`)
   failures.push(...validateVendorLock())
+  failures.push(...validateRootOpencodeConfig())
   if (failures.length) {
     for (const failure of failures) console.error(`FAIL: ${failure}`)
     for (const warning of warnings) console.error(`WARN: ${warning}`)
@@ -547,6 +557,24 @@ function installedPackageVersion(targetDir, packageName) {
   } catch {
     return null
   }
+}
+
+function validateRootOpencodeConfig() {
+  const path = join(REPO_ROOT, "opencode.json")
+  if (!pathExists(path)) return []
+  const config = readJson(path)
+  const failures = []
+  for (const [name, expected] of Object.entries(MCP_CONFIGS)) {
+    const actual = config.mcp?.[name]
+    if (!actual) {
+      failures.push(`opencode.json missing MCP "${name}" (declared in defaults.json)`)
+      continue
+    }
+    for (const key of ["type", "url"]) {
+      if (actual[key] !== expected[key]) failures.push(`opencode.json MCP "${name}.${key}" is "${actual[key]}" but defaults.json says "${expected[key]}"`)
+    }
+  }
+  return failures
 }
 
 function validateVendorLock() {
@@ -762,4 +790,7 @@ async function main(argv) {
   }
 }
 
-process.exitCode = await main(process.argv.slice(2))
+const isEntryPoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+if (isEntryPoint) {
+  process.exitCode = await main(process.argv.slice(2))
+}

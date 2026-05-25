@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>OpenCode Alloy v3 — Full Architecture & Configuration</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --text-dim: #64748b;
+    --text-dim2: #94a3b8;
+    --universal: #3b82f6;
+    --frontend: #ec4899;
+    --backend: #10b981;
+    --infra: #f59e0b;
+    --optional: #94a3b8;
+    --layer-source: #dbeafe;
+    --layer-sdk: #d1fae5;
+    --layer-installed: #fef3c7;
+    --layer-runtime: #fce7f3;
+    --origin-alloy: #3b82f6;
+    --origin-gsd: #14b8a6;
+    --origin-mattpocock: #f97316;
+    --origin-gstack: #84cc16;
+    --origin-superpower: #a855f7;
+    --origin-vendor: #ef4444;
+    --new: #8b5cf6;
+    --confirmed: #10b981;
+    --proposed: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 24px 20px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 28px; margin-bottom: 6px; letter-spacing: -0.02em; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 24px; }
+  h2 {
+    font-size: 20px;
+    margin: 36px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 14px;
+    margin: 18px 0 10px;
+    color: var(--text-dim);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  h4 {
+    font-size: 13px;
+    margin: 12px 0 6px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .grid { display: grid; gap: 10px; }
+  .grid-2 { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .grid-5 { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--optional);
+  }
+  .card.universal::before { background: var(--universal); }
+  .card.frontend::before { background: var(--frontend); }
+  .card.backend::before { background: var(--backend); }
+  .card.infra::before { background: var(--infra); }
+  .card.optional::before { background: var(--optional); }
+  .card .name {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 3px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Mono', monospace;
+  }
+  .card .desc {
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .card .meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .badge.new { background: #ede9fe; color: var(--new); border-color: #ddd6fe; }
+  .badge.confirmed { background: #d1fae5; color: var(--confirmed); border-color: #a7f3d0; }
+  .badge.proposed { background: #fef3c7; color: var(--proposed); border-color: #fde68a; }
+  .badge.vendor { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .badge.alloy { background: #dbeafe; color: var(--origin-alloy); border-color: #bfdbfe; }
+  .badge.gsd { background: #ccfbf1; color: var(--origin-gsd); border-color: #99f6e4; }
+  .badge.mattpocock { background: #ffedd5; color: var(--origin-mattpocock); border-color: #fed7aa; }
+  .badge.gstack { background: #ecfccb; color: var(--origin-gstack); border-color: #d9f99d; }
+  .badge.superpower { background: #f3e8ff; color: var(--origin-superpower); border-color: #e9d5ff; }
+
+  /* Architecture layers */
+  .arch-layer {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 4px;
+    position: relative;
+  }
+  .arch-layer.source { background: var(--layer-source); }
+  .arch-layer.sdk { background: var(--layer-sdk); }
+  .arch-layer.installed { background: var(--layer-installed); }
+  .arch-layer.runtime { background: var(--layer-runtime); }
+  .arch-layer .layer-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .arch-layer .layer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+  }
+  .arch-item {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .arch-item code { font-family: 'SF Mono', Monaco, monospace; font-size: 10px; background: rgba(0,0,0,0.05); padding: 1px 4px; border-radius: 3px; }
+  .arch-arrow { text-align: center; font-size: 24px; color: var(--text-dim2); margin: 4px 0; line-height: 1; }
+
+  /* Responsibility split */
+  .resp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .resp-col {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .resp-col .col-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  .resp-col.sdk .col-title { color: var(--origin-gsd); border-bottom-color: var(--origin-gsd); }
+  .resp-col.plugin .col-title { color: var(--origin-mattpocock); border-bottom-color: var(--origin-mattpocock); }
+  .resp-col.agent .col-title { color: var(--origin-alloy); border-bottom-color: var(--origin-alloy); }
+  .resp-col .col-sub { font-size: 11px; color: var(--text-dim); margin-bottom: 12px; }
+  .resp-col ul { list-style: none; margin: 0; padding: 0; }
+  .resp-col li {
+    font-size: 12px;
+    padding: 4px 0;
+    color: var(--text);
+    padding-left: 16px;
+    position: relative;
+  }
+  .resp-col li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--confirmed);
+    font-weight: 700;
+  }
+
+  /* Phase pipeline */
+  .phase-pipeline {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .phase-box {
+    flex: 1;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+  }
+  .phase-box::after {
+    content: '→';
+    position: absolute;
+    right: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 20px;
+    z-index: 1;
+  }
+  .phase-box:last-child::after { display: none; }
+  .phase-box .phase-name { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+  .phase-box .phase-cmd { font-family: monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+  .phase-box .phase-specialists { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .phase-box .phase-specialists b { color: var(--universal); }
+  .phase-box .phase-output { font-size: 10px; color: var(--text-dim); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+  /* Agent cards */
+  .agent-card {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .agent-card .name { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+  .agent-card .role { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .agent-card .desc { font-size: 12px; color: var(--text); line-height: 1.4; }
+  .agent-card .phase-tag { font-size: 10px; color: var(--text-dim); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+
+  /* Origin sections */
+  .origin-section {
+    border-left: 3px solid var(--border);
+    padding-left: 12px;
+    margin: 16px 0;
+  }
+  .origin-section.alloy { border-left-color: var(--origin-alloy); }
+  .origin-section.gsd { border-left-color: var(--origin-gsd); }
+  .origin-section.mattpocock { border-left-color: var(--origin-mattpocock); }
+  .origin-section.gstack { border-left-color: var(--origin-gstack); }
+  .origin-section.superpower { border-left-color: var(--origin-superpower); }
+  .origin-section.vendor { border-left-color: var(--origin-vendor); }
+  .origin-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .origin-source {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .origin-source code { font-family: monospace; background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 2px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .stat {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat .num { font-size: 24px; font-weight: 700; color: var(--text); }
+  .stat .label { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .data-flow {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin: 16px 0;
+  }
+  .data-flow pre {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .note {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    margin: 12px 0;
+    color: #713f12;
+  }
+  .note.info {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e40af;
+  }
+  .note.warn {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #713f12;
+  }
+
+  .toc {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .toc h4 { margin-bottom: 6px; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .toc ul { list-style: none; display: flex; gap: 16px; flex-wrap: wrap; margin: 0; padding: 0; }
+  .toc a { color: var(--universal); text-decoration: none; font-size: 12px; }
+  .toc a:hover { text-decoration: underline; }
+
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px; }
+
+  @media (max-width: 1024px) {
+    .resp-grid { grid-template-columns: 1fr; }
+    .phase-pipeline { flex-direction: column; }
+    .phase-box::after { display: none; }
+    .stats { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>OpenCode Alloy v3 — Full Architecture & Configuration</h1>
+<p class="subtitle">完整架构、责任划分、所有 agent/skill/MCP 候选。基于 Q1-Q10 grill 决策 + Matt Pocock 全套 + gstack + 调研发现。<br>
+更新：2026-05-25 | 状态：Q10 候选清单确认中</p>
+
+<!-- TOC -->
+<div class="toc">
+  <h4>跳转</h4>
+  <ul>
+    <li><a href="#stats">概览</a></li>
+    <li><a href="#arch">4 层架构</a></li>
+    <li><a href="#resp">SDK / Plugin / Agent 责任</a></li>
+    <li><a href="#workflow">3 阶段流水线</a></li>
+    <li><a href="#agents">7 个 Agent</a></li>
+    <li><a href="#skills-origin">Skills 按来源</a></li>
+    <li><a href="#vendor">Vendor</a></li>
+    <li><a href="#mcps">MCPs</a></li>
+    <li><a href="#clis">CLIs</a></li>
+    <li><a href="#flow">数据流</a></li>
+    <li><a href="#status">决策状态</a></li>
+  </ul>
+</div>
+
+<!-- 统计概览 -->
+<h2 id="stats">📊 概览</h2>
+<div class="stats">
+  <div class="stat"><div class="num">7</div><div class="label">Agents</div></div>
+  <div class="stat"><div class="num">30+</div><div class="label">候选 Skills</div></div>
+  <div class="stat"><div class="num">8</div><div class="label">MCPs</div></div>
+  <div class="stat"><div class="num">3</div><div class="label">Phases</div></div>
+  <div class="stat"><div class="num">2-tier</div><div class="label">分发模型</div></div>
+  <div class="stat"><div class="num">11/19</div><div class="label">OpenCode hooks 用</div></div>
+</div>
+
+<!-- 4-layer architecture -->
+<h2 id="arch">🏛️ 4 层架构</h2>
+
+<div class="arch-layer source">
+  <div class="layer-title">Layer 1 — REPO（源代码，我们维护）</div>
+  <div class="layer-content">
+    <div class="arch-item"><b>packs/</b><br><code>atoms.json</code>, <code>core/frontend/backend/infra/all.json</code></div>
+    <div class="arch-item"><b>defaults.json</b><br>plugin 版本 pin + MCP baseline</div>
+    <div class="arch-item"><b>models/</b><br><code>github-copilot/openai/local.json</code></div>
+    <div class="arch-item"><b>skills/</b><br>第一方 alloy-* + 吸收来的</div>
+    <div class="arch-item"><b>vendor/skills/</b><br>第三方框架特定 skill</div>
+    <div class="arch-item"><b>agents/</b><br>7 个 markdown prompt</div>
+    <div class="arch-item"><b>commands/</b><br><code>/plan /execute /verify /add</code></div>
+    <div class="arch-item"><b>templates/opencode/</b><br><code>alloy-plugin.ts</code></div>
+    <div class="arch-item"><b>vendor.lock.json + patches/</b><br>vendor 跟踪 + 本地补丁</div>
+  </div>
+</div>
+
+<div class="arch-arrow">▼ <code style="font-size:11px;background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:3px;">bin/alloy.mjs</code></div>
+
+<div class="arch-layer sdk">
+  <div class="layer-title">Layer 2 — ALLOY SDK / CLI（构建/安装时）</div>
+  <div class="layer-content">
+    <div class="arch-item"><b>alloy install</b><br>幂等双层安装（global + repo）</div>
+    <div class="arch-item"><b>alloy add / remove</b><br>修改 manifest.visible</div>
+    <div class="arch-item"><b>alloy list / search</b><br>透传 <code>npx skills find</code></div>
+    <div class="arch-item"><b>alloy outdated</b><br>按 vendor 独立查更新</div>
+    <div class="arch-item"><b>alloy upgrade [name]</b><br>升级单个 vendor 或 self</div>
+    <div class="arch-item"><b>alloy state add-*</b><br>写 .alloy/state/*.jsonl</div>
+    <div class="arch-item"><b>alloy gate check</b><br>读 JSONL 评估 phase gate</div>
+    <div class="arch-item"><b>alloy doctor</b><br>state.json + manifest + drift 检测</div>
+    <div class="arch-item"><b>alloy sync</b><br>多 repo workspace 批量同步</div>
+  </div>
+</div>
+
+<div class="arch-arrow">▼</div>
+
+<div class="arch-layer installed">
+  <div class="layer-title">Layer 3 — INSTALLED（用户机器 + target repo 的文件）</div>
+  <div class="layer-content">
+    <div class="arch-item"><b>~/.config/opencode/</b> （global tier）<br>agents/skills/commands/plugins/opencode.json/package.json</div>
+    <div class="arch-item"><b>~/.config/alloy/state.json</b><br>机器级"全局装过没"标记</div>
+    <div class="arch-item"><b>&lt;target&gt;/.opencode/</b> （repo tier）<br>scope-specific 内容</div>
+    <div class="arch-item"><b>&lt;target&gt;/.opencode/alloy.manifest.json</b><br>repo 级 visible 列表 + 版本</div>
+    <div class="arch-item"><b>&lt;target&gt;/.alloy/specs/&lt;id&gt;/</b><br>task_plan.md + findings.md + progress.md + verification.md</div>
+    <div class="arch-item"><b>&lt;target&gt;/.alloy/state/</b><br>tasks/evidence/claims/runs JSONL</div>
+    <div class="arch-item"><b>&lt;target&gt;/.alloy/projections/</b><br>status.md / current-plan.md（生成）</div>
+    <div class="arch-item"><b>&lt;target&gt;/.alloy/local/</b><br>gitignored，个人 dev override</div>
+  </div>
+</div>
+
+<div class="arch-arrow">▼ <code style="font-size:11px;background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:3px;">opencode 启动</code></div>
+
+<div class="arch-layer runtime">
+  <div class="layer-title">Layer 4 — RUNTIME（OpenCode 进程内）</div>
+  <div class="layer-content">
+    <div class="arch-item"><b>OpenCode 主机</b><br>读 opencode.json / 连 MCP / 加载 plugin / 跑 agent loop</div>
+    <div class="arch-item"><b>Alloy Plugin（Bun）</b><br>11 个 hook + 4 个 tool（见右图）</div>
+    <div class="arch-item"><b>Agent（LLM）</b><br>Orchestrator 路由 → Specialists 工作</div>
+    <div class="arch-item"><b>MCP Servers</b><br>context7 / grep_app / exa + scope-specific</div>
+    <div class="arch-item"><b>Skills (markdown)</b><br>agent 按需读取</div>
+    <div class="arch-item"><b>Tools</b><br>built-in (bash/read/write/edit) + plugin (alloy_*) + MCP</div>
+  </div>
+</div>
+
+<!-- 责任划分 -->
+<h2 id="resp">🎯 SDK / Plugin / Agent 责任分工</h2>
+<div class="resp-grid">
+
+  <div class="resp-col sdk">
+    <div class="col-title">Alloy SDK（CLI）</div>
+    <div class="col-sub">外部进程，install/sync/state 管道</div>
+    <ul>
+      <li>解析 pack/atom 配置</li>
+      <li>从源仓库 copy 文件到 .opencode/ 和 ~/.config/opencode/</li>
+      <li>读写 manifest.json（visible/managed/explicit）</li>
+      <li>读写 state.json（version/installedAt）</li>
+      <li>读写 .alloy/state/*.jsonl（tasks/evidence/claims）</li>
+      <li>跑 gate check（读 JSONL 评估）</li>
+      <li>检测 prereq（colima、container-use 等）</li>
+      <li>透传 <code>npx skills find</code> 做发现</li>
+      <li>调 GitHub releases API 查 vendor 更新</li>
+      <li>multi-repo workspace sync</li>
+    </ul>
+  </div>
+
+  <div class="resp-col plugin">
+    <div class="col-title">Alloy Plugin（Bun）</div>
+    <div class="col-sub">运行时进程内，OpenCode hook 注入</div>
+    <ul>
+      <li><b>config hook</b>：boot 时注入 default_agent + MCP</li>
+      <li><b>chat.message</b>：注入 .alloy/projections/status.md</li>
+      <li><b>chat.system.transform</b>：当前 task + 未通过 gate 的提示</li>
+      <li><b>permission.ask</b>：观察 + 拦危险</li>
+      <li><b>tool.execute.before</b>：正则拦 rm -rf、.env</li>
+      <li><b>tool.execute.after</b>：每次工具调用写 evidence</li>
+      <li><b>experimental.chat.messages.transform</b>：按 manifest filter skill（核心）</li>
+      <li><b>experimental.session.compacting</b>：注入 ledger 摘要防 context 漂移</li>
+      <li><b>command.execute.before</b>：拦 /add /spec /plan slash command</li>
+      <li><b>event hook</b>：所有 event 写 runs.jsonl</li>
+      <li><b>4 个 tool</b>：alloy_evidence/claim/state/gate（agent 主动调）</li>
+    </ul>
+  </div>
+
+  <div class="resp-col agent">
+    <div class="col-title">Agent（LLM）</div>
+    <div class="col-sub">实际写代码 + 调工具的智能体</div>
+    <ul>
+      <li>Orchestrator 解析用户请求</li>
+      <li>判定 phase + 派 specialist</li>
+      <li>Specialist 读 SKILL.md 跟纪律</li>
+      <li>调 OpenCode built-in tool（read/write/edit/bash）</li>
+      <li>调 MCP tool（context7/postgres/figma 等）</li>
+      <li>调 plugin tool（alloy_evidence 记录证据）</li>
+      <li>遵守 phase artifact 约定（写 task_plan.md 等）</li>
+      <li>遇到 gate fail 回头修，不强推</li>
+      <li>跨 specialist 通过 git commit / branch handoff</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="note info">
+💡 <b>核心原则</b>：SDK 不在运行时跑，Plugin 不写持久状态，Agent 不直接改 manifest。三层各管一段，靠 JSONL/manifest 文件做 IPC。
+</div>
+
+<!-- 阶段流水线 -->
+<h2 id="workflow">🔄 3 阶段中央 Pipeline</h2>
+<div class="phase-pipeline">
+  <div class="phase-box">
+    <div class="phase-name">Plan 阶段</div>
+    <div class="phase-cmd">/plan</div>
+    <div class="phase-specialists">
+      派 <b>Explorer</b> 读现状<br>
+      派 <b>Architect</b> 写 plan.md
+    </div>
+    <div class="phase-output">输出: .alloy/specs/&lt;id&gt;/task_plan.md（强制 ## Spec + ## Plan 双章节）+ findings.md + progress.md</div>
+  </div>
+  <div class="phase-box">
+    <div class="phase-name">Execute 阶段</div>
+    <div class="phase-cmd">/execute</div>
+    <div class="phase-specialists">
+      派 <b>Builder</b>（新代码）<br>
+      或 <b>Fixer</b>（修 bug）<br>
+      派 <b>Tester</b>（TDD）
+    </div>
+    <div class="phase-output">输出: 代码 commit + evidence.jsonl 累积 + progress.md 勾选</div>
+  </div>
+  <div class="phase-box">
+    <div class="phase-name">Verify 阶段</div>
+    <div class="phase-cmd">/verify</div>
+    <div class="phase-specialists">
+      派 <b>Reviewer</b>（review）<br>
+      派 <b>Tester</b>（跑测试）
+    </div>
+    <div class="phase-output">输出: verification.md + 通过 gate 后 alloy_claim 标 done</div>
+  </div>
+</div>
+
+<!-- Agents -->
+<h2 id="agents">🤖 7 个 Agent</h2>
+
+<h3>1 个 Router</h3>
+<div class="grid grid-4">
+  <div class="agent-card">
+    <div class="name">Orchestrator</div>
+    <div class="role">Router</div>
+    <div class="desc">智能路由器。OMO 风格分级路由——判定任务类型 + 复杂度 + 模块 → 决定 phase + specialist + 模型。</div>
+    <div class="phase-tag">所有阶段都参与</div>
+  </div>
+</div>
+
+<h3>6 个 Specialist（任务类型专精）</h3>
+<div class="grid grid-3">
+  <div class="agent-card">
+    <div class="name">Explorer</div>
+    <div class="role">读懂代码</div>
+    <div class="desc">读现有代码、理解架构、追依赖。可作 sub-agent 委托读后返回摘要给主 agent，省 context。</div>
+    <div class="phase-tag">主要在 Plan 阶段</div>
+  </div>
+  <div class="agent-card">
+    <div class="name">Architect</div>
+    <div class="role">写 plan.md</div>
+    <div class="desc">设计决策、技术选型、写 ## Spec + ## Plan 双章节。源覆盖审计。原 alloy-planner 改名。</div>
+    <div class="phase-tag">主要在 Plan 阶段</div>
+  </div>
+  <div class="agent-card">
+    <div class="name">Builder</div>
+    <div class="role">新代码</div>
+    <div class="desc">新功能/组件实现。原 alloy-executor 拆出。配合 alloy-tdd 走红绿重构。</div>
+    <div class="phase-tag">Execute 阶段</div>
+  </div>
+  <div class="agent-card">
+    <div class="name">Fixer</div>
+    <div class="role">修 bug</div>
+    <div class="desc">先重现 → 最小化 → 根因 → 最小修复 → 回归测试。原 debugger + executor 修 bug 部分合并。</div>
+    <div class="phase-tag">Execute 阶段</div>
+  </div>
+  <div class="agent-card">
+    <div class="name">Reviewer</div>
+    <div class="role">评审代码</div>
+    <div class="desc">Code review + critique。Critical / Important / Minor 三档严重度。不能 patch 自己吐槽的代码。</div>
+    <div class="phase-tag">Verify 阶段</div>
+  </div>
+  <div class="agent-card">
+    <div class="name">Tester</div>
+    <div class="role">写跑测试</div>
+    <div class="desc">写 test + 跑 test + TDD discipline。原 verifier 改名 + 加强。</div>
+    <div class="phase-tag">Execute + Verify</div>
+  </div>
+</div>
+
+<!-- Skills by Origin -->
+<h2 id="skills-origin">📚 所有 Skill 按来源分</h2>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-alloy)"></div>Alloy 自己写</div>
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-gsd)"></div>吸收自 GSD</div>
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-superpower)"></div>吸收自 SuperPower</div>
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-mattpocock)"></div>Matt Pocock</div>
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-gstack)"></div>gstack</div>
+  <div class="legend-item"><div class="legend-dot" style="background: var(--origin-vendor)"></div>Vendor（独立版本）</div>
+  <div class="legend-item"><span class="badge new">NEW</span>新增</div>
+  <div class="legend-item"><span class="badge proposed">待定</span>等你确认</div>
+</div>
+
+<!-- Alloy 第一方核心 -->
+<div class="origin-section alloy">
+  <div class="origin-title">🔵 Alloy 第一方核心（SDD 主线 + bootstrap）</div>
+  <div class="origin-source">我们从零写的 + 吸收 SuperPower 设计后的纪律。MIT。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">alloy-using</div>
+      <div class="desc">Session bootstrap，教 1% 规则 + skill 发现机制</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-brainstorm</div>
+      <div class="desc">探索阶段 HARD-GATE + 2-3 方案对比</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">增强</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-plan</div>
+      <div class="desc">写 plan.md（含 Spec + Plan 双章节强制）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-execute</div>
+      <div class="desc">按 plan 执行，4 状态码 DONE/CONCERNS/NEEDS_CONTEXT/BLOCKED</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-tdd</div>
+      <div class="desc">RED→GREEN→REFACTOR + Iron Law + 反合理化表</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">增强</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-debug</div>
+      <div class="desc">4 相根因 + "3 次 fix 失败问架构"规则</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">增强</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-verify</div>
+      <div class="desc">完成前 gate，必须有新鲜 evidence 才能 claim done</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-review</div>
+      <div class="desc">请人/agent code review，三档严重度</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-respond-review</div>
+      <div class="desc">收到 review 后如何回应，禁过度同意</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-ship</div>
+      <div class="desc">Branch 收尾、merge、cleanup 决策</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">humanizer</div>
+      <div class="desc">中文/英文写作去 AI 味</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">保留</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">git-master</div>
+      <div class="desc">Git workflow（commit/rebase/history 三 reference）</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">重构</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">frontend-ui-ux</div>
+      <div class="desc">设计师视角写前端代码</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">保留</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">playwright-cli</div>
+      <div class="desc">浏览器自动化验证（先修死链）</div>
+      <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">保留</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">using-sandboxes</div>
+      <div class="desc">教 agent 用 Container Use 13 个 tool</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 从 GSD 吸收 -->
+<div class="origin-section gsd">
+  <div class="origin-title">🟢 吸收自 GSD（rokicool/gsd-opencode）</div>
+  <div class="origin-source">取其设计意图，不引入 GSD 本身。MIT。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">alloy-discuss</div>
+      <div class="desc">灰色地带提取访谈，D-01/D-02 决策点（大型 feature 锤 spec）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge gsd">GSD</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">alloy-map-codebase</div>
+      <div class="desc">陌生 brownfield 代码库地图 → .alloy/codebase/*.md</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge gsd">GSD</span><span class="badge proposed">待定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Matt Pocock -->
+<div class="origin-section mattpocock">
+  <div class="origin-title">🟠 Matt Pocock（mattpocock/skills，104k stars MIT）</div>
+  <div class="origin-source">TypeScript 教主，全套高质量。Vendor 进我们。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">grill-me</div>
+      <div class="desc">结构化追问 plan/design 决策（你早就要的）</div>
+      <div class="meta"><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">grill-with-docs</div>
+      <div class="desc">拿真实 CONTEXT.md / ADR 锤 plan，决策结晶后写回 docs</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">handoff</div>
+      <div class="desc">把对话压缩成 handoff doc 给另一个 agent</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">caveman</div>
+      <div class="desc">~75% token 压缩通信模式（保技术准确）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">zoom-out</div>
+      <div class="desc">陌生代码细节卡住时跳出来看全景</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card optional">
+      <div class="name">to-prd</div>
+      <div class="desc">对话上下文 → PRD → issue tracker（可选，团队用 issues 才装）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card optional">
+      <div class="name">to-issues</div>
+      <div class="desc">plan/PRD 拆 tracer-bullet 垂直切片 issues</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card optional">
+      <div class="name">improve-codebase-architecture</div>
+      <div class="desc">借 CONTEXT.md 找架构 deepening 机会</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge mattpocock">MattPocock</span><span class="badge proposed">待定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- gstack 系列 -->
+<div class="origin-section gstack">
+  <div class="origin-title">🟢 gstack 系列（~/.gstack/repos/gstack）</div>
+  <div class="origin-source">本地已装的多角度 review 全家桶。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">plan-eng-review</div>
+      <div class="desc">Eng manager 视角 review plan（架构 / 测试覆盖）</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">plan-ceo-review</div>
+      <div class="desc">CEO 视角 review plan（用户价值 / 风险）</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">autoplan</div>
+      <div class="desc">串起多个 plan review 自动跑</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">ship</div>
+      <div class="desc">Ship workflow: tests → bump → CHANGELOG → PR</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">cso</div>
+      <div class="desc">Chief Security Officer 安全审计（基建 + OWASP + STRIDE）</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">plan-design-review</div>
+      <div class="desc">设计师视角 review plan</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">design-shotgun</div>
+      <div class="desc">生成多个 design variants 对比</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card frontend">
+      <div class="name">qa</div>
+      <div class="desc">QA testing + iterative fix</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card optional">
+      <div class="name">retro</div>
+      <div class="desc">Weekly engineering retrospective（可选）</div>
+      <div class="meta"><span class="badge gstack">gstack</span><span class="badge proposed">待定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 其他独立 skill -->
+<div class="origin-section">
+  <div class="origin-title">⚪ 其他独立 plugin（已装在 Claude Code）</div>
+  <div class="origin-source">来自不同作者，质量高，按需取用。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">plannotator-review</div>
+      <div class="desc">交互式标注 plan markdown（人 + agent 协作）</div>
+      <div class="meta"><span class="badge">plannotator</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">plannotator-annotate</div>
+      <div class="desc">任何 markdown 文件交互标注</div>
+      <div class="meta"><span class="badge">plannotator</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">planning-with-files</div>
+      <div class="desc">Manus 风格三文件 plan（我们自己在用）</div>
+      <div class="meta"><span class="badge">OthmanAdi</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">clean-code</div>
+      <div class="desc">Master skill，懒加载 functions/naming/comments/error-handling 子 skill</div>
+      <div class="meta"><span class="badge">claude-official</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">refactoring</div>
+      <div class="desc">Master skill，懒加载多个 refactoring 子 skill</div>
+      <div class="meta"><span class="badge">claude-official</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">investigate</div>
+      <div class="desc">系统化 debug（root cause investigation）</div>
+      <div class="meta"><span class="badge">gstack/community</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">harden</div>
+      <div class="desc">让 interface production-ready：错误处理/i18n/边缘 case</div>
+      <div class="meta"><span class="badge">gstack/community</span><span class="badge proposed">待定</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 从 SuperPower 吸收 4 个补充 -->
+<div class="origin-section superpower">
+  <div class="origin-title">🟣 SuperPower 补充 4 个（obra/superpowers）</div>
+  <div class="origin-source">已 vendor 了 brainstorming/debug/tdd 三个 → 删；补这 4 个修复断链。MIT。</div>
+  <div class="grid grid-3">
+    <div class="card universal">
+      <div class="name">writing-plans</div>
+      <div class="desc">写 plan 的 SOP（被 brainstorming 引用）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge superpower">SuperPower</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">executing-plans</div>
+      <div class="desc">线性 inline 执行（不用 subagent 时用）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge superpower">SuperPower</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">using-git-worktrees</div>
+      <div class="desc">教 agent 用 git worktree 隔离并行工作</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge superpower">SuperPower</span><span class="badge proposed">待定</span></div>
+    </div>
+    <div class="card universal">
+      <div class="name">verification-before-completion</div>
+      <div class="desc">完成前必须有新鲜验证证据的 Iron Law（被 alloy-verify 吸收？）</div>
+      <div class="meta"><span class="badge new">NEW</span><span class="badge superpower">SuperPower</span><span class="badge proposed">待定</span></div>
+    </div>
+  </div>
+  <div class="note warn" style="margin-top:8px;">⚠️ <b>SuperPower 重复</b>：alloy-verify 已经吸收 verification-before-completion 的内容。要么直接 vendor 上游、要么删 alloy-verify 用上游。**二选一**。</div>
+</div>
+
+<!-- Vendor skills -->
+<h2 id="vendor">📦 Vendor Skills（独立版本号，Renovate 跟）</h2>
+
+<h3>Frontend Scope</h3>
+<div class="grid grid-2">
+  <div class="card frontend">
+    <div class="name">vercel-react-best-practices</div>
+    <div class="desc">React 70 条性能规则</div>
+    <div class="meta"><span class="badge vendor">vendor</span><span class="badge">MIT</span><span class="badge">已 vendor</span></div>
+  </div>
+  <div class="card frontend">
+    <div class="name">vercel-labs/next-best-practices</div>
+    <div class="desc">Next.js App Router 专属，Vercel 官方</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card frontend">
+    <div class="name">next-cache-components</div>
+    <div class="desc">Next 15+ caching 策略</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+</div>
+
+<h3>Backend Scope</h3>
+<div class="grid grid-2">
+  <div class="card backend">
+    <div class="name">kotlin-backend-jpa-entity-mapping</div>
+    <div class="desc">Kotlin + JPA entity 正确性陷阱</div>
+    <div class="meta"><span class="badge vendor">vendor</span><span class="badge">Apache-2.0</span><span class="badge">已 vendor</span></div>
+  </div>
+  <div class="card backend">
+    <div class="name">sivalabs/spring-boot</div>
+    <div class="desc">Spring Boot 4.x 全套：Maven/JPA/Modulith/ArchUnit/testing/Docker</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card backend">
+    <div class="name">postgres (router)</div>
+    <div class="desc">PG router，内含 design-postgres-tables + pgvector-semantic-search references</div>
+    <div class="meta"><span class="badge vendor">vendor</span><span class="badge">Apache-2.0</span><span class="badge">已 vendor</span></div>
+  </div>
+</div>
+
+<h3>Infra Scope</h3>
+<div class="grid grid-2">
+  <div class="card infra">
+    <div class="name">terraform-skill</div>
+    <div class="desc">Diagnose-first Terraform workflow + 7 references</div>
+    <div class="meta"><span class="badge vendor">vendor</span><span class="badge">Apache-2.0</span><span class="badge">已 vendor</span></div>
+  </div>
+  <div class="card infra">
+    <div class="name">hashicorp/terraform-style-guide</div>
+    <div class="desc">HashiCorp 官方 HCL 风格</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card infra">
+    <div class="name">aws-agent-skills/ecs</div>
+    <div class="desc">ECS task definition + Fargate/EC2 + logs</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card infra">
+    <div class="name">aws-agent-skills/lambda</div>
+    <div class="desc">Lambda + debugging + deployment</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card infra">
+    <div class="name">aws-agent-skills 子集</div>
+    <div class="desc">iam / secrets-manager / cloudwatch / rds / s3 cherry-pick</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge vendor">vendor</span><span class="badge proposed">待定</span></div>
+  </div>
+</div>
+
+<!-- MCPs -->
+<h2 id="mcps">🔌 MCPs (Model Context Protocol)</h2>
+
+<h3>Universal Tier（默认装）</h3>
+<div class="grid grid-3">
+  <div class="card universal">
+    <div class="name">context7</div>
+    <div class="desc">技术文档 MCP（React/Tailwind/framework 文档查询）</div>
+    <div class="meta"><span class="badge">保留</span></div>
+  </div>
+  <div class="card universal">
+    <div class="name">grep_app</div>
+    <div class="desc">公共代码搜索（GitHub）</div>
+    <div class="meta"><span class="badge">保留</span></div>
+  </div>
+  <div class="card universal">
+    <div class="name">exa</div>
+    <div class="desc">网页搜索</div>
+    <div class="meta"><span class="badge">保留</span></div>
+  </div>
+</div>
+
+<h3>Frontend Scope</h3>
+<div class="grid grid-2">
+  <div class="card frontend">
+    <div class="name">chrome-devtools-mcp</div>
+    <div class="desc">Google 官方 26 tool：DOM/network/performance/console/Lighthouse</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card frontend">
+    <div class="name">Figma MCP（官方）</div>
+    <div class="desc">Figma 自家维护，OAuth。读 design tokens / 导出组件</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge proposed">待定</span><span class="badge">你明确要的</span></div>
+  </div>
+</div>
+
+<h3>Backend Scope</h3>
+<div class="grid grid-2">
+  <div class="card backend">
+    <div class="name">crystaldba/postgres-mcp (Pro)</div>
+    <div class="desc">restricted mode 读 schema + EXPLAIN + index 建议</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge proposed">待定</span></div>
+  </div>
+</div>
+
+<h3>Infra Scope</h3>
+<div class="grid grid-2">
+  <div class="card infra">
+    <div class="name">hashicorp/terraform-mcp-server</div>
+    <div class="desc">HashiCorp 官方。Provider 文档 + module registry</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge proposed">待定</span></div>
+  </div>
+  <div class="card infra">
+    <div class="name">awslabs/mcp</div>
+    <div class="desc">AWS 官方。aws-api + cloudwatch + ecs + lambda + amplify</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge proposed">待定</span></div>
+  </div>
+</div>
+
+<h3>Optional</h3>
+<div class="grid grid-3">
+  <div class="card optional">
+    <div class="name">container-use (Dagger)</div>
+    <div class="desc">Sandbox via Dagger 容器。13 个 environment_* tool。需 colima/Docker</div>
+    <div class="meta"><span class="badge new">NEW</span><span class="badge">Apache-2.0</span><span class="badge">opt-in</span></div>
+  </div>
+</div>
+
+<!-- CLIs -->
+<h2 id="clis">⌨️ CLI 工具（README 推荐，Alloy 不打包）</h2>
+<div class="grid grid-4">
+  <div class="card optional"><div class="name">gh</div><div class="desc">GitHub CLI</div></div>
+  <div class="card optional"><div class="name">az devops</div><div class="desc">Azure DevOps CLI</div></div>
+  <div class="card optional"><div class="name">psql</div><div class="desc">Postgres CLI</div></div>
+  <div class="card optional"><div class="name">aws / aws-vault</div><div class="desc">AWS CLI + 凭证 keychain</div></div>
+  <div class="card optional"><div class="name">saml2aws</div><div class="desc">SAML 联邦登录 AWS</div></div>
+  <div class="card optional"><div class="name">terraform / terragrunt</div><div class="desc">IaC 主力</div></div>
+  <div class="card optional"><div class="name">tflint / tfsec / checkov</div><div class="desc">Terraform 静态分析</div></div>
+  <div class="card optional"><div class="name">colima</div><div class="desc">Container runtime（替代 Docker Desktop）</div></div>
+  <div class="card optional"><div class="name">npx skills find</div><div class="desc">外部 skill 发现（透传进 alloy search）</div></div>
+</div>
+
+<!-- 数据流 -->
+<h2 id="flow">🌊 关键数据流</h2>
+
+<div class="data-flow">
+  <h4>1. 用户首次 onboard</h4>
+<pre>$ curl -fsSL alloy/install.sh | bash
+  ├─→ 装 alloy CLI 二进制到 /usr/local/bin/alloy
+  ├─→ alloy install --target global
+  │   ├─→ 从公共 repo clone universal/ 内容
+  │   ├─→ 复制 agents/skills/commands 到 ~/.config/opencode/
+  │   ├─→ 写 ~/.config/opencode/plugins/alloy.ts
+  │   └─→ 写 ~/.config/alloy/state.json
+  └─→ shell completion 安装</pre>
+</div>
+
+<div class="data-flow">
+  <h4>2. 进入新 repo</h4>
+<pre>$ cd ~/code/my-nextjs-app
+$ alloy install
+  ├─→ 检测 .alloy/alloy.project.json 或自动推断 scope=frontend
+  ├─→ 从公共 repo 复制 scopes/frontend/ 到 .opencode/
+  ├─→ 写 .opencode/alloy.manifest.json (visible + managed 列表)
+  └─→ 写 .alloy/specs/ 空骨架</pre>
+</div>
+
+<div class="data-flow">
+  <h4>3. OpenCode 启动 + plugin 检测</h4>
+<pre>$ opencode
+  └─→ OpenCode 读 .opencode/opencode.json
+      └─→ 加载 Bun plugin: .opencode/plugins/alloy.ts
+          ├─→ config hook: 检查 state.json + manifest 是否最新
+          │   └─→ 不是 → 警告 "运行 alloy upgrade"
+          ├─→ 注册 11 个 hook
+          └─→ 注册 4 个 tool (alloy_evidence/claim/state/gate)</pre>
+</div>
+
+<div class="data-flow">
+  <h4>4. 用户跑 /plan 命令</h4>
+<pre>用户: /plan 加密码重置功能
+  ↓
+command.execute.before hook 拦截
+  ↓
+派 Orchestrator → 决定 phase=plan → 派 Explorer + Architect
+  ↓
+Explorer 读现有 auth 模块 (subagent task)
+  ↓
+Architect 写 .alloy/specs/&lt;uuid&gt;/task_plan.md
+  - 强制 ## Spec 章节
+  - 强制 ## Plan 章节
+  - alloy-plan skill 提供 SOP
+  ↓
+gate check: 文件存在 + 双章节 ok
+  ↓
+alloy_evidence 写一条 phase=plan complete 进 evidence.jsonl
+  ↓
+projections/status.md 更新</pre>
+</div>
+
+<div class="data-flow">
+  <h4>5. Vendor skill 升级流</h4>
+<pre>Vercel labs 发 v1.4.0
+  ↓ (Renovate 自动每周巡)
+Renovate 在我们公共 repo 开 PR
+  - vendor.lock.json: vercel-react-best-practices "1.3.0" → "1.4.0"
+  - PR description 含 release notes
+  ↓
+CI 跑 scripts/revendor.mjs
+  - 重抓 v1.4.0 内容
+  - 重算 sha256
+  - 应用 vendor/patches/ 下补丁（若有）
+  ↓
+我们 review + merge
+  ↓
+用户下次跑:
+  $ alloy outdated
+  Vendor skills:
+    vercel-react-best-practices: 1.3.0 → 1.4.0  ✓ available
+
+  $ alloy upgrade vercel-react-best-practices
+  ✓ 装上了，agent 立刻能用（manifest filter hook 实时生效）</pre>
+</div>
+
+<div class="data-flow">
+  <h4>6. /add 单 skill 流（零重启）</h4>
+<pre>用户在 OpenCode 里: /add vercel-react-best-practices
+  ↓
+command.execute.before hook 拦截
+  ↓
+plugin 通过 Bash tool 跑: alloy add vercel-react-best-practices
+  ↓
+manifest.visible 加入 vercel-react
+  ↓
+下条用户消息触发 chat.messages.transform hook
+  - 读最新 manifest
+  - 在 &lt;available_skills&gt; 块里露出 vercel-react
+  ↓
+Agent 这条消息开始能用 vercel-react skill
+  → 无需 /exit 重启 OpenCode</pre>
+</div>
+
+<!-- 决策状态 -->
+<h2 id="status">✅ 决策状态</h2>
+<div class="grid grid-2">
+  <div class="card" style="--bg: white; border-left: 3px solid var(--confirmed);">
+    <h4 style="color: var(--confirmed);">已确定（Q1-Q9 + Q10 部分）</h4>
+    <ul style="font-size: 12px; padding-left: 16px; margin-top: 6px;">
+      <li>Q1 目标 = 2+3+5</li>
+      <li>Q2 受众 = D（dogfood + OSS 双线）</li>
+      <li>Q3 OMO 式分级路由</li>
+      <li>Q4 B：中央 3 阶段 + 阶段内派 specialist</li>
+      <li>Q5 X：3 阶段 plan/execute/verify + Manus plan.md（含 ## Spec + ## Plan）</li>
+      <li>Q6 6 specialist + 1 router</li>
+      <li>Q7 文件 + JSONL 混合存储</li>
+      <li>Q8 2-tier 物理装 + manifest 可见性 filter</li>
+      <li>Q9 Container Use opt-in atom + using-sandboxes skill</li>
+      <li>Q10 部分：vendor 独立版本号（不跟 Alloy CLI 版本绑）</li>
+    </ul>
+  </div>
+  <div class="card" style="--bg: white; border-left: 3px solid var(--proposed);">
+    <h4 style="color: var(--proposed);">等你确认（Q10 剩余）</h4>
+    <ul style="font-size: 12px; padding-left: 16px; margin-top: 6px;">
+      <li>Matt Pocock 5 个核心：grill-me / grill-with-docs / handoff / caveman / zoom-out</li>
+      <li>Matt Pocock 可选 3 个：to-prd / to-issues / improve-codebase-architecture</li>
+      <li>gstack 5 个 universal：plan-eng/ceo-review / autoplan / ship / cso</li>
+      <li>gstack 3 个 frontend：plan-design-review / design-shotgun / qa</li>
+      <li>plannotator 2 个：review / annotate</li>
+      <li>planning-with-files</li>
+      <li>4 个泛用：clean-code / refactoring / investigate / harden</li>
+      <li>SuperPower 4 个补充 OR alloy-verify 覆盖</li>
+      <li>Vendor 5 个：next-best / sivalabs-spring / aws-skills 子集 / terraform-style</li>
+      <li>MCPs 5 个：terraform / awslabs / chrome-devtools / postgres / figma</li>
+      <li>默认 visible 名单（建议 11-14 个核心）</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note">
+  📝 <b>默认 visible 推荐</b>：新 repo 装完后，agent 实际看见的核心 skill ≈ 11-14 个。其它 20+ 装在磁盘等用户 <code>alloy add</code> 开启。这样 agent context 不爆炸 + 用户能按需扩展。
+</div>
+
+<footer>
+  <p><b>文件位置</b>：所有决策细节在 <code>docs/redesign/task_plan.md</code>；研究依据在 <code>docs/redesign/findings.md</code>；进度跟踪在 <code>docs/redesign/progress.md</code>。</p>
+  <p>这个 overview 覆盖到 Q10 候选清单全部。Q11 OSS 治理（license / versioning / contribution）待 Q10 收口后开始。</p>
+</footer>
+
+</body>
+</html>

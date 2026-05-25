@@ -36,7 +36,6 @@ Packs replace the old user-facing "profile" concept. `--profile` still works as 
 | `frontend` | UI/web repos | core plus frontend and browser verification skills |
 | `backend` | API/service/data repos | core plus Kotlin/JPA and Postgres skills |
 | `infra` | Terraform/OpenTofu/cloud repos | core plus infra skill |
-| `workflow` | stateful Alloy workflow | alias-style pack for repos that want to name the standard `.alloy` workflow explicitly |
 | `all` | local power-user repo | every first-party and licensed third-party skill |
 
 Examples:
@@ -44,7 +43,6 @@ Examples:
 ```bash
 bash setup.sh --pack frontend --target local --models github-copilot
 bash setup.sh --pack backend --target local --models openai
-bash setup.sh --pack workflow --target local --models github-copilot
 ```
 
 ## Operating Model
@@ -138,7 +136,6 @@ Pack mapping:
 - `frontend`: core plus `frontend-ui-ux`, `playwright-cli`, `vercel-react-best-practices`
 - `backend`: core plus `kotlin-backend-jpa-entity-mapping`, `postgres`, `design-postgres-tables`, `pgvector-semantic-search`
 - `infra`: core plus `terraform-skill`
-- `workflow`: core skills with the `.alloy` state/gate/evidence workflow
 - `all`: every first-party and vendored third-party skill
 
 ## Vendor Policy
@@ -156,7 +153,6 @@ GSD and OMO Slim are no longer vendored or installable through Alloy. Their usef
 
 ```bash
 bash setup.sh --dry-run --pack core --target local
-bash setup.sh --dry-run --pack workflow --target local
 bash setup.sh --doctor --pack core --target local
 npm test
 ```
