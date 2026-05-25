@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "no-skip-commit-hooks",
+      "command": "git",
+      "subcommand": "commit",
+      "block_args": ["--no-verify"],
+      "reason": "Skipping commit hooks bypasses pre-commit checks. Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-commit-hooks-short",
+      "command": "git",
+      "subcommand": "commit",
+      "block_args": ["-n"],
+      "reason": "-n skips commit hooks (same as --no-verify). Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-push-hooks",
+      "command": "git",
+      "subcommand": "push",
+      "block_args": ["--no-verify"],
+      "reason": "Skipping push hooks bypasses pre-push checks. Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-merge-hooks",
+      "command": "git",
+      "subcommand": "merge",
+      "block_args": ["--no-verify"],
+      "reason": "Skipping merge hooks bypasses pre-merge checks. Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-rebase-hooks",
+      "command": "git",
+      "subcommand": "rebase",
+      "block_args": ["--no-verify"],
+      "reason": "Skipping rebase hooks bypasses commit validation. Fix the hook issue or get team approval."
+    }
+  ]
+}

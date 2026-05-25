@@ -28,6 +28,18 @@ Optional CLI replacements:
 - `az devops` for Azure Boards
 - `psql` for Postgres
 
+### cc-safety-net dangerous-command guard
+
+Alloy delegates dangerous shell-command interception to `cc-safety-net` (`kenryu42/claude-code-safety-net`, MIT). The plugin requires Node.js 18+; Alloy itself still requires Node.js 20+.
+
+Verify the guard before launching OpenCode:
+
+```bash
+npx cc-safety-net doctor
+```
+
+The project overlay template lives at `templates/opencode/safety-net-rules-template.json` and carries Alloy's five `git --no-verify` / `git -n` guard rules.
+
 ## 2. Dry Run
 
 ```bash
