@@ -14,12 +14,13 @@
     "pgvector-semantic-search"
   ],
   "agents": [
-    "alloy-orchestrator",
-    "alloy-planner",
-    "alloy-executor",
-    "alloy-reviewer",
-    "alloy-debugger",
-    "alloy-verifier"
+    "Orchestrator",
+    "Explorer",
+    "Architect",
+    "Builder",
+    "Fixer",
+    "Reviewer",
+    "Tester"
   ],
   "commands": [
     "autopilot",
@@ -42,10 +43,11 @@
     "exa"
   ],
   "modelRoles": [
+    "orchestrator",
     "planner",
     "executor",
     "reviewer",
-    "debugger",
-    "verifier"
+    "verifier",
+    "explorer"
   ]
 }

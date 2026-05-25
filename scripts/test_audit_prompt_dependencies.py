@@ -10,9 +10,9 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "agents").mkdir()
-            (root / "agents" / "alloy-orchestrator.md").write_text(
+            (root / "agents" / "Orchestrator.md").write_text(
                 'Use .sisyphus/boulder.json, team-tdd, frontend-tdd, pg-aiguide, '
-                'github MCP, agent: Orchestrator, @plannotator/opencode, and "skills": ["*"].',
+                'github MCP, @Oracle, @plannotator/opencode, and "skills": ["*"].',
                 encoding="utf-8",
             )
 
@@ -25,7 +25,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         self.assertIn("frontend-tdd", names)
         self.assertIn("pg-aiguide", names)
         self.assertIn("github MCP", names)
-        self.assertIn("agent: Orchestrator", names)
+        self.assertIn("@Oracle", names)
         self.assertIn("@plannotator/opencode", names)
         self.assertIn('skills:["*"]', names)
 
@@ -34,8 +34,8 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             root = Path(tmp)
             opencode = root / "opencode"
             (root / "agents").mkdir()
-            (root / "agents" / "alloy-orchestrator.md").write_text(
-                "Invoke alloy-tdd, alloy-brainstorm, alloy-debug, @alloy-planner, "
+            (root / "agents" / "Orchestrator.md").write_text(
+                "Invoke alloy-tdd, alloy-brainstorm, alloy-debug, @Architect, "
                 "use context7, and use exa.",
                 encoding="utf-8",
             )
@@ -46,7 +46,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             (opencode / "skills" / "alloy-debug").mkdir(parents=True)
             (opencode / "skills" / "alloy-debug" / "SKILL.md").write_text("# Alloy Debug")
             (opencode / "agents").mkdir(parents=True)
-            (opencode / "agents" / "alloy-planner.md").write_text("# Alloy Planner")
+            (opencode / "agents" / "Architect.md").write_text("# Alloy Architect")
             (opencode / "opencode.json").write_text(
                 '{"mcp":{"context7":{"enabled":true},"exa":{"enabled":true}},"plugin":[]}',
                 encoding="utf-8",
@@ -59,7 +59,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         self.assertTrue(by_ref["alloy-tdd"].opencode_visible)
         self.assertTrue(by_ref["alloy-brainstorm"].opencode_visible)
         self.assertTrue(by_ref["alloy-debug"].opencode_visible)
-        self.assertTrue(by_ref["@alloy-planner"].opencode_visible)
+        self.assertTrue(by_ref["@Architect"].opencode_visible)
         self.assertTrue(by_ref["context7"].opencode_visible)
         self.assertTrue(by_ref["exa"].opencode_visible)
 

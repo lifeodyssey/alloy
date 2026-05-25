@@ -35,6 +35,11 @@ def skill_names(cwd: Path) -> set[str]:
     return {path.name for path in skills.iterdir() if path.is_dir()}
 
 
+def agent_names(cwd: Path) -> set[str]:
+    agents = cwd / ".opencode" / "agents"
+    return {path.stem for path in agents.iterdir() if path.suffix == ".md"}
+
+
 def parse_json(stdout: str) -> dict:
     return json.loads(stdout)
 
@@ -101,9 +106,13 @@ class AlloyInstallerTest(unittest.TestCase):
             project = json.loads((cwd / ".alloy" / "alloy.project.json").read_text())
             plugin_pkg = json.loads((cwd / ".opencode" / "package.json").read_text())
             config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
+            agents = agent_names(cwd)
             plugin_exists = (cwd / ".opencode" / "plugins" / "alloy.ts").exists()
 
         self.assertTrue(project["runtimes"]["bun"])
+        self.assertEqual(agents, {"Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"})
+        self.assertEqual(config["default_agent"], "Orchestrator")
+        self.assertEqual(set(config["agent"].keys()), {"Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"})
         self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
         self.assertEqual(plugin_pkg["dependencies"]["zod"], "4.4.3")
         self.assertTrue(plugin_exists)
@@ -230,7 +239,7 @@ class AlloyInstallerTest(unittest.TestCase):
             config = json.loads((root / "web" / ".opencode" / "opencode.json").read_text())
 
             self.assertIn("frontend-ui-ux", skill_names(root / "web"))
-            self.assertEqual(config["agent"]["alloy-planner"]["model"], "openai/gpt-5.4")
+            self.assertEqual(config["agent"]["Architect"]["model"], "openai/gpt-5.4")
 
     def test_audit_only_does_not_install(self):
         with tempfile.TemporaryDirectory() as tmp:
