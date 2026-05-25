@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto"
-import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, copyFileSync, chmodSync, appendFileSync, accessSync } from "node:fs"
+import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, copyFileSync, chmodSync, appendFileSync, accessSync, realpathSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
@@ -790,7 +790,20 @@ async function main(argv) {
   }
 }
 
-const isEntryPoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+function isCliEntryPoint(argvPath, modulePath) {
+  if (!argvPath) return false
+
+  const resolvedArgvPath = resolve(argvPath)
+  if (resolvedArgvPath === modulePath) return true
+
+  try {
+    return realpathSync(resolvedArgvPath) === realpathSync(modulePath)
+  } catch {
+    return resolvedArgvPath === modulePath
+  }
+}
+
+const isEntryPoint = isCliEntryPoint(process.argv[1], fileURLToPath(import.meta.url))
 if (isEntryPoint) {
   process.exitCode = await main(process.argv.slice(2))
 }
