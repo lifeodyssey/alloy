@@ -4,12 +4,14 @@
 // Subcommands:
 //   --check <name>        Show current pinned version vs latest GitHub release
 //   --check-all           Same for every entry in vendor.lock.json
-//   --apply <name>        Re-clone source repo at latest tag, copy skillPath to vendor/skills/external/<name>/,
-//                         recompute sha256, update vendor.lock.json, apply vendor/patches/<name>/*.patch if present
+//   --apply <name>        Re-clone source repo at latest tag, copy upstreamPath to paths[0],
+//                         apply vendor/patches/<name>/*.patch if present, recompute sha256,
+//                         update vendor.lock.json
+//   --regenerate-hashes   Recompute sha256 for existing vendored paths in vendor.lock.json
 //   --help                Print this usage
 
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, readdirSync, statSync } from "node:fs"
-import { join, basename, dirname, resolve } from "node:path"
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, readdirSync, statSync, mkdirSync, cpSync } from "node:fs"
+import { join, basename, dirname, resolve, relative, sep } from "node:path"
 import { tmpdir } from "node:os"
 import { execSync, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
@@ -25,11 +27,16 @@ function usage() {
   node scripts/revendor.mjs --check <name>
   node scripts/revendor.mjs --check-all
   node scripts/revendor.mjs --apply <name>
+  node scripts/revendor.mjs --regenerate-hashes
   node scripts/revendor.mjs --help
 
 Reads vendor.lock.json, optionally checks GitHub releases for newer versions,
-and re-vendors skill content from upstream (shallow clone, copy skillPath,
-recompute sha256, apply local patches under vendor/patches/<name>/).`)
+and re-vendors skill content from upstream (shallow clone, copy upstreamPath
+from the source repo to paths[0], apply local patches under vendor/patches/<name>/,
+then recompute sha256).
+
+--apply requires each upstream-backed vendor.lock.json entry to define
+upstreamPath, the path inside the upstream repo (for example "skills/brainstorming").`)
 }
 
 function readLock() {
@@ -54,11 +61,11 @@ async function fetchLatestRelease(owner, repo) {
   if (res.status === 404) {
     // Some repos use tags not releases — fall back
     const tagsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/tags`, { headers })
-    if (!tagsRes.ok) return null
+    if (!tagsRes.ok) throw new Error(`GitHub tags API returned ${tagsRes.status}`)
     const tags = await tagsRes.json()
     return tags[0]?.name ?? null
   }
-  if (!res.ok) return null
+  if (!res.ok) throw new Error(`GitHub releases API returned ${res.status}`)
   const json = await res.json()
   return json.tag_name ?? json.name ?? null
 }
@@ -79,9 +86,15 @@ async function check(name) {
     console.log(`${name}: non-GitHub source (${entry.source}), skipped`)
     return
   }
-  const latest = await fetchLatestRelease(repoInfo.owner, repoInfo.repo)
+  let latest
+  try {
+    latest = await fetchLatestRelease(repoInfo.owner, repoInfo.repo)
+  } catch (e) {
+    console.log(`${name}: could not query upstream (reason: ${e.message})`)
+    return
+  }
   if (!latest) {
-    console.log(`${name}: could not query upstream (rate limit or missing)`)
+    console.log(`${name}: could not query upstream (reason: no release or tag found)`)
     return
   }
   const current = entry.version
@@ -100,24 +113,67 @@ async function checkAll() {
 }
 
 function sha256OfDir(dir) {
+  return sha256OfFiles(collectFiles(dir))
+}
+
+function collectFiles(root, relPrefix = "") {
   const files = []
   function walk(p) {
     for (const e of readdirSync(p)) {
       const full = join(p, e)
       const st = statSync(full)
       if (st.isDirectory()) walk(full)
-      else files.push(full)
+      else {
+        const rel = relative(root, full).split(sep).join("/")
+        files.push({ full, rel: relPrefix ? `${relPrefix}/${rel}` : rel })
+      }
     }
   }
-  walk(dir)
-  files.sort()
+  const st = statSync(root)
+  if (st.isDirectory()) walk(root)
+  else files.push({ full: root, rel: relPrefix || basename(root) })
+  return files
+}
+
+function sha256OfFiles(files) {
+  files.sort((a, b) => a.rel.localeCompare(b.rel))
   const hash = createHash("sha256")
-  for (const f of files) {
-    const rel = f.slice(dir.length + 1)
+  for (const { full, rel } of files) {
     hash.update(rel + "\n")
-    hash.update(readFileSync(f))
+    hash.update(readFileSync(full))
   }
   return hash.digest("hex")
+}
+
+function sha256OfEntryPaths(paths) {
+  if (paths.length === 1) return sha256OfDir(join(REPO_ROOT, paths[0]))
+  return sha256OfFiles(paths.flatMap((p) => collectFiles(join(REPO_ROOT, p), p)))
+}
+
+function localPathsForEntry(entry) {
+  if (!Array.isArray(entry.paths) || entry.paths.length === 0) return []
+  return entry.paths
+}
+
+function requireSingleLocalPath(name, entry) {
+  const paths = localPathsForEntry(entry)
+  if (paths.length === 0) {
+    console.error(`${name}: missing paths in vendor.lock.json; add a local vendored path before running --apply`)
+    process.exit(2)
+  }
+  if (paths.length > 1) {
+    console.error(`${name}: --apply requires exactly one local path in vendor.lock.json, found ${paths.length}`)
+    process.exit(2)
+  }
+  return paths[0]
+}
+
+function requireUpstreamPath(name, entry) {
+  if (!entry.upstreamPath) {
+    console.error(`${name}: missing upstreamPath in vendor.lock.json. Add the path inside the upstream repo before running --apply (for example "skills/brainstorming").`)
+    process.exit(2)
+  }
+  return entry.upstreamPath
 }
 
 function applyPatches(name, targetDir) {
@@ -156,9 +212,17 @@ async function apply(name) {
     console.error(`${name}: non-GitHub source (${entry.source}); --apply only supports GitHub for now`)
     process.exit(2)
   }
-  const latest = await fetchLatestRelease(repoInfo.owner, repoInfo.repo)
+  const upstreamPath = requireUpstreamPath(name, entry)
+  const localPath = requireSingleLocalPath(name, entry)
+  let latest
+  try {
+    latest = await fetchLatestRelease(repoInfo.owner, repoInfo.repo)
+  } catch (e) {
+    console.error(`${name}: could not query upstream (reason: ${e.message})`)
+    process.exit(3)
+  }
   if (!latest) {
-    console.error(`${name}: could not query upstream`)
+    console.error(`${name}: could not query upstream (reason: no release or tag found)`)
     process.exit(3)
   }
   console.log(`Pulling ${repoInfo.owner}/${repoInfo.repo}@${latest}`)
@@ -168,18 +232,18 @@ async function apply(name) {
       `git clone --depth=1 --branch=${latest} --no-tags --filter=blob:limit=1m https://github.com/${repoInfo.owner}/${repoInfo.repo}.git ${tmpDir}/src`,
       { stdio: "inherit" }
     )
-    const skillPath = entry.skillPath ?? entry.paths?.[0]?.replace(/^vendor\/skills\/external\//, "") ?? entry.name
-    const srcDir = join(tmpDir, "src", skillPath)
+    const srcDir = join(tmpDir, "src", upstreamPath)
     if (!existsSync(srcDir)) {
-      console.error(`Source path not found in upstream: ${skillPath}`)
+      console.error(`Source path not found in upstream: ${upstreamPath}`)
       process.exit(3)
     }
-    const destDir = join(REPO_ROOT, "vendor", "skills", "external", entry.name)
+    const destDir = join(REPO_ROOT, localPath)
     if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true })
-    execSync(`cp -R ${srcDir} ${destDir}`)
-    const newHash = sha256OfDir(destDir)
+    mkdirSync(dirname(destDir), { recursive: true })
+    cpSync(srcDir, destDir, { recursive: true })
     const oldHash = entry.sha256
     const patches = applyPatches(name, destDir)
+    const newHash = sha256OfDir(destDir)
     entry.version = latest
     entry.sha256 = newHash
     entry.vendoredAt = new Date().toISOString().split("T")[0]
@@ -190,6 +254,37 @@ async function apply(name) {
   } finally {
     rmSync(tmpDir, { recursive: true, force: true })
   }
+}
+
+function regenerateHashes() {
+  const entries = readLock()
+  const updated = []
+  const unchanged = []
+  const skipped = []
+  for (const entry of entries) {
+    const paths = localPathsForEntry(entry)
+    if (paths.length === 0) {
+      skipped.push(`${entry.name}: no paths`)
+      continue
+    }
+    const missing = paths.filter((p) => !existsSync(join(REPO_ROOT, p)))
+    if (missing.length > 0) {
+      skipped.push(`${entry.name}: missing ${missing.join(", ")}`)
+      continue
+    }
+    const newHash = sha256OfEntryPaths(paths)
+    if (entry.sha256 === newHash) {
+      unchanged.push(entry.name)
+      continue
+    }
+    const oldHash = entry.sha256
+    entry.sha256 = newHash
+    updated.push(`${entry.name}: ${oldHash.slice(0, 8)} -> ${newHash.slice(0, 8)}`)
+  }
+  if (updated.length > 0) writeLock(entries)
+  console.log(`Regenerated vendor hashes: ${updated.length} updated, ${unchanged.length} unchanged, ${skipped.length} skipped`)
+  for (const line of updated) console.log(`  updated ${line}`)
+  for (const line of skipped) console.log(`  skipped ${line}`)
 }
 
 async function main() {
@@ -207,6 +302,8 @@ async function main() {
   } else if (cmd === "--apply") {
     if (!args[1]) { console.error("--apply requires a name"); process.exit(1) }
     await apply(args[1])
+  } else if (cmd === "--regenerate-hashes") {
+    regenerateHashes()
   } else {
     console.error(`Unknown command: ${cmd}`)
     usage()
