@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync, readdirSync, statSync, mkdirSync, cpSync } from "node:fs"
 import { join, basename, dirname, resolve, relative, sep } from "node:path"
 import { tmpdir } from "node:os"
-import { execSync, spawnSync } from "node:child_process"
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 
@@ -68,6 +68,12 @@ async function fetchLatestRelease(owner, repo) {
   if (!res.ok) throw new Error(`GitHub releases API returned ${res.status}`)
   const json = await res.json()
   return json.tag_name ?? json.name ?? null
+}
+
+function requireSafeTagName(name, tag) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(tag)) {
+    throw new Error(`${name}: unsafe upstream tag name from GitHub: ${tag}`)
+  }
 }
 
 async function check(name) {
@@ -225,13 +231,27 @@ async function apply(name) {
     console.error(`${name}: could not query upstream (reason: no release or tag found)`)
     process.exit(3)
   }
+  requireSafeTagName(name, latest)
   console.log(`Pulling ${repoInfo.owner}/${repoInfo.repo}@${latest}`)
   const tmpDir = mkdtempSync(join(tmpdir(), "alloy-revendor-"))
   try {
-    execSync(
-      `git clone --depth=1 --branch=${latest} --no-tags --filter=blob:limit=1m https://github.com/${repoInfo.owner}/${repoInfo.repo}.git ${tmpDir}/src`,
+    const cloneResult = spawnSync(
+      "git",
+      [
+        "clone",
+        "--depth=1",
+        "--branch",
+        latest,
+        "--no-tags",
+        "--filter=blob:limit=1m",
+        `https://github.com/${repoInfo.owner}/${repoInfo.repo}.git`,
+        join(tmpDir, "src"),
+      ],
       { stdio: "inherit" }
     )
+    if (cloneResult.status !== 0) {
+      throw new Error(`git clone failed: status=${cloneResult.status}`)
+    }
     const srcDir = join(tmpDir, "src", upstreamPath)
     if (!existsSync(srcDir)) {
       console.error(`Source path not found in upstream: ${upstreamPath}`)
