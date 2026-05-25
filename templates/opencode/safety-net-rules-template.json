@@ -35,6 +35,20 @@
       "subcommand": "rebase",
       "block_args": ["--no-verify"],
       "reason": "Skipping rebase hooks bypasses commit validation. Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-am-hooks",
+      "command": "git",
+      "subcommand": "am",
+      "block_args": ["--no-verify"],
+      "reason": "Skipping apply-mail hooks bypasses patch validation. Fix the hook issue or get team approval."
+    },
+    {
+      "name": "no-skip-am-hooks-short",
+      "command": "git",
+      "subcommand": "am",
+      "block_args": ["-n"],
+      "reason": "-n skips apply-mail hooks (same as --no-verify). Fix the hook issue or get team approval."
     }
   ]
 }

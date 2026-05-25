@@ -101,13 +101,19 @@ class AlloyInstallerTest(unittest.TestCase):
             project = json.loads((cwd / ".alloy" / "alloy.project.json").read_text())
             plugin_pkg = json.loads((cwd / ".opencode" / "package.json").read_text())
             config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
+            safety_net = json.loads((cwd / ".safety-net.json").read_text())
             plugin_exists = (cwd / ".opencode" / "plugins" / "alloy.ts").exists()
+            safety_net_exists = (cwd / ".safety-net.json").exists()
 
         self.assertTrue(project["runtimes"]["bun"])
         self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
         self.assertEqual(plugin_pkg["dependencies"]["zod"], "4.4.3")
         self.assertTrue(plugin_exists)
-        self.assertNotIn("plugin", config)
+        self.assertTrue(safety_net_exists)
+        self.assertIn("cc-safety-net", config["plugin"])
+        safety_net_rules = {(rule["subcommand"], tuple(rule["block_args"])) for rule in safety_net["rules"]}
+        self.assertIn(("am", ("--no-verify",)), safety_net_rules)
+        self.assertIn(("am", ("-n",)), safety_net_rules)
 
     def test_resolve_uses_project_config_when_pack_and_models_are_omitted(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -160,7 +166,7 @@ class AlloyInstallerTest(unittest.TestCase):
             run_setup(cwd, "--pack", "core", "--target", "local")
             config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
 
-        self.assertNotIn("plugin", config)
+        self.assertNotIn("oh-my-opencode-slim", config.get("plugin", []))
         self.assertFalse((cwd / ".opencode" / "oh-my-opencode-slim.json").exists())
         self.assertFalse((cwd / ".opencode" / "commands" / "gsd").exists())
         self.assertFalse((cwd / ".opencode" / "bin" / "gsd-sdk").exists())

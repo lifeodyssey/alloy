@@ -38,7 +38,7 @@ Verify the guard before launching OpenCode:
 npx cc-safety-net doctor
 ```
 
-The project overlay template lives at `templates/opencode/safety-net-rules-template.json` and carries Alloy's five `git --no-verify` / `git -n` guard rules.
+The project overlay template lives at `templates/opencode/safety-net-rules-template.json` and carries Alloy's seven `git --no-verify` / `git -n` guard rules.
 
 ## 2. Dry Run
 

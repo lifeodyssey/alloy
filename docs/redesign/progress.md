@@ -50,7 +50,7 @@
 
 ### Plugin 设计
 - 用 cc-safety-net (kenryu42) 替代自写危险命令拦截
-- 我们 5 条 no-verify 规则作为 .safety-net.json 项目级补充
+- 我们 7 条 no-verify 规则作为 .safety-net.json 项目级补充
 
 ### MCPs
 - context7, grep_app, exa, chrome-devtools, sequential-thinking
