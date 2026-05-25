@@ -48,13 +48,13 @@ pinned_at: 2026-05-25
 - **Scope:** Wire kenryu42/claude-code-safety-net as our dangerous-command guard, replacing inline `isDangerousCommand` regex
 - **Files changed:**
   - `opencode.json` (add `plugin: ["cc-safety-net"]`)
-  - `templates/opencode/safety-net-rules-template.json` (NEW, our 5 no-verify rules as project overlay)
+  - `templates/opencode/safety-net-rules-template.json` (NEW, our 7 no-verify rules as project overlay)
   - `INSTALL.md` (note Node 18+ prereq, `npx cc-safety-net doctor` step)
   - `templates/opencode/alloy-plugin.ts` (remove `isDangerousCommand` — cc-safety-net handles it)
   - `safety-net-rules.json` (deprecate / move to template location)
 - **AC:**
   - [ ] `cc-safety-net` listed in opencode.json plugins → manual verification via OpenCode launch
-  - [ ] `.safety-net.json` template ships our 5 no-verify rules → `cat templates/opencode/safety-net-rules-template.json`
+  - [ ] `.safety-net.json` template ships our 7 no-verify rules → `cat templates/opencode/safety-net-rules-template.json`
   - [ ] `isDangerousCommand` regex removed from alloy-plugin.ts
   - [ ] `npx cc-safety-net doctor` passes in installed target → manual test
 - **Dependencies:** None

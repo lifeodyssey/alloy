@@ -180,7 +180,7 @@ User explicitly decided **no AWS/Terraform/Postgres MCP** — skills over MCPs f
 |---|---|---|
 | Hooks used | 6 | 11+ |
 | New hooks | — | `config` (boot mutation), `experimental.chat.messages.transform` (per-agent skill filter — the killer feature), `experimental.chat.system.transform` (cleaner status injection), `experimental.session.compacting` (ledger summary survives compaction), `command.execute.before` (`/add /spec /plan` slash command interception) |
-| Dangerous command guard | inline `isDangerousCommand` regex (hardcoded) | **cc-safety-net** plugin (semantic AST, bash wrapper detection, 13 built-in rules + our 5 no-verify rules as `.safety-net.json` project overlay) |
+| Dangerous command guard | inline `isDangerousCommand` regex (hardcoded) | **cc-safety-net** plugin (semantic AST, bash wrapper detection, 13 built-in rules + our 7 no-verify rules as `.safety-net.json` project overlay) |
 | OMO Slim ports | none | `filter-available-skills` (manifest-driven visibility), `json-error-recovery`, `delegate-task-retry`, `phase-reminder` (TBW) |
 | Memory | none | `opencode-working-memory` plugin (zero-config, no API key) |
 | Tools | `alloy_evidence`, `alloy_claim`, `alloy_state`, `alloy_gate` | Same + new tools as needed |
@@ -236,7 +236,7 @@ User explicitly decided **no AWS/Terraform/Postgres MCP** — skills over MCPs f
 
 | | v2 | v3 |
 |---|---|---|
-| Dangerous command guard | inline regex (orphan `safety-net-rules.json` not wired) | cc-safety-net plugin + our 5 no-verify rules as `.safety-net.json` project overlay |
+| Dangerous command guard | inline regex (orphan `safety-net-rules.json` not wired) | cc-safety-net plugin + our 7 no-verify rules as `.safety-net.json` project overlay |
 | License | MIT (LICENSE file exists) | Confirmed MIT first-party; vendored each keeps upstream license |
 | Telemetry | none | Explicitly none (diverges intentionally from gstack) |
 | Attribution discipline | partial (some skills attributed) | Universal — every absorbed-concept skill has Attribution section + CREDITS.md is central reference |

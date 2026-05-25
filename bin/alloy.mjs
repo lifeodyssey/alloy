@@ -412,7 +412,7 @@ function installCommand(options, projectDir = process.cwd()) {
   ensureAlloyProject(projectDir, resolved, options.dryRun, options.config)
   backupManaged(resolved.targetDir, options.dryRun)
   installCoreFiles(resolved, options.dryRun)
-  installPlugin(resolved, options.dryRun)
+  installPlugin(resolved, projectDir, options.dryRun)
   writeOpenCodeConfig(resolved, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
   if (options.dryRun) {
@@ -437,7 +437,7 @@ function installCoreFiles(resolved, dryRun = false) {
   console.log("")
 }
 
-function installPlugin(resolved, dryRun = false) {
+function installPlugin(resolved, projectDir, dryRun = false) {
   console.log("Alloy OpenCode plugin")
   const pkg = {
     private: true,
@@ -449,6 +449,7 @@ function installPlugin(resolved, dryRun = false) {
   }
   writeJson(join(resolved.targetDir, "package.json"), pkg, dryRun)
   copyFile(join(REPO_ROOT, "templates", "opencode", "alloy-plugin.ts"), join(resolved.targetDir, "plugins", "alloy.ts"), dryRun)
+  copyFile(join(REPO_ROOT, "templates", "opencode", "safety-net-rules-template.json"), join(projectDir, ".safety-net.json"), dryRun)
   writeText(join(resolved.targetDir, "alloy-runtime", "README.md"), "OpenCode loads the Alloy plugin from ../plugins/alloy.ts. Bun installs package.json dependencies.\n", dryRun)
   console.log("")
 }
@@ -465,6 +466,7 @@ function writeOpenCodeConfig(resolved, dryRun = false) {
     "$schema": "https://opencode.ai/config.json",
     autoupdate: false,
     default_agent: "Orchestrator",
+    plugin: ["cc-safety-net"],
     agent: agentModelConfig(resolved.models),
     mcp: resolved.mcp,
   }

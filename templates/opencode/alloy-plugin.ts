@@ -58,14 +58,6 @@ function safeEvent(event: any) {
   }
 }
 
-function isDangerousCommand(command: string) {
-  return [
-    /\brm\s+-[^\n]*[rf][^\n]*\s+["']?(\/|~|\$HOME)(\/|\s|["']|$)/,
-    /\brm\s+-[^\n]*[rf][^\n]*\s+["']?~\/\*/,
-    /\b(cat|sed|awk|grep|tail|head|less|more)\b[^\n]*\s\.env(\s|$)/,
-  ].some((pattern) => pattern.test(command))
-}
-
 export const AlloyPlugin: Plugin = async ({ directory }) => {
   const projectDir = resolve(directory)
 
@@ -92,10 +84,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
 
     "tool.execute.before": async (input, output) => {
       const args = output.args ?? {}
-      const command = String(args.command ?? "")
-      if (input.tool === "bash" && isDangerousCommand(command)) {
-        throw new Error("Alloy blocked a dangerous shell command")
-      }
+      // Dangerous-command interception delegated to cc-safety-net plugin (kenryu42/claude-code-safety-net, MIT)
       if ((input.tool === "read" || input.tool === "edit") && String(args.filePath ?? "").includes(".env")) {
         throw new Error("Alloy blocks direct .env file access")
       }
