@@ -1,8 +1,46 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import { z } from "zod"
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
+
+interface AlloyManifest {
+  version: string
+  installedAt: string
+  pack: string
+  models: string
+  managed: { skills: string[]; agents: string[]; commands: string[]; mcp: string[] }
+  visible: { skills: string[]; agents: string[] }
+  explicit: { added: string[]; removed: string[] }
+}
+
+type TextPart = {
+  type: "text"
+  text: string
+}
+
+type JsonRecord = Record<string, unknown>
+
+const DEFAULT_AGENT = "Orchestrator"
+
+const DEFAULT_MCP: Record<string, JsonRecord> = {
+  context7: { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true },
+  grep_app: { type: "remote", url: "https://mcp.grep.app", enabled: true },
+  exa: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: true },
+  "chrome-devtools": { type: "remote", url: "https://mcp.chrome-devtools.dev/mcp", enabled: false },
+  "sequential-thinking": { type: "remote", url: "https://mcp.sequential-thinking.dev/mcp", enabled: false },
+  "figma-official": { type: "remote", url: "https://mcp.figma.com/mcp", enabled: false },
+  "a11y-mcp": { type: "remote", url: "https://mcp.a11y.dev/mcp", enabled: false },
+  "container-use": { type: "remote", url: "https://mcp.container-use.dev/mcp", enabled: false },
+}
+
+const COMMAND_SKILLS: Record<string, string> = {
+  spec: "alloy-plan",
+  plan: "alloy-plan",
+  execute: "alloy-execute",
+  verify: "alloy-verify",
+  autopilot: "alloy-autopilot",
+}
 
 const recordSchema = z.object({
   taskId: z.string().optional(),
@@ -22,6 +60,10 @@ function statePath(directory: string, name: string) {
   return join(alloyDir(directory), "state", `${name}.jsonl`)
 }
 
+function manifestPath(directory: string) {
+  return join(directory, ".opencode", "alloy.manifest.json")
+}
+
 function appendJsonl(directory: string, name: string, record: Record<string, unknown>) {
   const path = statePath(directory, name)
   mkdirSync(join(alloyDir(directory), "state"), { recursive: true })
@@ -32,6 +74,12 @@ function readStatus(directory: string) {
   const path = join(alloyDir(directory), "projections", "status.md")
   if (!existsSync(path)) return "Alloy status is not initialized."
   return readFileSync(path, "utf8").slice(0, 4000)
+}
+
+function readCurrentPlan(directory: string) {
+  const path = join(alloyDir(directory), "projections", "current-plan.md")
+  if (!existsSync(path)) return ""
+  return readFileSync(path, "utf8").slice(0, 2400).trim()
 }
 
 function activeTaskId(directory: string) {
@@ -58,19 +106,360 @@ function safeEvent(event: any) {
   }
 }
 
+async function readJsonFile<T>(path: string): Promise<T | undefined> {
+  if (!existsSync(path)) return undefined
+  try {
+    const bun = (globalThis as any).Bun
+    if (bun?.file) return (await bun.file(path).json()) as T
+    return JSON.parse(readFileSync(path, "utf8")) as T
+  } catch {
+    return undefined
+  }
+}
+
+async function readManifest(directory: string) {
+  return readJsonFile<AlloyManifest>(manifestPath(directory))
+}
+
+function homeDir() {
+  return process.env.HOME || process.env.USERPROFILE || ""
+}
+
+function globalStatePath() {
+  return join(homeDir(), ".config", "alloy", "state.json")
+}
+
+function vendorLockPath(directory: string) {
+  const path = join(directory, "vendor.lock.json")
+  if (existsSync(path)) return path
+  return undefined
+}
+
+function sha256File(path: string) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex")
+}
+
+async function detectMagicWarnings(directory: string) {
+  const warnings: string[] = []
+  const manifest = await readManifest(directory)
+  const vendorLock = vendorLockPath(directory)
+
+  if (manifest && vendorLock) {
+    const installedAt = Date.parse(manifest.installedAt)
+    const vendorMtime = statSync(vendorLock).mtimeMs
+    if (!Number.isNaN(installedAt) && vendorMtime > installedAt) {
+      warnings.push("Alloy warning: manifest stale, run alloy upgrade.")
+    }
+  }
+
+  const state = await readJsonFile<{ lastSyncedVendorLock?: string }>(globalStatePath())
+  if (state?.lastSyncedVendorLock && vendorLock) {
+    const currentSha = sha256File(vendorLock)
+    if (state.lastSyncedVendorLock !== currentSha) {
+      warnings.push("Alloy warning: global state stale, run alloy install --target global.")
+    }
+  }
+
+  return warnings
+}
+
+function injectConfigDefaults(config: any) {
+  config.default_agent ||= DEFAULT_AGENT
+  config.mcp ||= {}
+  for (const [name, value] of Object.entries(DEFAULT_MCP)) {
+    config.mcp[name] ||= { ...value }
+  }
+}
+
+function textPart(text: string): TextPart {
+  return { type: "text", text }
+}
+
+function messageText(message: any) {
+  if (!message) return ""
+  if (typeof message === "string") return message
+  if (typeof message.content === "string") return message.content
+  if (typeof message.text === "string") return message.text
+  if (Array.isArray(message.parts)) {
+    return message.parts.map((part: any) => part?.text ?? part?.content ?? "").join("\n")
+  }
+  return ""
+}
+
+function maybeDelegateTaskRetry(input: any, output: { parts: any[] }) {
+  const text = `${messageText(input?.message)}\n${messageText(output?.message)}`.toLowerCase()
+  if (!text.includes("delegate")) return
+  if (!/(retry|again|failed|failure|timeout|timed out|stuck|exhausted|twice|second attempt)/.test(text)) return
+  output.parts.push(
+    textPart(
+      [
+        "## Alloy Delegate Fallback",
+        "The delegated task appears to be in a retry loop. Fall back to a smaller local task, capture the blocker in evidence, or ask for a narrower handoff before retrying delegation.",
+      ].join("\n"),
+    ),
+  )
+}
+
+function maybePhaseReminder(directory: string, output: { parts: any[] }, count: number) {
+  if (count % 3 !== 1) return
+  const currentPlan = readCurrentPlan(directory)
+  if (!currentPlan) return
+  output.parts.push(textPart(`## Alloy Phase Reminder\n${currentPlan}`))
+}
+
+function stripJsonFence(text: string) {
+  const trimmed = text.trim()
+  const match = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i)
+  return match ? match[1].trim() : trimmed
+}
+
+function balancedJsonCandidate(text: string) {
+  let candidate = stripJsonFence(text)
+  const firstObject = candidate.search(/[\[{]/)
+  if (firstObject > 0) candidate = candidate.slice(firstObject)
+  candidate = candidate.replace(/,\s*([}\]])/g, "$1").trim()
+
+  const stack: string[] = []
+  let inString = false
+  let escaped = false
+  for (const char of candidate) {
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (char === "\\") {
+      escaped = true
+      continue
+    }
+    if (char === "\"") {
+      inString = !inString
+      continue
+    }
+    if (inString) continue
+    if (char === "{") stack.push("}")
+    if (char === "[") stack.push("]")
+    if ((char === "}" || char === "]") && stack.at(-1) === char) stack.pop()
+  }
+  if (inString) candidate += "\""
+  return candidate + stack.reverse().join("")
+}
+
+function recoverMalformedJson(text: string) {
+  if (!text.trim()) return undefined
+  try {
+    JSON.parse(text)
+    return undefined
+  } catch {
+    // Continue into repair.
+  }
+
+  const candidate = balancedJsonCandidate(text)
+  try {
+    JSON.parse(candidate)
+    return candidate
+  } catch {
+    return undefined
+  }
+}
+
+function maybeRecoverToolJson(output: any) {
+  if (typeof output?.output !== "string") return
+  const repaired = recoverMalformedJson(output.output)
+  if (repaired) {
+    output.output = repaired
+    output.metadata ||= {}
+    output.metadata.alloyJsonRecovered = true
+  }
+}
+
+function parseJsonlLine(line: string) {
+  try {
+    return JSON.parse(line)
+  } catch {
+    return undefined
+  }
+}
+
+function readJsonl(directory: string, name: string, limit = 5) {
+  const path = statePath(directory, name)
+  if (!existsSync(path)) return []
+  return readFileSync(path, "utf8")
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(parseJsonlLine)
+    .filter(Boolean)
+    .slice(-limit)
+}
+
+function summarizeRecord(record: any) {
+  const id = record.id ? `[${record.id}] ` : ""
+  const status = record.status ? ` (${record.status})` : ""
+  const summary = record.title ?? record.summary ?? record.text ?? record.kind ?? "record"
+  return `- ${id}${summary}${status}`
+}
+
+function ledgerSummary(directory: string) {
+  const sections: string[] = []
+  const currentPlan = readCurrentPlan(directory)
+  if (currentPlan) sections.push(`### Current Plan\n${currentPlan}`)
+
+  const activeTasks = readJsonl(directory, "tasks", 8).filter((task: any) => !["closed", "done"].includes(task.status))
+  if (activeTasks.length) sections.push(`### Active Tasks\n${activeTasks.map(summarizeRecord).join("\n")}`)
+
+  const evidence = readJsonl(directory, "evidence", 8)
+  if (evidence.length) sections.push(`### Recent Evidence\n${evidence.map(summarizeRecord).join("\n")}`)
+
+  const claims = readJsonl(directory, "claims", 8)
+  if (claims.length) sections.push(`### Recent Claims\n${claims.map(summarizeRecord).join("\n")}`)
+
+  return sections.length ? `## Alloy Ledger Summary\n${sections.join("\n\n")}` : ""
+}
+
+function normalizeCommand(command: string) {
+  return command.trim().replace(/^\//, "").toLowerCase()
+}
+
+function shellQuote(value: string) {
+  if (/^[A-Za-z0-9_./:@+-]+$/.test(value)) return value
+  return `'${value.replace(/'/g, "'\\''")}'`
+}
+
+function routeCommand(input: { command: string; arguments: string }, output: { parts: any[] }) {
+  const command = normalizeCommand(input.command)
+  const args = input.arguments.trim()
+  if (command === "add") {
+    const alloyCommand = ["alloy", "add", ...args.split(/\s+/).filter(Boolean).map(shellQuote)].join(" ")
+    output.parts.push(
+      textPart(
+        [
+          "## Alloy Command Intercept",
+          "Run this through the Bash tool, then continue with the refreshed manifest on the next message:",
+          "",
+          "```bash",
+          alloyCommand,
+          "```",
+        ].join("\n"),
+      ),
+    )
+    return
+  }
+
+  const skill = COMMAND_SKILLS[command]
+  if (!skill) return
+  output.parts.push(
+    textPart(
+      [
+        "## Alloy Command Intercept",
+        `Route /${command} through the ${skill} skill and record phase evidence before closing the task.`,
+        args ? `Request: ${args}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    ),
+  )
+}
+
+function skillNameFromLine(line: string) {
+  const trimmed = line.trim()
+  const nameAttr = trimmed.match(/\bname=["']([^"']+)["']/i)
+  if (nameAttr) return nameAttr[1]
+  const bullet = trimmed.match(/^[-*]\s*`?([A-Za-z0-9_.-]+)`?(?:\s*[:(-]|$)/)
+  if (bullet) return bullet[1]
+  const heading = trimmed.match(/^#+\s*`?([A-Za-z0-9_.-]+)`?(?:\s*[:(-]|$)/)
+  if (heading) return heading[1]
+  const keyed = trimmed.match(/^`?([A-Za-z0-9_.-]+)`?\s*:/)
+  if (keyed) return keyed[1]
+  return undefined
+}
+
+function shouldKeepSkillLine(line: string, visibleSkills: Set<string>, managedSkills: Set<string>) {
+  const name = skillNameFromLine(line)
+  if (!name) return true
+  if (visibleSkills.has(name)) return true
+  if (managedSkills.has(name)) return false
+  return true
+}
+
+function filterAvailableSkillsBlock(text: string, manifest: AlloyManifest, agent?: string) {
+  const visibleAgents = new Set(manifest.visible?.agents ?? [])
+  const agentCanSeeSkills = !agent || visibleAgents.size === 0 || visibleAgents.has(agent)
+  const visibleSkills = new Set(agentCanSeeSkills ? manifest.visible?.skills ?? [] : [])
+  const managedSkills = new Set(manifest.managed?.skills ?? [])
+  if (managedSkills.size === 0) return text
+
+  return text.replace(/<available_skills>([\s\S]*?)<\/available_skills>/gi, (_match, body: string) => {
+    const lines = body.split(/\r?\n/)
+    const filtered = lines.filter((line) => shouldKeepSkillLine(line, visibleSkills, managedSkills))
+    return `<available_skills>${filtered.join("\n")}</available_skills>`
+  })
+}
+
+function mutateTextParts(target: any, transform: (text: string) => string) {
+  if (typeof target?.text === "string") target.text = transform(target.text)
+  if (typeof target?.content === "string") target.content = transform(target.content)
+  if (!Array.isArray(target?.parts)) return
+  for (const part of target.parts) {
+    if (part?.type === "text" && typeof part.text === "string") part.text = transform(part.text)
+  }
+}
+
+async function filterAvailableSkills(directory: string, input: any, output: { messages: any[] }) {
+  const manifest = await readManifest(directory)
+  if (!manifest) return
+  for (const message of output.messages ?? []) {
+    mutateTextParts(message, (text) => filterAvailableSkillsBlock(text, manifest, input?.agent))
+  }
+}
+
+function rewriteToolDefinition(input: { toolID: string }, output: { description: string }) {
+  const toolID = input.toolID.toLowerCase()
+  if (!["bash", "write", "edit"].includes(toolID)) return
+  const hint =
+    toolID === "bash"
+      ? " Alloy gate: record meaningful commands as evidence and avoid bypassing project safety gates."
+      : " Alloy gate: update evidence/claims for task-relevant file changes and respect manifest-managed files."
+  if (!output.description.includes("Alloy gate")) output.description = `${output.description}${hint}`
+}
+
 export const AlloyPlugin: Plugin = async ({ directory }) => {
   const projectDir = resolve(directory)
+  let bootWarnings: string[] = []
+  let bootWarningsChecked = false
+  let bootWarningsEmitted = false
+  let phaseReminderCount = 0
+
+  async function ensureBootWarnings() {
+    if (bootWarningsChecked) return
+    bootWarnings = await detectMagicWarnings(projectDir)
+    bootWarningsChecked = true
+  }
 
   return {
+    config: async (config) => {
+      injectConfigDefaults(config)
+      bootWarnings = await detectMagicWarnings(projectDir)
+      bootWarningsChecked = true
+      bootWarningsEmitted = false
+    },
+
     "shell.env": async (_input, output) => {
       output.env.ALLOY_PROJECT_DIR = projectDir
       output.env.ALLOY_RUN_ID ||= randomUUID()
       output.env.ALLOY_TASK_ID ||= ""
     },
 
-    "chat.message": async (_input, output) => {
+    "chat.message": async (input, output) => {
+      await ensureBootWarnings()
+      if (bootWarnings.length && !bootWarningsEmitted) {
+        output.parts.push(textPart(`## Alloy Startup Warnings\n${bootWarnings.map((warning) => `- ${warning}`).join("\n")}`))
+        bootWarningsEmitted = true
+      }
       const context = `\n\n## Alloy Workflow Status\n${readStatus(projectDir)}`
       output.parts.push({ type: "text", text: context } as any)
+      maybeDelegateTaskRetry({ ...input, message: output.message }, output)
+      phaseReminderCount += 1
+      maybePhaseReminder(projectDir, output, phaseReminderCount)
     },
 
     "permission.ask": async (input) => {
@@ -91,6 +480,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     },
 
     "tool.execute.after": async (input, output) => {
+      maybeRecoverToolJson(output)
       appendJsonl(projectDir, "evidence", {
         id: randomUUID(),
         taskId: activeTaskId(projectDir),
@@ -111,6 +501,27 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
         payload: safeEvent(event),
         createdAt: new Date().toISOString(),
       })
+    },
+
+    "experimental.chat.messages.transform": async (input, output) => {
+      await filterAvailableSkills(projectDir, input, output)
+    },
+
+    "experimental.chat.system.transform": async (_input, output) => {
+      output.system.push(`## Alloy Workflow Status\n${readStatus(projectDir)}`)
+    },
+
+    "experimental.session.compacting": async (_input, output) => {
+      const summary = ledgerSummary(projectDir)
+      if (summary) output.context.push(summary)
+    },
+
+    "command.execute.before": async (input, output) => {
+      routeCommand(input, output)
+    },
+
+    "tool.definition": async (input, output) => {
+      rewriteToolDefinition(input, output)
     },
 
     tool: {
