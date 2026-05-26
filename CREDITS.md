@@ -126,6 +126,8 @@ Files copied verbatim, license preserved, recorded in `vendor.lock.json` with sh
 | hashicorp/terraform-style-guide | hashicorp | MPL-2.0 | github-releases |
 | aws-agent-skills/ecs+lambda+iam+secrets+cloudwatch+rds+s3 | itsmostafa/aws-agent-skills | MIT | github-releases |
 
+ralph-loop — MIT, anthropics/claude-plugins-official, vendored at vendor/skills/external/ralph-loop/
+
 ### Skill sub-references (vendored within first-party skills)
 
 | Skill | Reference files | Source | License |
@@ -141,7 +143,6 @@ Files copied verbatim, license preserved, recorded in `vendor.lock.json` with sh
 | cc-safety-net | dangerous-command guard | kenryu42/claude-code-safety-net | MIT |
 | container-use | sandbox runtime | dagger/container-use | Apache-2.0 |
 | opencode-working-memory | cross-session memory | sdwolf4103/opencode-working-memory | MIT |
-| ralph-loop | bounded retry loop + user-facing recurring work | anthropics/claude-plugins-official/ralph-loop | MIT |
 
 ### MCP servers (referenced, not vendored)
 
