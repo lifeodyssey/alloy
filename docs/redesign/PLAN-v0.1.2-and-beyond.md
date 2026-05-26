@@ -1,540 +1,899 @@
-# Alloy 完整 Plan — v0.1.2 to v0.3+
+# Plan: Alloy v0.1.2 — concrete code changes (not roadmap)
 
-> 写于 2026-05-26 evening session  
-> 收敛今天 grill-me 讨论所有结论  
-> Status: **DRAFT, awaiting plannotator review**
-
----
-
-## 0. Executive Summary
-
-**Alloy 是什么**：一个给"一个人带 AI agent 团队"的人用的 harness——在 OpenCode/Claude Code 里给 agents 装好规则、流程、上下文管理，让 agent 走最强约束、不替用户做选择。
-
-**给谁用**：自用 + 一小撮认同 harness engineering 的 OSS 朋友。**不是商业产品**。"未来面试看你带 agent 团队"是核心 use case。
-
-**今天讨论决定的事**（按落地版本）：
-
-- **v0.1.2 patch**（1-2 天）：MD 文档更新 + skill inline copy 原版 + spec/plan 合并 + 加 mattpocock handoff + OpenCode DCP optional pack
-- **v0.2 重构**（1-2 周）：plugin-first 心智落地（砍 CLI 命令）+ state machine + execute context pruning + zhenjia token 优化 6 步
-- **v0.3+ 远期**：rate limit auto-resume + audit grade chain hash + daemon mode + Claude Code/Codex adapter + skill learning loop
+> 写于 2026-05-26 evening, after plannotator session br4uo24aj + Explore deep-dive  
+> v0.1.3+ 远期内容 strip 掉，本 plan 只 focus **v0.1.2 next concrete actions**  
+> Final destination: `/Users/lumimamini/opencode-team-config/docs/redesign/PLAN-v0.1.2-and-beyond.md`
 
 ---
 
-## 1. Vision: alloy 想要成为什么
+## A. 用户深 question 的 ground truth 答案 (TDD/QA 三家差异)
 
-### 一句话定位
+Explore agent 深读后真实差异（不再是抽象 "vertical slicing"）：
 
-> "**The harness that lets one person run an AI agent team — with zero compromise on control.**"
+### TDD 四家区别（含 alloy 自己的 team-tdd 前身）
 
-### 价值主张
+**重要**：alloy-tdd 是 **3-way fusion + team-tdd legacy** (4 sources)。team-tdd 不是 vendor 上游，是 **alloy 自己 v0.1.0 之前的早期版本**（git 历史 commit `60a9207:skills/team-tdd/SKILL.md` 98 行），含 **alloy 原创的 code constraints 和 Stack Companions routing**。
 
-- **不是 chat UI**：alloy 不发明聊天界面，用户在 OpenCode/Claude Code 现有 UI 里工作
-- **不是 agent**：alloy 不是 LLM agent，是给 agent 套规则的外壳
-- **不是 SaaS**：alloy 在你自己电脑上跑，状态在你自己 repo 里
-- **不是 framework**：alloy 不强迫你重写代码，它是配置 + 集成
+| 维度 | obra/superpowers v5.1.0 | mattpocock/skills | **team-tdd (alloy 前身)** | alloy-tdd (现状 348 行) |
+|---|---|---|---|---|
+| **核心 dogma** | "NO PRODUCTION CODE WITHOUT FAILING TEST FIRST" | "Integration-style only, never test implementation" | 借 Iron Law + 加 vertical slicing | 4-way 全融合 |
+| **态度** | Punitive (8 项 anti-rationalization table) | Philosophical (test pain = design feedback) | 简洁 enforce | 严厉 + 智慧 + enforce |
+| **Cycle 重点** | RGR 严格 + 看 test fail 是 proof | Design emerges from test difficulty | 短 RGR cycle + atomic commit | 全部继承 |
+| **Vertical slicing** | — | ✅ 原创 (one test → one impl → repeat) | ✅ 借用 mattpocock (含 horizontal vs vertical 对比图) | 继承 |
+| **Mocking 规则** | (一般) | ✅ Only at system boundaries (网络/DB/time), **绝不** mock 自己的 class | (借鉴 mattpocock 但只一行) | mattpocock 完整规则保留 |
+| **Deep modules** | — | ✅ Small interface, deep implementation | — | mattpocock 概念保留 |
+| **Code constraints (硬约束)** | — | — | ✅ **alloy 原创**: functions ≤10 行 / classes ≤50-100 行 / files ≤300 行 / ≤2 indentation / ≤3 params | **继承 team-tdd 原创** |
+| **Stack Companions routing** | — | — | ✅ **alloy 原创**: React/TS → vercel-react-best-practices + next-best-practices + frontend-tdd; Kotlin/Spring → kotlin-agent-skills + dr-jskill; Terraform → terraform-skill; AWS → awslabs; Postgres → pg-aiguide | **继承 + 扩展** |
+| **Anti-rationalization** | ✅ 8 项 excuse+反驳 table | — | — | 继承 superpowers |
+| **References** | 1 内嵌 (testing-anti-patterns.md) | 5 vendored (tests/mocking/deep-modules/interface-design/refactoring) | 0 (98 行 single file) | 已 vendored 5 mattpocock + 引用 superpowers + 隐式继承 team-tdd |
+| **Evidence ledger** | — | — | — | ✅ **alloy v3 新加** |
+| **字数** | ~500 行 | ~? | **98 行** | 348 行 |
 
-### 关键信念（六信条）
+**alloy-tdd 一句话**: "Iron Law (superpowers) + integration-style/deep modules (mattpocock) + code constraints + Stack Companions routing (**team-tdd alloy 原创**) + evidence ledger (alloy v3 新加)"。
 
-| # | 信条 | 含义 |
+**关键 insight 给 Task 7** (反转之前的拆包决定)：
+
+**用户决定**: "tdd 都融合一下，最终字数和行数都要多，能用原文就用原文"
+
+→ **alloy-tdd 走 inline 模式** (不拆包):
+- 把 4 source 全部 inline 进 SKILL.md
+- 字数 only more not less
+- 能用上游原文 verbatim 就用
+- **超过 Anthropic 500 行 best practice 也接受**（用户明确决定）
+
+预计最终大小: ~1300-1500 行（superpowers ~500 + mattpocock 5 ref ~300 + team-tdd ~98 + alloy 现有 fusion 348 + alloy-integration 段 ~100）。
+
+**Case-by-case 原则**（区分 TDD vs QA）:
+
+| Skill | 策略 | 理由 |
 |---|---|---|
-| 1 | **最强约束** | 关键流程靠 code 强制走对，**不靠 prompt 建议**。LLM 只能在 SDK 允许的工具集里操作 |
-| 2 | **Plugin-first, CLI-minimal** | 用户在 chat 里完成 99% 操作，CLI 只用于一次性 install + 偶尔 doctor |
-| 3 | **不替用户做选择** | 用户装了 GitHub or GitLab、Linear or Jira，alloy 不替你判，全 visible |
-| 4 | **Vendor over rewrite** | Skills 走 inline copy 原版 + append alloy 段路径，**不重写不删除** |
-| 5 | **状态外置但极简** | JSONL append-only ledger + state machine guard，**不上数据库** |
-| 6 | **零依赖运行时** | `.mjs` + zod + jsdoc，没 build step，install 即可用 |
+| **alloy-tdd** | inline 全部 4 source | 上游内容**轻量自包含**，能直接用 |
+| **alloy-qa** | **重写**（不 vendor 上游） | gstack runtime 太重（gstack-* binaries / $B browse / ~/.gstack/），剥离后剩余内容**alloy 自己重写**更干净 |
+| 其他 9 个 alloy-* skill | case-by-case 判断 | 看上游是否能直接 inline |
+
+### gstack /qa 实现底层 (Explore agent 真挖到)
+
+| 维度 | 真实情况 |
+|---|---|
+| **实现位置** | `garrytan/gstack/qa/SKILL.md` (**单文件 1647 行**, preamble tier 4) |
+| **形态** | SKILL.md (不是 slash command 不是 bash script)，但内嵌全部 runtime 调用 |
+| **11 phases** | Initialize / Authenticate / Orient / Explore / Document / Wrap Up / Triage / Fix Loop (8a-8f 含 **8e.5 mandatory regression test 含 codepath tracing + attribution + auto-increment filename**) / Final QA / Report / TODOS Update |
+| **健康 rubric (8 类)** | console 15% / functional 20% / UX 15% / a11y 15% / links 10% / visual 10% / performance 10% / content 5% |
+| **WTF-likelihood self-regulator** | Reverts +15% / multi-file +5% each / fix>15 +1%/每个 / low-severity +10% / unrelated +20% / **>20% stop, hard cap 50 fixes** |
+| **gstack 重依赖** | `~/.claude/skills/gstack/bin/gstack-*` (update-check/config/slug/learnings-search/learnings-log/question-preference/timeline-log) + `$B` browse binary (Rust+Playwright) + `~/.gstack/` (learnings.jsonl/analytics/projects/) + test bootstrap Phase B (200+ 行) + telemetry |
+
+### alloy-qa vs gstack /qa: 保留/剥离/替换 (alloy-qa 现状 377 行)
+
+| 类别 | 内容 |
+|---|---|
+| ✅ **保留** | 11-phase workflow / 8-类 rubric (权重一致) / WTF-likelihood (20% 阈值 / 50-fix cap) / Phase 8e.5 regression / 框架-specific hints (Next/Rails/WordPress/SPA) / diff-aware mode / atomic commits |
+| ❌ **剥离** | gstack preamble (100+ 行: update check/sessions/learnings/config/telemetry) / `gstack-*` binaries / `$B` browse / `~/.gstack/` 目录 / test bootstrap Phase B / learnings 系统 / question tuning / telemetry / project-scoped 路径 |
+| 🔄 **替换** | `alloy_evidence` tool 替 `~/.gstack/analytics/` / `playwright-cli` skill abstraction 替 `$B` syntax / `.alloy/qa-reports/` 替 `~/.gstack/projects/` / 加 `--report-only` flag |
+
+**一句话**: alloy-qa = gstack 的 workflow + discipline，剥离 runtime 依赖，用 evidence ledger + playwright-cli 抽象做 portable harness。
 
 ---
 
-## 2. 当前状态（v0.1.1，已 ship）
+---
 
-### 已有
+## 1. Context
 
-- ✅ Pack distribution + atoms+extends 架构（v0.1.0 Card 3）
-- ✅ 12 OpenCode plugin hooks（v0.1.0 Card 8+9+10）
-- ✅ 7 v3 specialist agents（Orchestrator / Explorer / Architect / Builder / Fixer / Reviewer / Tester）
-- ✅ 11 alloy-* fusion skills + 2 baseline + scoped + vendored
-- ✅ 15 CLI subcommands（install / add / remove / list / search / outdated / upgrade / doctor / completion / state / gate / 等）
-- ✅ install.sh one-liner + alloy completion (bash/zsh/fish)
-- ✅ 33 tests passing
-- ✅ docs/alloy-overview.html (2002 行 product walkthrough)
+### 为什么有这个 plan
 
-### 不足（待 v0.1.2/v0.2 解）
+今天 grill-me session 把 alloy roadmap 拍清后写了 v1 plan (`PLAN-v0.1.2-and-beyond.md`, 540 行)，推到 GitHub `8db7e62`。用户在 plannotator 里 review 给了 5 条反馈，**5 条都改变了 v1 plan 的方向**。这个 plan 文件存的是**修订后的方案**，下一步 ExitPlanMode 拿到用户批准后用 Edit 覆盖原 v1 plan。
 
-- ⚠️ **CLI-centric 心智**：很多 CLI 命令其实该是 plugin tool，让用户在 chat 里调
-- ⚠️ **Skills 是 fusion 重写**：违反"照抄原版"原则，上游更新难 sync
-- ⚠️ **状态管理无 transition table**：agent 可以乱走 phase
-- ⚠️ **OpenCode DCP 没集成**：token 优化大杀器没用上
-- ⚠️ **Mattpocock handoff skill 没 vendor**：session handoff 痛点没解
-- ⚠️ **spec + plan 分两个 phase**：流程冗余
+### 5 条反馈 verbatim
+
+1. **General**: "另外预装 source graph 和 rtk"
+2. **On 版本号**: "这些都算 1.2"（指 v0.2 重构内容算 v0.1.2 系列）
+3. **On install**: "我们能不能在 Install 的时候给用户选要装啥... 就像 npx skills 时一样"
+4. **On skill inline**: "这个倒是可以融合一下 不过融合之后的字数只准多不准少"  
+   后续追问: "这个还符合最佳实践吗？另外我好像没看到 qa skill，也没看到 omo slim 相关的缝合"
+5. **On phase 命名**: "都叫 plan 吧"（spec phase → plan phase）
+
+### OMO Slim 缝合真正目标（澄清后）
+
+用户在 grill 中明确："filter-available-skills + **agent 的编排**，gsd 也做了 agent 的编排"。
+
+通过 claude-mem 找到关键 observations：
+
+- **ID 3904**: OMO Slim plugin 启动时加载 **9 agents + 11 hook managers + 6 tools + 3 MCPs + 10 hook points**。runtime preset tracking 是模块级 state。
+- **ID 3901**: 架构对比 — GSD 是 `.planning/` state machine（disk-based, 30+ slash commands 驱动 phase），OMO Slim 是 plugin-level event-driven（runtime preset + health checks）。alloy 是 install-time pack distribution + JSONL ledger。
+- **ID 2421**: alloy 旧版（v0.1.0 之前）曾经用过 OMO Slim 3-agent setup（plan-reviewer/executor/code-reviewer），后来 Card 4 重写成 7 v3 specialists。
+- **ID 4446**: 用户曾明确说"prefer external state machine (OGSD-style) over SDK-managed state"。
+
+**结论**：用户期待 alloy v0.1.x 把 OMO Slim 的 **plugin-level multi-agent orchestration** 和 GSD 的 **slash-command-driven phase progression** 两套思想都缝合到 alloy 当前的 atoms+pack+ledger 架构上。
+
+具体能力清单（缝合目标）：
+
+| 来源 | 能力 | 现状 |
+|---|---|---|
+| OMO Slim | 9 agents plugin-level 加载 | alloy 7 specialists 已是这种，但 install-time 不是 runtime |
+| OMO Slim | Runtime preset 切换 | 没有，alloy 是 install-time |
+| OMO Slim | Health check (agent/tool/MCP loaded?) | 部分有 (alloy doctor)，但不在 plugin 启动 |
+| OMO Slim | filter-available-skills hook | ✅ 已 port (v0.1.0 Wave 4a) |
+| OMO Slim | preset-manager (`/pack <name>` 热切) | 没有 |
+| GSD | `.planning/` disk-based state machine | alloy 有 `.alloy/state/*.jsonl` 但无 transition guard |
+| GSD | 30+ slash commands 驱动 phase | alloy 有 spec/plan/execute/verify SDD commands，部分对齐 |
+| GSD | profile selection (simple/smart/genius → model) | alloy `models/*.json` 有 role→model 映射，跟 GSD 类似 |
+| GSD | XML-structured phase plan files | alloy 用 markdown YAML frontmatter，不同形态但同思想 |
 
 ---
 
-## 3. v0.1.2 Patch — 文档纠偏 + 关键 skill 补齐 + spec/plan 合并
+## 2. 5 条反馈对应的具体修订
 
-### 目的
+### #1 加 CodeGraph + RTK 预装
 
-把今天讨论的认知里**不需要大重构**的部分先落到 v0.1.1 上。**1-2 天工作量**。
+**修订**：v0.1.2 在 `packs/atoms.json` 加 `core-infrastructure` atom，default 装 CodeGraph + RTK。
 
-### 完整 task 清单（按依赖顺序）
+- **CodeGraph**：AST 索引工具，用户已在用 (.codegraph/ 目录已存在)。作为 select 工具基础设施。zhenjia 文章 Step 2 "减少无效探索" 推荐。
+- **RTK**：CLI 输出压缩工具，zhenjia 文章 Step 3 "预防上下文膨胀" 推荐。
 
-#### Task 1: README 重定位（30 min）
+**不冲突"不替用户做选择"** — 这是基础设施 token 优化，不是项目集成偏好（vcs/issues）。
 
-修改 `README.md`：
-- 把"OpenCode pack distributor"重述为"个人 harness"
-- 加 vision 章节（"The harness that lets one person run an AI agent team"）
-- 加六信条
-- 加 use case section（"我用 alloy 干什么"）
+### #2 版本号: v0.2 全部 fold 进 v0.1.x 系列
 
-#### Task 2: CLAUDE.md 加六信条（30 min）
+**修订**：取消 v0.2 大版本号。所有 v0.2 内容拆成 v0.1.x 渐进 ship。**v0.1.6 三层防御砍掉**。
 
-修改 `CLAUDE.md`：
-- 头部加 "## Design Beliefs" section
-- 六信条原文写进去
-- 加一段 "What Alloy is NOT"（不是 chat UI / agent / SaaS / framework）
+新版本树（用户已确认 v0.1.6 砍）：
 
-#### Task 3: Vendor mattpocock handoff skill（1 hour）
+```
+v0.1.2 (~10-12h)  Skill inline + plan phase 合并 + handoff + DCP + CodeGraph + RTK + agent 编排 OMO/GSD 缝合
+v0.1.3 (~12h)     Plugin-first 重构 (砍 CLI, 改 plugin tools, install interactive)
+v0.1.4 (~10h)     State machine + JSONL ledger guard (含 transition table + capability isolation)
+v0.1.5 (~10h)     Execute context pruning + zhenjia 6 步 token 优化
+─────
+[v0.1.6 砍掉 — capability isolation 和 hook block 已 fold 进 v0.1.4 ledger guard]
+[v0.2 取消 — v0.3 远期内容继续叫 v0.3+]
+```
+
+### #3 Install interactive 像 npx skills
+
+**修订**：`alloy install` 默认 interactive：
 
 ```bash
-# 操作
-cd vendor/skills/external/  # 新建子目录给 mattpocock
-mkdir -p mattpocock/<latest-version>/handoff/
-# 下载 mattpocock/skills repo handoff 内容 inline 复制进来
+$ alloy install
+? Pack: (Use arrow keys)
+  > core
+    frontend
+    backend
+    infra
+    all
+
+? Model preset: (Use arrow keys)
+  > github-copilot
+    anthropic
+    mixed
+    custom
+
+? Optional add-ons (toggle Space, Enter to confirm):
+  [x] CodeGraph     - AST 索引 (推荐)
+  [x] RTK           - CLI 输出压缩 (推荐)
+  [ ] OpenCode DCP  - Token 优化但会破 cache
+  [ ] mattpocock handoff - Session handoff skill
 ```
 
-更新 `vendor.lock.json`：
-```json
-{
-  "name": "handoff",
-  "kind": "skill",
-  "source": "https://github.com/mattpocock/skills",
-  "upstreamPath": "skills/handoff",
-  "version": "<latest>",
-  "license": "MIT",
-  "sha256": "<computed>",
-  "paths": ["vendor/skills/external/mattpocock/<v>/handoff"],
-  "vendoredAt": "2026-05-26"
-}
-```
+**保留** CLI flag (`--pack core --models github-copilot --addons codegraph,rtk`) 给 install.sh 脚本化用。
 
-更新 `packs/atoms.json`：
-```json
-"mattpocock-handoff": { "skills": ["handoff"] }
-```
+实现：用 `prompts` npm package（轻量 ~50KB），单文件 ESM。
 
-加进 `packs/core.json` extends 列表。
+### #4 Skill 融合"字数只准多不准少" + 是否符合最佳实践
 
-CREDITS.md 加一段 attribution。
+**用户的质疑是对的** — 全文双 base inline 会让 SKILL.md 上千行，**LLM 加载时浪费 token，不符合最佳实践**。
 
-#### Task 4: 加 OpenCode DCP 作 optional pack（30 min）
+**Anthropic 官方推荐** (claude.com Skill authoring best practices)：
+- SKILL.md **body < 500 行**，**1500-2000 字**
+- 超过就用 **progressive disclosure** 拆到 reference 文件
+- "SKILL.md serves as an overview that points Claude to detailed materials as needed, like a table of contents"
+- Startup 只把 frontmatter (name + description) load 进 system prompt，body 是 on-demand 读
 
-新建 `packs/dcp.json`:
-```json
-{
-  "id": "dcp",
-  "description": "OpenCode Dynamic Context Pruning — 50-70% token saving (会破 prompt cache，权衡使用)",
-  "extends": ["mcp-baseline"],
-  "plugins": ["@tarquinen/opencode-dcp"]
-}
-```
-
-`defaults.json` 加 plugin pin。
-
-文档说明：`alloy install --pack core+dcp` opt-in。
-
-#### Task 5: 11 个 alloy-* SKILL.md 改为"inline copy 原版 + append" 模式（4 hours）
-
-**这是 v0.1.2 最大工作量**。
-
-**原则**：每个 alloy-* skill 选一个**单一 base 原版**，inline 复制 base 完整内容**不删不改**，然后 append "## Alloy Integration" section 加 alloy 特定内容。
-
-**操作方式**（per skill）：
+**修订: Vendor 完整原文 + SKILL.md 是 router**（符合 Anthropic 官方 progressive disclosure 模式）：
 
 ```
 universal/skills/alloy-tdd/
-├── SKILL.md                  ← 主入口
-└── upstream/
-    ├── superpowers-tdd.md    ← obra/superpowers 原文 inline 完整
-    └── mattpocock-tdd.md     ← mattpocock 相关 inline 完整
+├── SKILL.md              ← <500 行 (Anthropic 官方上限): alloy router overview + 引用原版位置
+├── upstream/
+│   ├── superpowers/
+│   │   └── tdd.md        ← obra/superpowers v5.1.0 完整原文 (~500 行) 一字不删
+│   └── mattpocock/
+│       └── tdd.md        ← mattpocock 相关完整原文 (~300 行) 一字不删
+└── alloy-integration.md  ← <500 行: alloy ledger / evidence / agent 集成 (on-demand read)
 ```
-
-或更激进版（顶层模式）：
-
-```
-universal/skills/alloy-tdd/SKILL.md
-─────────────────────────────────
-[obra/superpowers v5.1.0 test-driven-development/SKILL.md 完整原文 inline]
-[mattpocock TDD 相关原文 inline]
-─────────────────────────────────
-## Alloy Integration (我们追加)
-- TDD before code 强制走 alloy_evidence tool
-- 95% coverage floor via alloy_gate
-- evidence 写入 .alloy/state/evidence.jsonl
-─────────────────────────────────
-## Attribution
-- obra/superpowers (MIT)
-- mattpocock/skills (MIT)
-- alloy first-party (MIT)
-```
-
-**11 个 skill 处理清单**：
-
-| Skill | Inline base | Alloy 追加段 |
-|---|---|---|
-| `alloy-tdd` | obra/superpowers test-driven-development/SKILL.md + mattpocock/skills tdd | evidence 写入 / 95% coverage / Builder agent 集成 |
-| `alloy-brainstorm` | obra/superpowers brainstorming/SKILL.md | 写到 .alloy/specs/<id>/spec.md (## Spec section) |
-| `alloy-debug` | obra/superpowers systematic-debugging/SKILL.md（含 references/） | regression test 强制 + alloy_evidence 集成 |
-| `alloy-plan` | obra/superpowers subagent-driven-development/SKILL.md（部分） | 写到 spec.md (## Plan section) — **v0.1.2 合进 alloy-brainstorm** |
-| `alloy-execute` | obra/superpowers subagent-driven-development/SKILL.md | Builder/Fixer 集成 / wave execution |
-| `alloy-verify` | obra/superpowers verification-before-completion/SKILL.md | alloy_claim with evidenceIds / alloy_gate |
-| `alloy-discuss` | GSD gray-area extraction (源待确认 license) | 写到 .alloy/specs/<id>/context.md |
-| `alloy-using` | (Alloy 原创) | session-start orientation |
-| `alloy-autopilot` | axledbetter/claude-autopilot | ralph-loop 5-iter cap 集成 |
-| `alloy-map-codebase` | GSD brownfield mapper (源待确认) | Explorer agent 集成 |
-| `alloy-qa` | gstack /qa 内容 (MIT, 待 inline) | (无大改) |
-
-**Open question (plannotator review)**：单 source vs 多 source inline 哪个？我倾向**多 source inline**（一个 SKILL.md 文件里 inline 多个 base + alloy 段），这样每个 alloy-* 仍是单 skill 文件，不需要 sub-skill。
-
-#### Task 6: spec + plan phase 合并（2 hours）
-
-**改动**：
-
-1. `commands/plan.md` **删除**（或留个 stub: `# DEPRECATED. Use /spec`）
-2. `commands/spec.md` 扩展内容：现在 spec 做完整 spec + plan 工作流
-3. `packs/atoms.json` `alloy-sdd-commands` atom 去掉 "plan"：
-   ```json
-   "alloy-sdd-commands": {
-     "commands": ["autopilot", "discuss", "execute", "spec", "verify"]
-   }
-   ```
-4. `alloy-brainstorm` + `alloy-plan` skill **合并**为 `alloy-brainstorm`（plan skill 内容追加进 brainstorm）
-   - 或者保留两个 skill 都被 /spec 命令 invoke
-5. 7 agent `.md` 文件里引用 plan command/skill 的地方更新
-6. `docs/alloy-overview.html` 更新 SDD pipeline 图
-
-**新 phase pipeline**：
-```
-pending → spec (含 brainstorm + plan + planning-with-files + plannotator-review)
-       ↓ (user approve via plannotator UI)
-       execute
-       ↓
-       verify
-       ↓
-       done
-```
-
-#### Task 7: 7 个 agent .md 加 phase pipeline 说明（1 hour）
-
-修改 `agents/Orchestrator.md` + 6 specialist：
-- 加 "## Phase Pipeline" section
-- 说明每个 phase 走哪个 skill / 强制 invoke 哪些 tool
-- 不变动现有 routing matrix
-
-#### Task 8: 写 docs/redesign/PLAN-v0.1.2-and-beyond.md（30 min）
-
-就是这份文档的正式版本。
-
-#### Task 9: 加 CHANGELOG 条目 + bump version 到 0.1.2（15 min）
-
-- `package.json`: `"version": "0.1.2"`
-- `defaults.json`: `version: "0.1.2"` (if has)
-- `CHANGELOG.md`: 完整列出 9 个 task 改动
-
-#### Task 10: 跑全套测试 + ship（30 min）
-
-- `npm test` 全过
-- `bash setup.sh --doctor --pack core` 全过
-- `python3 scripts/audit_prompt_dependencies.py` 干净
-- commit + push + tag v0.1.2
-
-### v0.1.2 总工作量
-
-| Task | 时间 |
-|---|---|
-| 1 README | 30 min |
-| 2 CLAUDE.md | 30 min |
-| 3 mattpocock handoff vendor | 1h |
-| 4 OpenCode DCP pack | 30 min |
-| 5 11 skill inline copy | 4h |
-| 6 spec+plan 合并 | 2h |
-| 7 agent .md phase pipeline | 1h |
-| 8 PLAN.md 落盘 | 30 min |
-| 9 CHANGELOG + version | 15 min |
-| 10 test + ship | 30 min |
-| **总计** | **~10-11 hours** |
-
-**1 个晚上 + 1 个上午**能做完。
-
----
-
-## 4. v0.2 — Plugin-first 大重构（1-2 周）
-
-### 目的
-
-把 alloy 从 CLI-centric 改为 plugin-centric。落地"最强约束"。集成 zhenjia token 优化 6 步。
-
-### 五个大块
-
-#### Block 1: Plugin-first 重构
-
-**砍命令**（用户日常 chat 里完成）：
-- ❌ `alloy add` / `remove` / `list` / `search` / `outdated` / `upgrade`
-- ❌ `alloy init` / `resolve` / `state` / `gate`
-
-**改成 plugin tools**（agent 在 chat 里调）：
-- `alloy_add` / `alloy_remove` / `alloy_list` / `alloy_search` / `alloy_outdated` / `alloy_upgrade`
-- `alloy_state_add_task` / `alloy_state_add_evidence` / `alloy_state_add_claim`
-- `alloy_gate_check`
-- `alloy_phase_advance(from, to)`
-
-**保留 CLI**：
-- ✅ `alloy install` — 一次性 setup
-- ✅ `alloy doctor` — 偶尔诊断
-- ✅ `alloy completion` — shell completion 生成
-
-**新增 plugin hook 自动行为**：
-- `config` hook 启动时 detect userOverlay（用户加的 skill/MCP），写 manifest.userOverlay
-- 检测到 → `chat.message` hook 注入提示 "Detected my-custom-skill. Use it?"
-- 用户回答 → agent 调 `alloy_adopt_overlay` 或 `alloy_exclude_overlay` tool
-
-#### Block 2: State machine guard + Append-only ledger
-
-**新文件**：
-- `bin/state-machine.mjs` (~80 LOC)：`TASK_TRANSITIONS` table + `transition_task(id, to)` guard
-- `bin/ledger.mjs` (~100 LOC)：`appendEvent(type, payload)` + `proper-lockfile` 文件锁
 
 **规则**：
-- 所有 state mutation 必须走 ledger.mjs（agent / plugin / hook 都不能直接写 jsonl）
-- 非法 transition → `IllegalTransitionError`
-- Append-only，**no chain hash yet**（v0.3 加）
+- ✅ 上游原文**完整 vendor**到 `upstream/` 子目录，**一字不删**
+- ✅ 用户/LLM 想要全文 → 读 `upstream/<source>/*.md`
+- ✅ SKILL.md 自己作"地图"：列出 alloy-tdd 包含哪些上游，alloy 自己怎么用
+- ✅ "只准多不准少" 字数原则**满足**：上游原文一字不少，alloy 自己加的 alloy-integration.md 是纯增量
+- ✅ LLM 加载 SKILL.md 时不爆 token，按需深入读 upstream/
 
-**Phase transition table**：
-```js
-const TASK_TRANSITIONS = {
-  pending:   ['spec'],
-  spec:      ['execute', 'abandoned'],     // 注: spec 已含 plan
-  execute:   ['verify', 'blocked'],
-  verify:    ['done', 'execute'],
-  blocked:   ['execute', 'abandoned'],
-  done:      [],
-  abandoned: [],
-}
+**这是 mattpocock 自己的 skill 推荐模式** — references 模式比 inline 大块更合最佳实践。
+
+### #5 Phase 名叫 plan（不是 spec）
+
+**修订**：所有命名统一 plan：
+- Phase: `pending → plan → execute → verify → done`
+- Command: `/plan` (`/spec` 删除)
+- Skill: `alloy-plan` (吸收 `alloy-brainstorm` 内容，brainstorm skill 删除)
+- File: `.alloy/plans/<id>/plan.md` (dir 从 `specs/` 改 `plans/`)
+- atoms.json: `alloy-sdd-commands` 改成 `commands: [autopilot, discuss, execute, plan, verify]` (去掉 spec)
+
+---
+
+## 3. v0.1.2 完整 task 清单（最终修订版）
+
+按 ROI 排序，**~14-16 小时工作量**（含 Task 9 OMO preset 实现 +5h）：
+
+| # | Task | 时间 | Files |
+|---|---|---|---|
+| 1 | README 重定位 + 6 信条 | 30m | README.md |
+| 2 | CLAUDE.md 加 6 信条 + "What Alloy is NOT" | 30m | CLAUDE.md |
+| 3 | Vendor mattpocock handoff skill (一字不改) | 1h | vendor/skills/external/mattpocock/<v>/handoff/ + vendor.lock.json + atoms.json + CREDITS.md |
+| 4 | OpenCode DCP optional pack | 30m | packs/dcp.json + defaults.json |
+| 5 | CodeGraph + RTK 加 `core-infrastructure` atom | 30m | packs/atoms.json + packs/core.json + vendor.lock.json |
+| 6 | **plan phase 合并**（用户优先要） — 见 §D 具体到代码 | 2h | commands/plan.md (改写), commands/spec.md (删), atoms.json, alloy-plugin.ts COMMAND_SKILLS map, agents/*.md 引用更新 |
+| 7 | **11 alloy-* skill 改 vendor reference 模式** — 见 §B 具体到代码 | 4h | universal/skills/alloy-*/{SKILL.md (保留), upstream/, alloy-integration.md (新建)} |
+| 8 | 7 agent .md 加 phase pipeline section | 1h | agents/*.md |
+| 9 | **OMO Slim runtime preset 热切换** — 见 §C 具体到代码 | 5h | templates/opencode/alloy-plugin.ts + packs/atoms.json + bin/alloy.mjs + tests |
+| 10 | 把这份 plan 写成 docs/redesign/PLAN-v0.1.2-and-beyond.md (覆盖 v1) | 30m | docs/redesign/PLAN-v0.1.2-and-beyond.md |
+| 11 | CHANGELOG + version bump | 15m | CHANGELOG.md + package.json |
+| 12 | npm test + audit + ship + tag v0.1.2 | 30m | (no edit) |
+
+---
+
+## 4. v0.1.3+ 远期
+
+**Strip 掉**（用户："plan 应该是下一阶段做什么 plan，roadmap 单独"）。
+
+v0.1.3+ 路线另写到 `docs/redesign/ROADMAP-v0.1.3-and-beyond.md`，本 plan 不展开。
+高层框架（仅 ref）:
+- v0.1.3: plugin-first 重构 / userOverlay auto-detect / install interactive
+- v0.1.4: state machine + ledger guard (含 capability isolation)
+- v0.1.5: execute context pruning + zhenjia 6 步 token 优化
+- v0.3+: rate limit auto-resume / chain hash / daemon / Claude Code+Codex adapter / skill ledger learning
+
+---
+
+## B. Task 7 具体到代码: 11 skill 拆包 file-by-file
+
+### B.1 alloy-tdd (348 → ~1300+ inline 融合)
+
+**改前**:
+```
+universal/skills/alloy-tdd/
+├── SKILL.md (348 行, fusion 已写)
+└── references/
+    ├── tests.md            (mattpocock vendored)
+    ├── mocking.md
+    ├── deep-modules.md
+    ├── interface-design.md
+    └── refactoring.md
 ```
 
-#### Block 3: Execute phase context pruning
+**改后** (用户决定: inline 全部, 不拆包):
+```
+universal/skills/alloy-tdd/
+├── SKILL.md (~1300-1500 行 — inline 全部 4 source)
+└── references/  (保留, mattpocock 5 个 file 仍在; 但 SKILL.md 已 inline 全文, references/ 作历史源 backup)
+```
 
-**机制**：`alloy_phase_advance(spec → execute)` 时：
+**SKILL.md 新结构** (建议章节顺序):
+```markdown
+# Alloy TDD (inline-fused, 4 sources verbatim)
 
-1. 读 `.alloy/specs/<id>/spec.md` frontmatter
-2. 提取 `required_skills` / `required_mcps` / `required_agents`
-3. **临时 manifest override**：
-   - 把 `manifest.visible.skills` 改成 `required_skills`
-   - `opencode.json` 里只暴露 `required_mcps`
-   - sub-agent 派出去时只携带 visible skills
-4. Phase 结束（verify → done）后恢复原 manifest
+## Section 1: Iron Law (from obra/superpowers v5.1.0, verbatim)
+[obra/superpowers test-driven-development/SKILL.md 全文 inline ~500 行]
 
-**为什么**：每次 execute 只装载真正需要的 skill/MCP，system prompt 变小，cache hit 率提升。
+## Section 2: testing-anti-patterns (from superpowers, verbatim)
+[testing-anti-patterns.md 全文 inline]
 
-#### Block 4: Zhenjia token 优化 6 步集成
+## Section 3: Integration-style philosophy (from mattpocock, verbatim)
+[mattpocock skills/engineering/tdd/tests.md 全文 inline]
 
-**Step 0 观测**：加 `alloy usage` 命令（聚合 runs.jsonl 的 token 数据）。**不集成 ccusage**，文档推荐用户自己装。
+## Section 4: Mocking discipline (from mattpocock, verbatim)
+[mattpocock skills/engineering/tdd/mocking.md 全文 inline]
 
-**Step 1 缓存纪律**（最高 ROI）：
-- 固定 system prompt 前缀顺序：CLAUDE.md → agents/<role>.md → skills/<skill>.md（字母序）
-- 写入 opencode.json 固化
-- 新增 `alloy doctor --cache` 检查前缀稳定性 + MCP schema 变更
+## Section 5: Deep modules (from mattpocock, verbatim)
+[mattpocock skills/engineering/tdd/deep-modules.md 全文 inline]
 
-**Step 2 减少无效探索**：
-- CLAUDE.md template 加注释 `<!-- KEEP UNDER 200 LINES -->`
-- 推荐 LSP（universal/skills/using-lsp/ vendor cclsp）
-- codegraph 作 optional pack
+## Section 6: Interface design (from mattpocock, verbatim)
+[mattpocock skills/engineering/tdd/interface-design.md 全文 inline]
 
-**Step 3 预防上下文膨胀**：
-- alloy plugin `tool.execute.after` hook 自动截断超长 tool output（>10KB → `[truncated, see .alloy/state/tool-output-<id>.txt]`）
-- 用 OpenCode DCP（v0.1.2 已加 optional pack）
+## Section 7: Refactoring (from mattpocock, verbatim)
+[mattpocock skills/engineering/tdd/refactoring.md 全文 inline]
 
-**Step 4 隔离 + 模型分级**（alloy 已有底子）：
-- `models/github-copilot.json` 写死推荐分级：
-  ```json
-  {
-    "explorer": "claude-haiku-4-5",
-    "planner": "claude-sonnet-4-6",
-    "architect": "claude-opus-4-7",
-    "executor": "claude-sonnet-4-6",
-    "reviewer": "claude-sonnet-4-6",
-    "verifier": "claude-haiku-4-5"
-  }
-  ```
-- 注意：顺序任务**不要强拆 multi-agent**（arXiv 2512.08296：退化 39-70%）
+## Section 8: Code constraints + Stack Companions routing (from team-tdd legacy, verbatim)
+[git show 60a9207:skills/team-tdd/SKILL.md 全文 inline 98 行]
 
-**Step 5 Write**：
-- spec.md 模式已有
-- 新增 `/clear-and-execute` 命令（写完 spec 后 clear session 重新开 execute）
+## Section 9: alloy v3 fusion + integration
+[现有 alloy-tdd SKILL.md 348 行核心融合论述 + evidence ledger 集成段]
+```
 
-**Step 6 输出控制**：
-- skill body 加约束："Output stays minimal. No emoji. No restating user input."
-- 新增 `alloy_set_effort(low|medium|high)` tool
+**总字数**: 字数 + 行数 only more not less。每个 section 上游内容 verbatim，alloy 自己只**追加** Section 9 不修改前 8 个 section。
 
-#### Block 5: 强制约束三层防御落地
+**Vendor 命令** (用 gh api fetch 全文):
+```bash
+# Section 1-2: superpowers
+gh api repos/obra/superpowers/contents/skills/test-driven-development/SKILL.md --jq '.content' | base64 -d
+gh api repos/obra/superpowers/contents/skills/test-driven-development/testing-anti-patterns.md --jq '.content' | base64 -d
 
-**Layer 1: Capability isolation**
-- 每个 phase 给 agent 不同 tool 集合
-- spec phase: 没 write-code / run-tests / git-commit tool
-- execute phase: 没 edit-spec / edit-plan / git-commit-to-main tool
-- verify phase: 没 write-code / edit-anything tool（只能 read + run + claim）
+# Section 3-7: mattpocock
+gh api repos/mattpocock/skills/contents/skills/engineering/tdd/tests.md --jq '.content' | base64 -d
+gh api repos/mattpocock/skills/contents/skills/engineering/tdd/mocking.md --jq '.content' | base64 -d
+gh api repos/mattpocock/skills/contents/skills/engineering/tdd/deep-modules.md --jq '.content' | base64 -d
+gh api repos/mattpocock/skills/contents/skills/engineering/tdd/interface-design.md --jq '.content' | base64 -d
+gh api repos/mattpocock/skills/contents/skills/engineering/tdd/refactoring.md --jq '.content' | base64 -d
 
-**Layer 2: Tool gating**
-- phase advance 必须调 `alloy_phase_advance` tool（agent 不能 free-form 写 jsonl）
-- 重派 interrupted sub-agent 必须调 `alloy_resume_subagents` tool
+# Section 8: team-tdd (alloy 自家从 git history)
+git show 60a9207:skills/team-tdd/SKILL.md  # in alloy repo
 
-**Layer 3: Hook block**
-- `Stop` hook 检测 invariants:
-  - spec phase 没写完 ## Spec section → block
-  - execute phase 没 evidence 就想结束 → block
-  - verify phase 有未处理 interrupted sub-agents → block
+# Section 9: 现有 alloy-tdd SKILL.md 当前 348 行 + 追加 alloy-integration 内容
+```
 
-### v0.2 总工作量
+**Trade-off (用户已接受)**:
+- ✅ "字数只准多不准少" 原则 100% 满足
+- ✅ "能用原文就用原文" 满足
+- ✅ 一个 SKILL.md 全在，无需多文件跳转
+- ⚠️ 违反 Anthropic 500 行 best practice (实际 ~1300-1500 行)
+- ⚠️ LLM 每次加载吃更多 token (但 Anthropic 说 SKILL.md startup 只 load frontmatter，body 是 on-demand 读，**所以实际不会每次都吃 token**——只在 LLM 主动 invoke skill 时 read)
 
-约 **30-50 小时** 工程，**1-2 周** ship。
+**Note on Anthropic best practice**: SKILL.md body 是 on-demand load 不是 always-loaded，所以 1500 行只在 invoke 时吃 token。startup 只看 frontmatter (name + description)。所以 inline 长 SKILL.md 实际**不破 cache discipline**，跟 zhenjia 文章 Step 1 缓存纪律不冲突。
 
----
+**Migration script** (`scripts/restructure-skills.mjs` 新建):
+```js
+// for each alloy-* skill:
+//   1. create upstream/<source>-<version>/ dirs
+//   2. vendor upstream files via gh api ... base64 -d
+//   3. compute sha256, update vendor.lock.json
+//   4. move existing references/ files to upstream/mattpocock-<v>/
+//   5. generate alloy-integration.md from template
+```
 
-## 5. v0.3+ 远期路线
+### B.2 alloy-integration.md 模板 (每个 skill 1 份)
 
-| 主题 | 内容 | 触发条件 |
+```markdown
+# Alloy Integration — alloy-tdd
+
+## 4 Sources fused
+
+1. `upstream/superpowers-v5.1.0/SKILL.md` — Iron Law (NO CODE WITHOUT FAILING TEST) / RGR cycle / 8-项 anti-rationalization table
+2. `upstream/mattpocock-<v>/tdd-*.md` — Integration-style / deep modules / mocking discipline / interface design / refactoring
+3. `upstream/alloy-team-tdd-legacy/SKILL.md` — **alloy 自家**早期 (v0.1.0 前) team-tdd 98 行原文, 含:
+   - Code constraints (functions ≤10 / classes ≤50-100 / files ≤300 / indent ≤2 / params ≤3) — **alloy 原创**
+   - Stack Companions routing (React/TS → vercel-react + next-best + frontend-tdd; Kotlin/Spring → kotlin-agent-skills + dr-jskill; Terraform → terraform-skill; AWS → awslabs; Postgres → pg-aiguide) — **alloy 原创**
+4. (v3 新加) Evidence ledger integration
+
+## What each source contributed (具体到 sentence-level)
+
+| 来自 | 内容 |
+|---|---|
+| superpowers | "NO PRODUCTION CODE WITHOUT FAILING TEST FIRST" + "Code written before tests → delete it" + anti-rationalization 8-项 |
+| mattpocock | "Vertical slicing not horizontal" + "Mock only at system boundaries" + Deep modules / interface-design / refactoring 5 references |
+| team-tdd (alloy 前世) | Code constraints (functions ≤10 行 etc.) + Stack Companions routing 列表 + atomic commit per RGR + early return / 3-param rule |
+| **alloy v3 新加** | `alloy_evidence` tool 调用要求 + `alloy_gate` 95% coverage floor |
+
+## Why this 4-way fusion
+
+- superpowers 单用: 严厉但缺 design feedback loop
+- mattpocock 单用: 智慧但缺 enforce mechanism
+- team-tdd 单用: 太简 (98 行), 缺 anti-rationalization 和 deep modules
+- 4-way: 严厉 + 智慧 + alloy 原创硬约束 + ledger 集成
+
+## Reading order
+
+1. SKILL.md (router + 高层 workflow)
+2. alloy-integration.md (this file)
+3. upstream/superpowers-v5.1.0/SKILL.md (Iron Law 细节)
+4. upstream/mattpocock-<v>/*.md (specific topic 深入)
+5. upstream/alloy-team-tdd-legacy/SKILL.md (溯源 alloy 原创点)
+```
+
+### B.3 alloy-qa (用户决定: 重写, 不 vendor 上游)
+
+**改前**:
+```
+universal/skills/alloy-qa/
+└── SKILL.md (377 行)
+```
+
+**改后** (用户决定: "我们能重写吗" = yes):
+```
+universal/skills/alloy-qa/
+└── SKILL.md (377 行 → 可能扩到 ~500 行, alloy 自己重写完整版)
+```
+
+**理由 (case-by-case 原则)**:
+- gstack /qa 上游 1647 行**绝大部分是 runtime 调用** (`gstack-*` binaries / `$B` browse / `~/.gstack/`)
+- 剥离 runtime 后剩**纯思想**部分 = 11 phases / rubric / WTF-likelihood / regression discipline
+- 这些思想 alloy-qa 当前 377 行**已经吸收并 alloy-portable 化**
+- **不需要 inline gstack 全文** (1300+ 行 runtime 代码对 alloy 用户无意义)
+
+**alloy-qa SKILL.md 重写策略** (扩展现有 377 行到 ~500):
+1. 保留 11-phase workflow (基于 gstack 思想，alloy 重写)
+2. 保留 8-类 rubric (权重一致 + alloy 自己重写描述)
+3. 保留 WTF-likelihood 规则 (20% 阈值 / 50-fix cap)
+4. 保留 Phase 8e.5 regression discipline (强化为强制)
+5. **新加**: `playwright-cli` skill 集成命令表 (替 `$B` syntax)
+6. **新加**: `alloy_evidence` 调用要求 (替 telemetry)
+7. **新加**: `.alloy/qa-reports/` 路径约定
+8. **新加**: `--report-only` flag
+
+**Attribution** (在 SKILL.md 底部加):
+```markdown
+## Attribution
+
+This skill is **inspired by** gstack `/qa` (garrytan/gstack, MIT) but **rewritten** to remove gstack runtime dependencies (gstack-* binaries, $B browse, ~/.gstack/). Core concepts adopted: 11-phase workflow / 8-category health rubric / WTF-likelihood self-regulator / Phase 8e.5 regression discipline. alloy adds: evidence ledger integration / playwright-cli abstraction / --report-only mode.
+
+See CREDITS.md for full attribution chain.
+```
+
+**不在 universal/skills/alloy-qa/ 加 upstream/ 子目录**（因为我们不 vendor gstack runtime）。
+
+**对比 alloy-tdd vs alloy-qa 处理**:
+
+| 维度 | alloy-tdd | alloy-qa |
 |---|---|---|
-| **Rate limit auto-resume** | 推荐用 `claude-auto-retry` (tmux send-keys) + alloy plugin SubagentStop hook contain sub-agent rate limit | v0.2 ship 后 |
-| **Audit grade** | chain hash (SHA256) + repair tool + force-transition + `alloy state graph` (mermaid) | 第一次发现 ledger 损坏或需审计 |
-| **Compaction + archive** | jsonl 50MB+ 或 6 个月使用后 archive | 用满 6 个月 |
-| **Schema migration** | `alloy state migrate --from N --to N+1` | 第一次需要 breaking change |
-| **Daemon mode** | 借 reins daemon pattern + tracker (GH Issues) 集成 | v0.4+ |
-| **Claude Code adapter** | Layer 1 第二 runtime | v0.5 |
-| **Codex adapter** | Layer 1 第三 runtime | v0.6 |
-| **Skill ledger learning loop** | bandit router 选历史成功率最高 skill | v0.5+ |
+| **策略** | inline 4 source 全文 (~1300 行) | 重写 (~500 行) |
+| **上游内容能否用** | ✅ 轻量、自包含 | ❌ 重 runtime 依赖 |
+| **upstream/ 目录** | 保留 references/ (mattpocock) | 没有 |
+| **Attribution** | 4 section 各自标 source | 底部 "inspired by gstack, rewritten" |
+| **字数变化** | 348 → ~1300+ (增 ~4x) | 377 → ~500 (增 ~30%) |
+| **Anthropic 500 行 best practice** | 违反 (用户决定接受) | 满足 |
+
+### B.4 其他 9 个 alloy-* skill 同样 pattern
+
+每个 skill 文件夹结构一致:
+```
+universal/skills/alloy-<name>/
+├── SKILL.md (现有内容不动)
+├── upstream/<source>-<version>/  (vendor 上游原文)
+└── alloy-integration.md (新写)
+```
+
+具体 mapping:
+
+| Skill | 上游 source + 路径 | Vendor 命令 |
+|---|---|---|
+| alloy-brainstorm | obra/superpowers v5.1.0 skills/brainstorming/SKILL.md | (待 fetch) |
+| alloy-debug | obra/superpowers v5.1.0 skills/systematic-debugging/ + 5 references | 已有 references/ → 移到 upstream/ |
+| alloy-execute | obra/superpowers v5.1.0 skills/subagent-driven-development/ + 3 prompts | 已有 references/ → 移到 upstream/ |
+| alloy-verify | obra/superpowers v5.1.0 skills/verification-before-completion/SKILL.md | (待 fetch) |
+| alloy-discuss | GSD repo (license 待确认) discuss-phase 内容 | 跳过 vendor 上游 (license 不明)，仅 alloy-integration.md |
+| alloy-plan | obra/superpowers writing-plans/SKILL.md + GSD plan-phase | (mixed, vendor superpowers 那份) |
+| alloy-autopilot | axledbetter/claude-autopilot README + skill | (vendor README + skill) |
+| alloy-map-codebase | GSD brownfield mapper (license 待确认) | 跳过 vendor，仅 alloy-integration.md |
+| alloy-using | (Alloy 原创) | 无 upstream/，只 alloy-integration.md |
+
+### B.5 工作量明细
+
+| 操作 | 时间 |
+|---|---|
+| 写 `scripts/restructure-skills.mjs` migration script | 1h |
+| 跑 script 自动 vendor + 生成 upstream/ 结构 | 30m |
+| 手写 11 个 `alloy-integration.md` (各 ~100 行) | 2h |
+| 更新 vendor.lock.json (11 个新 source 入条目) | 30m |
+| 跑 npm test + audit 验证 | 30m |
+| **Task 7 总** | **4-5h** |
 
 ---
 
-## 6. 配置怎么处理（关键设计 — 不替用户做选择）
+## C. Task 9 具体到代码: OMO preset runtime hot-swap
 
-### 项目级配置：`.alloy/alloy.project.json`
+### C.1 现状 (templates/opencode/alloy-plugin.ts)
 
-**v0.2 简化后只保留最小信息**：
+L25: `const DEFAULT_AGENT = "Orchestrator"` — hardcoded
+L38-45: `COMMAND_SKILLS` map (spec/plan/execute/verify/autopilot/ralph-loop)
+L177-180 附近: `injectConfigDefaults` 在 `config` hook 注 default_agent + mcp
+
+**没有 preset 概念**。要加。
+
+### C.2 改后设计
+
+**新文件**: `packs/presets.json` (atoms.json 的姊妹文件)
 ```json
 {
-  "pack": "core",                  // 或 frontend / backend / infra / all
-  "models": "github-copilot"       // 或 anthropic / mixed / 用户自定义
+  "presets": {
+    "default": {
+      "agents": ["Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"],
+      "skills_visible": "all",
+      "mcps_enabled": "all"
+    },
+    "plan-mode": {
+      "agents": ["Orchestrator", "Explorer", "Architect"],
+      "skills_visible": ["alloy-plan", "alloy-discuss", "alloy-brainstorm", "alloy-map-codebase"],
+      "mcps_enabled": ["context7", "grep_app"]
+    },
+    "execute-mode": {
+      "agents": ["Builder", "Fixer"],
+      "skills_visible": ["alloy-tdd", "alloy-execute", "alloy-debug"],
+      "mcps_enabled": ["context7"]
+    },
+    "review-mode": {
+      "agents": ["Reviewer", "Tester"],
+      "skills_visible": ["alloy-verify", "alloy-qa"],
+      "mcps_enabled": ["context7", "exa"]
+    }
+  }
 }
 ```
 
-**不再有**：
-- ❌ `agentOverrides` (per-agent skill 列表)
-- ❌ `integrations` (vcs / issues / ci 预设)
+**templates/opencode/alloy-plugin.ts** 加 section (~150 LOC):
 
-### 用户加的 skill/MCP 处理
+```typescript
+// Module-level preset state (OMO 模式)
+let activePreset: string = "default"
+let presetsDef: PresetsDef | null = null
 
-**Discovery**：plugin `config` hook 启动自动 detect
-**Adoption**：通过 chat 跟 agent 说"adopt my-custom-skill"，plugin 写 manifest.userOverlay
-**Visibility**：userOverlay 默认全 visible（不替用户挑）
-**Exclusion**：只在用户明确说"去掉 X"才进 manifest.excluded
+function loadPresets(directory: string): PresetsDef {
+  if (presetsDef) return presetsDef
+  const path = join(directory, ".opencode", "presets.json")
+  if (!existsSync(path)) return { presets: { default: { ... } } }
+  presetsDef = JSON.parse(readFileSync(path, "utf8"))
+  return presetsDef!
+}
 
-### Atoms.json 砍掉的预设
+function getActivePreset(directory: string): PresetSpec {
+  const defs = loadPresets(directory)
+  return defs.presets[activePreset] ?? defs.presets.default
+}
 
-**砍**：vcs-github / vcs-gitlab / vcs-azure / issues-linear / issues-jira / issues-github / ci-* atoms
+function applyPreset(directory: string, name: string): boolean {
+  const defs = loadPresets(directory)
+  if (!defs.presets[name]) return false
+  activePreset = name
+  // 写到 .alloy/state/preset.jsonl (audit trail)
+  appendJsonl(directory, "preset", {
+    id: randomUUID(),
+    event: "preset_changed",
+    from: activePreset,
+    to: name,
+    ts: new Date().toISOString(),
+  })
+  return true
+}
 
-**留**：基础 alloy atoms（baseline-5 / workflow-extras / v3-agents / v3-modelRoles / SDD-commands / legacy-commands / mcp-baseline / ralph-loop / mattpocock-handoff / frontend-skills / backend-skills / infra-skills）
+// 新 plugin tool (LLM 在 chat 里调)
+const presetSwitchTool = tool({
+  description: "Switch the active Alloy preset (plan-mode / execute-mode / review-mode / default).",
+  args: {
+    preset: z.string().describe("Preset name from .opencode/presets.json"),
+  },
+  async execute(args) {
+    const ok = applyPreset(projectDir, args.preset)
+    return ok
+      ? `Preset switched to ${args.preset}. Skills/agents/MCPs hot-reloaded.`
+      : `Unknown preset: ${args.preset}`
+  },
+})
+
+// Existing experimental.chat.messages.transform hook 加入 preset filter:
+"experimental.chat.messages.transform": async (input, output) => {
+  if (!output || !Array.isArray(output.messages)) return
+  await filterAvailableSkills(projectDir, input, output)
+  // NEW: 也按 preset 过滤 skills
+  await filterByPreset(projectDir, input, output)
+},
+
+// Health check (boot 时验证 preset 加载)
+config: async (config) => {
+  if (!config) return
+  injectConfigDefaults(config)
+  loadPresets(projectDir) // ← 启动预加载 + 验证
+  bootWarnings = await detectMagicWarnings(projectDir)
+  ...
+},
+```
+
+**plugin export** 加 tool: `alloy_switch_preset` 注册到 `tool: {...}` block (alloy-plugin.ts L607 附近).
+
+### C.3 bin/alloy.mjs 改动
+
+```js
+// 新增 stateFunction (alloy install 时 materialize)
+function writePresets(resolvedConfig, targetDir) {
+  const path = join(targetDir, ".opencode", "presets.json")
+  // 默认 4 个 preset (default + plan-mode + execute-mode + review-mode)
+  const defaults = require("../packs/presets.json")
+  writeJson(path, defaults, false)
+}
+
+// 在 installCommand 内调用
+function installCommand(options) {
+  ...
+  writeOpenCodeConfig(resolved)
+  writePresets(resolved, resolved.targetDir)  // ← NEW
+  ...
+}
+```
+
+### C.4 Tests 加 (scripts/test_alloy_installer.py)
+
+```python
+def test_install_writes_presets_json(self):
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = Path(tmp)
+        run_setup(cwd, "--pack", "core", "--target", "local")
+        presets = json.loads((cwd / ".opencode" / "presets.json").read_text())
+        self.assertIn("default", presets["presets"])
+        self.assertIn("plan-mode", presets["presets"])
+        self.assertIn("execute-mode", presets["presets"])
+        self.assertIn("review-mode", presets["presets"])
+```
+
+### C.5 用户体感
+
+```
+User: /plan some-feature
+  → Plugin chat.message hook 注入: "Now in plan-mode preset"
+  → alloy-plan + alloy-discuss visible，alloy-tdd 隐藏
+  → only Orchestrator/Explorer/Architect agents available
+
+User: /execute
+  → Plugin command.execute.before 自动调 alloy_switch_preset("execute-mode")
+  → 切到 Builder/Fixer，alloy-tdd visible
+
+User in chat: "switch to review mode"
+  → Orchestrator agent 调 alloy_switch_preset("review-mode") tool
+  → 热加载，session 不重启
+```
 
 ---
 
-## 7. 跟今天讨论的所有点对照表
+## D. Task 6 具体到代码: plan phase 合并
 
-| 讨论点 | 落到哪个版本 |
-|---|---|
-| 自用 + OSS 定位 | v0.1.2 README |
-| Plugin-first 心智 | v0.1.2 CLAUDE.md / v0.2 实际改 |
-| 最强约束三层防御 | v0.2 |
-| Skill inline copy 原版 + append | v0.1.2 Task 5 |
-| Mattpocock handoff vendor | v0.1.2 Task 3 |
-| OpenCode DCP optional pack | v0.1.2 Task 4 |
-| Spec + plan 合并 | v0.1.2 Task 6 |
-| Execute context pruning | v0.2 Block 3 |
-| State machine + JSONL ledger | v0.2 Block 2 |
-| Zhenjia token 优化 6 步 | v0.2 Block 4 |
-| 不替用户做选择 | v0.2 Block 1 |
-| 保留 frontend/backend/infra/all pack | v0.1.2+ 永久 |
-| 砍 vcs/issues atoms | v0.2 |
-| Rate limit auto-resume | v0.3 |
-| Sub-agent contain | v0.3 |
-| Audit chain hash | v0.3 |
-| Daemon + tracker | v0.4+ |
-| Claude Code adapter | v0.5 |
-| Codex adapter | v0.6 |
-| Skill learning loop | v0.5+ |
-| 不要数据库 | 永远 |
-| 用 .mjs (不上 ts) | 永远 |
+### D.1 commands/spec.md → DELETE
+
+```bash
+git rm commands/spec.md
+```
+
+### D.2 commands/plan.md 重写 (合并 spec + plan)
+
+**改前** (commands/plan.md, 20 行):
+```yaml
+---
+description: Convert an Alloy spec into an implementation plan
+agent: alloy-orchestrator
+---
+# /plan
+Append the implementation-ready `## Plan` section to an Alloy task plan.
+## Workflow
+1. Invoke the `alloy-plan` skill.
+2. Identify the requested `.alloy/specs/<id>/task_plan.md`.
+3. Confirm the `## Spec` section exists ...
+```
+
+**改后** (commands/plan.md, ~30 行):
+```yaml
+---
+description: Brainstorm + plan an implementation in one phase (合并 spec + plan)
+agent: alloy-orchestrator
+---
+# /plan
+Brainstorm the user request + produce an implementation-ready plan in one pass.
+This phase replaces the old separate /spec and /plan commands.
+
+## Workflow
+1. Invoke `alloy-plan` skill (which now also handles brainstorm via merged content).
+2. Identify or create a stable plan id for `.alloy/plans/<id>/`.
+3. Read `.alloy/plans/<id>/context.md` if `/discuss` already captured decisions.
+4. Brainstorm + clarify scope (was /spec).
+5. Produce bite-sized implementation tasks with exact files, commands, verification steps.
+6. Write to `.alloy/plans/<id>/plan.md` with frontmatter:
+   ```yaml
+   ---
+   id: <id>
+   approved: false  # user must approve before /execute
+   required_skills: [...]
+   required_mcps: [...]
+   required_agents: [...]
+   files_to_touch: [...]
+   acceptance_criteria: [...]
+   ---
+   ```
+7. Stop here, wait for user approval (set approved: true) before /execute.
+
+## User Task
+$ARGUMENTS
+```
+
+### D.3 packs/atoms.json 改动
+
+```diff
+"alloy-sdd-commands": {
+-   "commands": ["autopilot", "discuss", "execute", "plan", "spec", "verify"]
++   "commands": ["autopilot", "discuss", "execute", "plan", "verify"]
+}
+```
+
+### D.4 templates/opencode/alloy-plugin.ts COMMAND_SKILLS 改动 (L38-45)
+
+```diff
+const COMMAND_SKILLS: Record<string, string> = {
+-   spec: "alloy-plan",
+    plan: "alloy-plan",
+    execute: "alloy-execute",
+    verify: "alloy-verify",
+    autopilot: "alloy-autopilot",
+    "ralph-loop": "ralph-loop",
+}
+```
+
+### D.5 .alloy/specs/ → .alloy/plans/ migration
+
+`scripts/migrate-specs-to-plans.mjs` (新建):
+```js
+import { existsSync, renameSync } from "node:fs"
+import { resolve } from "node:path"
+
+const specsDir = resolve(process.cwd(), ".alloy/specs")
+const plansDir = resolve(process.cwd(), ".alloy/plans")
+
+if (existsSync(specsDir) && !existsSync(plansDir)) {
+  renameSync(specsDir, plansDir)
+  console.log("Migrated .alloy/specs → .alloy/plans")
+}
+```
+
+集成到 `bin/alloy.mjs install` 流程:
+```js
+// installCommand 开头加
+if (existsSync(join(targetDir, ".alloy/specs")) && !existsSync(join(targetDir, ".alloy/plans"))) {
+  renameSync(join(targetDir, ".alloy/specs"), join(targetDir, ".alloy/plans"))
+}
+```
+
+### D.6 alloy-plan SKILL.md 改动 (合并 brainstorm 内容)
+
+universal/skills/alloy-plan/SKILL.md 当前 180 行。alloy-brainstorm SKILL.md 当前 200 行。
+
+合并策略:
+- alloy-plan/SKILL.md **前半** 从 alloy-brainstorm/SKILL.md 复制 "natural collaborative dialogue + ask one question at a time + HARD-GATE" 部分
+- alloy-plan/SKILL.md **后半** 保留现有 "bite-sized TDD plan + source coverage audit" 部分
+- 总长度 ~280 行 (仍 < 500 行最佳实践)
+
+**universal/skills/alloy-brainstorm/ → DELETE 整个目录**
+
+### D.7 agent .md 引用更新
+
+7 个 agent .md 文件全文 search-replace:
+```
+/spec → /plan
+.alloy/specs/ → .alloy/plans/
+"alloy-brainstorm" → "alloy-plan"
+"Invoke alloy-brainstorm" → "Invoke alloy-plan"
+"Use alloy-brainstorm" → "Use alloy-plan"
+```
+
+### D.8 docs/alloy-overview.html SDD pipeline 图更新
+
+修改 §4 Agents Workflow 的 mermaid/HTML 图:
+```diff
+- pending → spec → plan → execute → verify → done
++ pending → plan → execute → verify → done
+```
 
 ---
 
-## 8. 立即执行（v0.1.2 第一步）
+## 5. Critical files to be modified (v0.1.2)
 
-按 ROI 顺序：
-
-1. **Task 8 写这份 PLAN 到 docs/redesign/**（已完成）→ commit push
-2. **Task 1 README 重定位**（30 min）
-3. **Task 2 CLAUDE.md 加六信条**（30 min）
-4. **Task 6 spec+plan 合并**（2h，user 优先要这个）
-5. **Task 3 mattpocock handoff vendor**（1h）
-6. **Task 4 OpenCode DCP pack**（30 min）
-7. **Task 7 agent .md phase pipeline**（1h）
-8. **Task 5 11 skill inline copy 改造**（4h，最大块，最后做）
-9. **Task 9-10 version bump + test + ship**
-
----
-
-## 9. Open Questions — 需要 plannotator review 时拍
-
-1. **Skill inline copy 模式**：单 base 还是多 base inline 到同一 SKILL.md？我倾向多 base inline（11 alloy-* skill 文件数不变），但 base 选择需要 case by case 拍：
-   - `alloy-tdd`: obra/superpowers 为主 base？mattpocock 作为 append 段？
-   - `alloy-discuss`: GSD 内容 license 待确认
-   - `alloy-map-codebase`: GSD 内容 license 待确认
-   - `alloy-qa`: gstack 内容 inline 完整吗？
-
-2. **`alloy-plan` skill 命运**：
-   - 选项 A: 合并进 `alloy-brainstorm`（删掉 alloy-plan 目录）
-   - 选项 B: 保留 alloy-plan skill，但 /spec 命令同时 invoke alloy-brainstorm + alloy-plan
-   - 倾向 A（更简单）
-
-3. **OpenCode DCP 默认装吗**：
-   - 选项 A: 不默认装（破 cache，trade-off 大）
-   - 选项 B: default 装但 conservatives 设置（少 prune）
-   - 倾向 A
-
-4. **userOverlay detect 自动 adopt 还是问用户**：
-   - 选项 A: detect 后 chat.message 问用户 yes/no
-   - 选项 B: 自动 adopt 进 visible
-   - 倾向 A（不替用户做选择，但要主动告知）
-
-5. **七个 specialist agent .md 改多深**：
-   - 选项 A: 只加 phase pipeline 说明 section
-   - 选项 B: 重写 routing matrix
-   - 倾向 A（v0.1.2 patch 不大动）
-
-6. **v0.1.2 vs v0.2 cutoff**：是不是有些 v0.2 内容（比如 state machine）可以提前到 v0.1.x 系列？还是严格守住"v0.1.x patch only"原则？
+```
+README.md                                                  Task 1
+CLAUDE.md                                                  Task 2
+CHANGELOG.md                                               Task 11
+package.json                                               Task 11
+vendor.lock.json                                           Task 3, 5
+packs/atoms.json                                           Task 3, 5, 6
+packs/core.json (+ frontend/backend/infra/all)             Task 5, 6
+packs/dcp.json (NEW)                                       Task 4
+defaults.json                                              Task 4
+vendor/skills/external/mattpocock/<v>/handoff/ (NEW)       Task 3
+vendor/skills/codegraph/ (NEW vendor)                      Task 5
+vendor/skills/rtk/ (NEW vendor)                            Task 5
+CREDITS.md                                                 Task 3, 5, 9
+commands/plan.md (扩展, 接管 spec)                          Task 6
+commands/spec.md (DELETE)                                  Task 6
+agents/Orchestrator.md (+6 specialists)                    Task 8
+.alloy/specs/ → .alloy/plans/ (rename, scripts/migration)  Task 6
+universal/skills/alloy-tdd/ + 10 others/                   Task 7
+  ├── SKILL.md (重写为 router)
+  ├── upstream/ (NEW dir, vendor 原文)
+  └── alloy-integration.md (NEW)
+universal/skills/alloy-brainstorm/ (DELETE — 并入 alloy-plan) Task 6
+templates/opencode/alloy-plugin.ts (注释加 OMO 缝合记录)    Task 9
+docs/redesign/PLAN-v0.1.2-and-beyond.md (覆盖)              Task 10
+docs/alloy-overview.html (SDD pipeline 图更新)             Task 8
+```
 
 ---
 
-## 10. 验收标准（v0.1.2 ship-ready 标志）
+## 6. Existing functions/utilities to reuse
 
-- ✅ npm test 33 + 新增 tests 全过
-- ✅ `bash setup.sh --pack core --target local --models github-copilot` 在 temp dir 成功
-- ✅ `python3 scripts/audit_prompt_dependencies.py` exits 0
-- ✅ 11 alloy-* SKILL.md 包含 inline 原版完整内容（grep 验证）
-- ✅ packs/atoms.json 含 mattpocock-handoff atom
-- ✅ packs/dcp.json 存在
-- ✅ commands/plan.md 已删除（或标 DEPRECATED）
-- ✅ Git tag v0.1.2 push 到 origin
-- ✅ CHANGELOG.md 含完整变更
-- ✅ docs/alloy-overview.html SDD pipeline 图更新
+- `bin/alloy.mjs` `loadPack()` / `loadAtoms()` / `resolveConfig()` — 已存在，pack expand 不动
+- `bin/alloy.mjs` `installPlugin()` / `installSkills()` — vendor 新 skill 复用
+- `templates/opencode/alloy-plugin.ts` — 已有 12 hooks，Task 9 只加注释不动逻辑
+- `scripts/revendor.mjs` — vendor mattpocock handoff 时复用
+- `scripts/audit_prompt_dependencies.py` — 验证新 skill 引用
+- `scripts/test_alloy_installer.py` — 加 v0.1.2 新 e2e cases
+- `npm test` (33 tests) — 不破坏现有
 
 ---
+
+## 7. Verification (end-to-end test for v0.1.2 ship)
+
+```bash
+# 1. 全套 tests
+npm test                  # 33+ unit + e2e all pass
+node --check bin/alloy.mjs
+python3 scripts/audit_prompt_dependencies.py
+
+# 2. Vendor 完整性
+ls universal/skills/alloy-tdd/upstream/superpowers/tdd.md       # 上游原文 exist
+ls universal/skills/alloy-tdd/upstream/mattpocock/tdd.md
+diff vendor/skills/external/mattpocock/<v>/handoff/SKILL.md \
+     <(curl -s https://raw.githubusercontent.com/mattpocock/skills/.../skills/handoff/SKILL.md)
+# 应该一字不差
+
+# 3. End-to-end install (temp dir)
+tmp=$(mktemp -d)
+cd "$tmp"
+bash /Users/lumimamini/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+# 验证:
+ls .opencode/skills/handoff/                  # mattpocock handoff installed
+ls .opencode/skills/alloy-tdd/upstream/       # vendor 原文 propagate 进 install
+cat .opencode/opencode.json | jq .plugin      # CodeGraph + RTK 装上
+cat .opencode/alloy.manifest.json | jq .managed.skills  # 13+ skills
+
+# 4. Plan phase 合并验证
+node bin/alloy.mjs                            # 不应该有 /spec command
+# 用户在 OpenCode session 跑 /plan 应该走完整 brainstorm+plan 流程
+
+# 5. Tag + push
+git tag v0.1.2
+git push origin v0.1.2
+gh release create v0.1.2 --notes-from-tag
+```
+
+---
+
+## 8. User decisions confirmed (post-grill)
+
+- ✅ **Q (skill 文件)**: Anthropic 官方推荐 SKILL.md ≤500 行 + progressive disclosure → 用拆包模式（主 SKILL.md router + upstream/ 完整原文 + alloy-integration.md）
+- ✅ **Q (OMO 缝合)**: v0.1.2 **直接加** runtime preset 热切换 (+5h 工作量)
+- ✅ **Q (install 体验)**: 完全像 `npx skills` —— install 时全部 interactive prompt，alloy 不替用户判 default-on / opt-in
+
+## Open questions (need user decision before ship)
+
+### Q1: skill upstream/ 子目录的命名
+
+`universal/skills/alloy-tdd/upstream/<source-name>/<file>.md` 还是 `universal/skills/alloy-tdd/upstream/<source-name>-<version>/<file>.md` (含版本号)？
+
+倾向后者，方便 Renovate 跟版本。
+
+### Q2: alloy-brainstorm skill 是否合并进 alloy-plan
+
+倾向 **合并**（删 alloy-brainstorm，内容并入 alloy-plan），因为 plan phase 合并了 spec + plan。
+
+### Q3: ~~default-on / opt-in 分类~~ → 全部 interactive prompt（用户决定）
+
+`alloy install` 像 `npx skills` 那样 prompt 全部 add-on（handoff / CodeGraph / RTK / DCP / OMO preset 等），用户自己 Y/n 选。alloy 不替用户判。
+
+### Q4: install.sh 怎么挂 interactive prompts
+
+`alloy install` 默认 interactive。但 `install.sh` (curl one-liner) 怎么办？
+- 选项 A: install.sh 跑 `alloy install --pack core --target global --models github-copilot --yes` 全 default，用户后续在 chat 里改
+- 选项 B: install.sh 进入 interactive mode 让用户在 terminal 选
+- 倾向 A（一行装完，后续 chat 调整）
+
+---
+
+## 9. Notes on what's NOT in this plan
+
+- **v0.1.6 强制三层防御** — 用户明确说不做，capability isolation 和 Stop hook block fold 进 v0.1.4 ledger guard
+- **v0.2 大版本** — 取消，所有内容渐进 ship 进 v0.1.x
+- **Daemon mode / rate limit auto-resume / Claude Code adapter / Codex adapter / chain hash / compaction** — 全部 v0.3+ 远期
+- **Multi-runtime (CC/Codex)** — v0.3+ 才考虑
+- **Database** — 永远不做（除非未来真要 web UI）
+- **TypeScript 迁移** — 永远保持 `.mjs` + zod + jsdoc
 
 End of plan.
