@@ -93,17 +93,35 @@ test("loadPack: deleted workflow pack no longer resolves", () => {
 
 test("loadAtoms exposes atomic pack building blocks", () => {
   const atoms = loadAtoms()
-  assert.ok(atoms["alloy-core-skills"].skills.includes("alloy-tdd"))
+  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"])
+  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-plan"))
   assert.deepEqual(atoms["mcp-baseline"].mcp, ["context7", "grep_app", "exa"])
   assert.ok(atoms["frontend-skills"].skills.includes("frontend-ui-ux"))
 })
 
 test("loadPack expands extends into concrete arrays", () => {
   const frontend = loadPack("frontend")
-  assert.ok(frontend.skills.includes("alloy-plan"))
+  assert.ok(frontend.skills.includes("alloy-tdd"))
+  assert.ok(!frontend.skills.includes("alloy-plan"))
   assert.ok(frontend.skills.includes("frontend-ui-ux"))
   assert.deepEqual(frontend.mcp, ["context7", "grep_app", "exa"])
   assert.equal(frontend.extends, undefined)
+})
+
+test("loadPack reports unknown atoms used in extends", () => {
+  assert.throws(
+    () => mergePack({ id: "synthetic-pack", extends: ["nonexistent-atom"] }, { id: "extra" }),
+    /Unknown atom "nonexistent-atom" in pack synthetic-pack/,
+  )
+})
+
+test("mergePack loads empty extends as empty inventories", () => {
+  const merged = mergePack({ id: "empty-pack", extends: [] }, { id: "extra-pack", extends: [] })
+  assert.deepEqual(merged.skills, [])
+  assert.deepEqual(merged.agents, [])
+  assert.deepEqual(merged.commands, [])
+  assert.deepEqual(merged.mcp, [])
+  assert.deepEqual(merged.modelRoles, [])
 })
 
 test("mergePack unions arrays and deduplicates", () => {

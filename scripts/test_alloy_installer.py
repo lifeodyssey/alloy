@@ -100,19 +100,26 @@ class AlloyInstallerTest(unittest.TestCase):
             backend = skill_names(root / "backend")
             infra = skill_names(root / "infra")
 
-        self.assertIn("frontend-ui-ux", frontend)
-        self.assertIn("playwright-cli", frontend)
-        self.assertNotIn("postgres", frontend)
-        self.assertNotIn("terraform-skill", frontend)
-
-        self.assertIn("postgres", backend)
-        self.assertIn("kotlin-backend-jpa-entity-mapping", backend)
-        self.assertNotIn("frontend-ui-ux", backend)
-        self.assertNotIn("terraform-skill", backend)
-
-        self.assertIn("terraform-skill", infra)
-        self.assertNotIn("postgres", infra)
-        self.assertNotIn("frontend-ui-ux", infra)
+        baseline = {"alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"}
+        workflow_extras = {
+            "alloy-plan",
+            "alloy-discuss",
+            "alloy-execute",
+            "alloy-verify",
+            "alloy-using",
+            "alloy-autopilot",
+            "alloy-map-codebase",
+            "alloy-qa",
+        }
+        self.assertEqual(frontend, baseline | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"})
+        self.assertEqual(
+            backend,
+            baseline | {"kotlin-backend-jpa-entity-mapping", "postgres", "design-postgres-tables", "pgvector-semantic-search"},
+        )
+        self.assertEqual(infra, baseline | {"terraform-skill"})
+        self.assertTrue(workflow_extras.isdisjoint(frontend))
+        self.assertTrue(workflow_extras.isdisjoint(backend))
+        self.assertTrue(workflow_extras.isdisjoint(infra))
 
     def test_install_generates_alloy_project_and_plugin_dependencies(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -345,14 +352,6 @@ class AlloyInstallerTest(unittest.TestCase):
             "alloy-tdd",
             "alloy-brainstorm",
             "alloy-debug",
-            "alloy-plan",
-            "alloy-discuss",
-            "alloy-execute",
-            "alloy-verify",
-            "alloy-using",
-            "alloy-autopilot",
-            "alloy-map-codebase",
-            "alloy-qa",
             "git-master",
             "humanizer",
             "frontend-ui-ux",
@@ -380,6 +379,39 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(resolved["pack"]["agents"], inline_equivalent_agents)
         self.assertEqual(resolved["pack"]["commands"], inline_equivalent_commands)
         self.assertEqual(resolved["pack"]["mcp"], ["context7", "grep_app", "exa"])
+
+    def test_global_install_preserves_existing_user_config_entries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            cwd = root / "project"
+            target = home / ".config" / "opencode"
+            target.mkdir(parents=True)
+            cwd.mkdir()
+            existing = {
+                "$schema": "https://opencode.ai/config.json",
+                "theme": "user-theme",
+                "plugin": ["user-plugin"],
+                "mcp": {
+                    "context7": {"type": "remote", "url": "https://user.example/context7"},
+                    "custom-mcp": {"type": "remote", "url": "https://user.example/custom"},
+                },
+                "agent": {"UserAgent": {"model": "user/model"}},
+            }
+            (target / "opencode.json").write_text(json.dumps(existing))
+            env = {**os.environ, "HOME": str(home)}
+
+            run_alloy(cwd, "install", "--pack", "core", "--target", "global", env=env)
+            config = json.loads((target / "opencode.json").read_text())
+
+        self.assertEqual(config["theme"], "user-theme")
+        self.assertIn("user-plugin", config["plugin"])
+        self.assertIn("cc-safety-net", config["plugin"])
+        self.assertEqual(config["mcp"]["context7"]["url"], "https://user.example/context7")
+        self.assertEqual(config["mcp"]["custom-mcp"]["url"], "https://user.example/custom")
+        self.assertIn("grep_app", config["mcp"])
+        self.assertIn("UserAgent", config["agent"])
+        self.assertIn("Orchestrator", config["agent"])
 
     def test_scope_skills_load_from_new_dirs(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -503,6 +535,30 @@ class AlloyInstallerTest(unittest.TestCase):
 
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse((cwd / ".opencode").exists())
+
+    def test_doctor_preinstall_succeeds_without_opencode_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            result = run_alloy(cwd, "doctor", "--pack", "core", "--target", "local")
+
+        self.assertIn("OpenCode Alloy Doctor", result.stdout)
+        self.assertIn("Run alloy install first for full doctor", result.stdout)
+
+    def test_missing_defaults_json_fails_without_node_stack(self):
+        backup = ROOT / "defaults.json.testbak"
+        defaults = ROOT / "defaults.json"
+        defaults.rename(backup)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                result = run_alloy(Path(tmp), "resolve", "--pack", "core", check=False)
+        finally:
+            backup.rename(defaults)
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(f"ERROR: Missing defaults.json at {defaults}", result.stderr)
+        self.assertIn("Ensure you are running alloy from the repo root.", result.stderr)
+        self.assertNotIn("ENOENT", result.stderr)
+        self.assertNotIn("at Object", result.stderr)
 
     def test_invalid_target_fails_fast(self):
         with tempfile.TemporaryDirectory() as tmp:
