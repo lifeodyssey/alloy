@@ -1,4 +1,4 @@
-# OpenCode Alloy v2 → v3 — Complete Change Summary
+# Alloy v2 → v3 — Complete Change Summary
 
 > Single-document reference for everything that changed in the v3 redesign. Generated 2026-05-25 at end of Q1-Q11 grill cycle. Pair with `task_plan.md` (decisions), `findings.md` (research), `progress.md` (session log), `config-overview.html` (visual).
 
@@ -339,6 +339,6 @@ For questions:
 - **OSS governance** → `task_plan.md` Q11 section
 
 For changes:
-- Open an issue at `lifeodyssey/opencode-alloy` describing the Q being revisited
+- Open an issue at `lifeodyssey/alloy` describing the Q being revisited
 - Run `grill-me` skill to stress-test the proposed change
 - Reference this SUMMARY.md section to confirm the proposed change doesn't silently violate a prior decision

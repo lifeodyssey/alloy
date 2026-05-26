@@ -123,10 +123,10 @@ Then Wave 3 (Card 6+7+12: CLI v3 surface), Wave 4 (Card 8+9+10: plugin 11 hooks,
 For Step 2 above. Dispatch via Agent tool with `subagent_type: codex:codex-rescue` and `run_in_background: true`:
 
 ```
-You are the Executor fixing reviewer findings on PR #3 of OpenCode Alloy v0.1.0. Self-contained brief.
+You are the Executor fixing reviewer findings on PR #3 of Alloy v0.1.0. Self-contained brief.
 
-Repo: /Users/lumimamini/opencode-alloy
-Worktree: /Users/lumimamini/opencode-alloy/.worktrees/cc-safety-net-integration
+Repo: /Users/lumimamini/alloy
+Worktree: /Users/lumimamini/alloy/.worktrees/cc-safety-net-integration
 Branch: iter1/cc-safety-net-integration (PR #3, already pushed at HEAD 67b8cfb)
 
 Three reviewer findings to fix:
@@ -145,7 +145,7 @@ AC:
 - `node --check bin/alloy.mjs` passes
 
 How:
-1. cd /Users/lumimamini/opencode-alloy/.worktrees/cc-safety-net-integration
+1. cd /Users/lumimamini/alloy/.worktrees/cc-safety-net-integration
 2. Make fixes
 3. Run `npm test` + `node --check bin/alloy.mjs`
 4. Commit: `git add -A && git commit -m "fix(plugin): wire cc-safety-net through installer (PR #3 reviewer findings)"`

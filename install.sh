@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ALLOY_REPO_URL="https://github.com/lifeodyssey/opencode-alloy"
+ALLOY_REPO_URL="https://github.com/lifeodyssey/alloy"
 ALLOY_REF="${ALLOY_INSTALL_REF:-main}"
 ALLOY_PACK="${ALLOY_PACK:-core}"
 DOWNLOAD_DIR=""
 BIN_DIR="${HOME}/.local/bin"
-INSTALL_ROOT="${HOME}/.local/share/alloy/opencode-alloy"
+INSTALL_ROOT="${HOME}/.local/share/alloy"
 ALLOY_BIN="${BIN_DIR}/alloy"
 ALLOY_CONFIG_DIR="${HOME}/.config/alloy"
 STATE_PATH="${ALLOY_CONFIG_DIR}/state.json"
@@ -69,7 +69,7 @@ check_prereqs() {
 }
 
 download_repo() {
-  progress "Downloading OpenCode Alloy"
+  progress "Downloading Alloy"
   DOWNLOAD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/alloy-install-XXXXXX")"
   if [[ -n "${ALLOY_INSTALL_SOURCE_DIR:-}" ]]; then
     local source_dir
@@ -111,8 +111,8 @@ ensure_path() {
 
   if [[ "${path_missing}" -eq 1 ]]; then
     local path_block='export PATH="$HOME/.local/bin:$PATH"'
-    append_block_once "${HOME}/.zshrc" "OpenCode Alloy PATH" "${path_block}"
-    append_block_once "${HOME}/.bashrc" "OpenCode Alloy PATH" "${path_block}"
+    append_block_once "${HOME}/.zshrc" "Alloy PATH" "${path_block}"
+    append_block_once "${HOME}/.bashrc" "Alloy PATH" "${path_block}"
   fi
 }
 
@@ -136,7 +136,7 @@ install_alloy_bin() {
 }
 
 run_global_install() {
-  progress "Installing global OpenCode Alloy config"
+  progress "Installing global Alloy config"
   (
     cd "${INSTALL_ROOT}"
     "${ALLOY_BIN}" install --target global --pack "${ALLOY_PACK}"
@@ -177,8 +177,8 @@ install_completion() {
   "${ALLOY_BIN}" completion zsh > "${zsh_dir}/_alloy"
   "${ALLOY_BIN}" completion fish > "${fish_dir}/alloy.fish"
 
-  append_block_once "${HOME}/.bashrc" "OpenCode Alloy completion" '[ -f "$HOME/.bash_completion.d/alloy" ] && . "$HOME/.bash_completion.d/alloy"'
-  append_block_once "${HOME}/.zshrc" "OpenCode Alloy completion" 'fpath=("$HOME/.zsh/completions" $fpath)
+  append_block_once "${HOME}/.bashrc" "Alloy completion" '[ -f "$HOME/.bash_completion.d/alloy" ] && . "$HOME/.bash_completion.d/alloy"'
+  append_block_once "${HOME}/.zshrc" "Alloy completion" 'fpath=("$HOME/.zsh/completions" $fpath)
 autoload -Uz compinit
 compinit'
 }

@@ -1,6 +1,6 @@
 {
   "id": "backend",
-  "description": "OpenCode Alloy backend pack: core plus Kotlin/Spring and Postgres skills.",
+  "description": "Alloy backend pack: core plus Kotlin/Spring and Postgres skills.",
   "target": "local",
   "extends": [
     "alloy-baseline-5",

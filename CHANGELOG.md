@@ -1,10 +1,26 @@
 # Changelog
 
-All notable changes to OpenCode Alloy will be documented in this file.
+All notable changes to Alloy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows semantic versioning for the Alloy CLI separately from
 vendored skill versions.
+
+## [Unreleased]
+
+### Changed
+
+- Renamed the repository from `opencode-team-config` to `alloy`, with
+  `opencode-alloy` used only as an interim migration name.
+- Repositioned Alloy as a multi-runtime adapter: v0.1.x supports OpenCode,
+  v0.2 plans Claude Code, and v0.3 plans Codex CLI.
+- Updated repository URLs, install helper URLs, security links, and self-upgrade
+  defaults to `lifeodyssey/alloy`.
+
+### Notes
+
+- The npm package name is `@lifeodyssey/alloy` because the unscoped `alloy`
+  package name is already taken on npm.
 
 ## [0.1.0] - 2026-05-25
 

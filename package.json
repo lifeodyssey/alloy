@@ -1,5 +1,5 @@
 {
-  "name": "opencode-alloy",
+  "name": "@lifeodyssey/alloy",
   "version": "0.1.0",
   "private": true,
   "type": "module",

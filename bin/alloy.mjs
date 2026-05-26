@@ -83,7 +83,7 @@ function loadDefaults() {
 }
 
 function usage() {
-  return `OpenCode Alloy
+  return `Alloy
 
 Usage:
   alloy init [--pack core] [--models github-copilot] [--target local]
@@ -549,7 +549,7 @@ function installCommand(options, projectDir = process.cwd()) {
   const resolved = resolveConfig(options, projectDir)
   if (options.auditOnly) return auditTarget(resolved, projectDir)
   const installedAt = new Date().toISOString()
-  console.log("OpenCode Alloy Setup")
+  console.log("Alloy Setup")
   console.log(`Pack: ${resolved.pack.id}`)
   if (options.usedProfileAlias) console.log("Profile alias: deprecated; use --pack going forward")
   console.log(`Target: ${options.target} (${resolved.targetDir})`)
@@ -569,12 +569,12 @@ function installCommand(options, projectDir = process.cwd()) {
   if (options.target === "global") writeGlobalInstallState(resolved, installedAt, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
   if (options.dryRun) {
-    console.log(resolved.pack.id === "core" ? "Alloy core pack installed (dry-run plan only)" : "OpenCode Alloy pack installed (dry-run plan only)")
+    console.log(resolved.pack.id === "core" ? "Alloy core pack installed (dry-run plan only)" : "Alloy pack installed (dry-run plan only)")
     console.log("Dry run complete; no files were written.")
     return 0
   }
   updateProjections(projectDir)
-  console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "OpenCode Alloy pack installed")
+  console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "Alloy pack installed")
   return auditTarget(resolved, projectDir)
 }
 
@@ -711,7 +711,7 @@ function validateTargetFiles(resolved) {
 }
 
 function doctorCommand(options, projectDir = process.cwd()) {
-  console.log("OpenCode Alloy Doctor")
+  console.log("Alloy Doctor")
   const resolved = resolveConfig(options, projectDir)
   const failures = []
   const warnings = []
@@ -1090,7 +1090,7 @@ async function fetchLatestRelease(owner, repo) {
   const mocked = mockedRelease(owner, repo)
   if (mocked !== undefined) return mocked
   const base = (process.env.ALLOY_GITHUB_API_BASE || "https://api.github.com").replace(/\/$/, "")
-  const headers = { "User-Agent": "opencode-alloy", "Accept": "application/vnd.github+json" }
+  const headers = { "User-Agent": "alloy", "Accept": "application/vnd.github+json" }
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
   const release = await fetch(`${base}/repos/${owner}/${repo}/releases/latest`, { headers, signal: fetchTimeoutSignal() })
   if (release.status === 404) return fetchLatestTag(base, owner, repo, headers)
@@ -1176,7 +1176,7 @@ function runRevendor(name) {
 }
 
 function upgradeSelf() {
-  const url = process.env.ALLOY_SELF_UPGRADE_URL || "https://raw.githubusercontent.com/lifeodyssey/opencode-alloy/main/install.sh"
+  const url = process.env.ALLOY_SELF_UPGRADE_URL || "https://raw.githubusercontent.com/lifeodyssey/alloy/main/install.sh"
   console.log(`Running Alloy self-upgrade from ${url}`)
   const result = spawnSync("/bin/bash", ["-c", `curl -fsSL ${shellQuote(url)} | bash`], { stdio: "inherit", env: process.env })
   return result.status ?? 1
@@ -1436,7 +1436,7 @@ function syncCommand(options, projectDir = process.cwd()) {
   if (!pathExists(workspacePath)) throw new Error(`Missing workspace file: ${workspacePath}`)
   const workspace = readJson(workspacePath)
   if (!Array.isArray(workspace.projects)) throw new Error("alloy.workspace.json must contain projects[]")
-  console.log("OpenCode Alloy Sync")
+  console.log("Alloy Sync")
   for (const project of workspace.projects) {
     const target = resolve(dirname(workspacePath), project.path)
     console.log(`${options.dryRun ? "DRY-RUN: " : ""}sync project ${target}`)

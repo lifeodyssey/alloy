@@ -1,9 +1,9 @@
-# OpenCode Alloy Install
+# Alloy Install
 
 ## Quick install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lifeodyssey/opencode-alloy/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lifeodyssey/alloy/main/install.sh | bash
 ```
 
 The installer checks Node.js 20+, Bun 1.1+, Git, and curl; installs the Alloy CLI at `~/.local/bin/alloy`; runs `alloy install --target global`; writes `~/.config/alloy/state.json`; and installs shell completion.
@@ -96,7 +96,7 @@ Open a new terminal after install so your shell reloads its startup file.
 
 The installer only writes under your home directory:
 
-- `~/.local/share/alloy/opencode-alloy`
+- `~/.local/share/alloy`
 - `~/.local/bin/alloy`
 - `~/.config/opencode`
 - `~/.config/alloy/state.json`

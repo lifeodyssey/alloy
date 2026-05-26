@@ -1,6 +1,6 @@
 {
   "id": "core",
-  "description": "OpenCode Alloy core pack: native Alloy agents, commands, core skills, Bun plugin support, and the minimal MCP baseline.",
+  "description": "Alloy core pack: native Alloy agents, commands, core skills, Bun plugin support, and the minimal MCP baseline.",
   "target": "local",
   "extends": [
     "alloy-baseline-5",

@@ -73,7 +73,7 @@ class AlloyInstallerTest(unittest.TestCase):
                 "github-copilot",
             )
 
-        self.assertIn("OpenCode Alloy Setup", result.stdout)
+        self.assertIn("Alloy Setup", result.stdout)
         self.assertIn(".alloy/alloy.project.json", result.stdout)
         self.assertIn(".opencode/agents", result.stdout)
         self.assertIn(".opencode/skills", result.stdout)
@@ -566,7 +566,7 @@ class AlloyInstallerTest(unittest.TestCase):
             )
             result = run_alloy(root, "sync", "--workspace", str(workspace), "--dry-run")
 
-        self.assertIn("OpenCode Alloy Sync", result.stdout)
+        self.assertIn("Alloy Sync", result.stdout)
         self.assertIn("sync project", result.stdout)
         self.assertIn(".opencode/opencode.json", result.stdout)
         self.assertNotIn(str(Path.home() / ".config" / "opencode"), result.stdout)
@@ -609,7 +609,7 @@ class AlloyInstallerTest(unittest.TestCase):
             cwd = Path(tmp)
             result = run_alloy(cwd, "doctor", "--pack", "core", "--target", "local")
 
-        self.assertIn("OpenCode Alloy Doctor", result.stdout)
+        self.assertIn("Alloy Doctor", result.stdout)
         self.assertIn("Run alloy install first for full doctor", result.stdout)
 
     def test_missing_defaults_json_fails_without_node_stack(self):

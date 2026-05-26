@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility wrapper for the OpenCode Alloy Node CLI."""
+"""Compatibility wrapper for the Alloy Node CLI."""
 
 from __future__ import annotations
 

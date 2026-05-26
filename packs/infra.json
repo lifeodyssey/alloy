@@ -1,6 +1,6 @@
 {
   "id": "infra",
-  "description": "OpenCode Alloy infra pack: core plus Terraform/OpenTofu guidance.",
+  "description": "Alloy infra pack: core plus Terraform/OpenTofu guidance.",
   "target": "local",
   "extends": [
     "alloy-baseline-5",

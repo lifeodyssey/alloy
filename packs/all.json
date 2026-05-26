@@ -1,6 +1,6 @@
 {
   "id": "all",
-  "description": "OpenCode Alloy all pack: every first-party and licensed third-party skill.",
+  "description": "Alloy all pack: every first-party and licensed third-party skill.",
   "target": "local",
   "extends": [
     "alloy-baseline-5",

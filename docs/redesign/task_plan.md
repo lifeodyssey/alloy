@@ -4,7 +4,7 @@
 
 ## Goal (Q1 — decided)
 
-Redesign opencode-alloy / OpenCode Alloy as a fusion of GSD + OMO Slim + SuperPower **best ideas** (not as a wrapper for them).
+Redesign alloy / Alloy as a fusion of GSD + OMO Slim + SuperPower **best ideas** (not as a wrapper for them).
 
 **Three co-equal goals:**
 

@@ -1,6 +1,6 @@
 # Credits & Attribution
 
-OpenCode Alloy v3 absorbs ideas, prompts, and reference content from multiple upstream projects. This file lists every source we draw from, with license and attribution.
+Alloy v3 absorbs ideas, prompts, and reference content from multiple upstream projects. This file lists every source we draw from, with license and attribution.
 
 Our own first-party Alloy content is **MIT** unless otherwise noted in the individual file. Vendored third-party content keeps its upstream license.
 
@@ -11,7 +11,7 @@ Skills under `skills/` that we author and own:
 - `alloy-using`, `alloy-brainstorm`, `alloy-plan`, `alloy-execute`, `alloy-tdd`, `alloy-debug`, `alloy-verify`, `alloy-discuss`, `alloy-map-codebase`, `alloy-autopilot`, `alloy-qa`
 - `frontend-ui-ux`, `playwright-cli`, `git-master`, `humanizer`, `using-sandboxes`
 
-Authors:  contributors of the `opencode-alloy` (Alloy) project.
+Authors:  contributors of the `alloy` (Alloy) project.
 
 These skills absorb design ideas from the projects listed below; see each SKILL.md's "Attribution" section for specifics.
 
@@ -162,10 +162,10 @@ ralph-loop — MIT, anthropics/claude-plugins-official, vendored at vendor/skill
 
 ## License Summary
 
-OpenCode Alloy v3 itself: **MIT**.
+Alloy v3 itself: **MIT**.
 
 Vendored content retains upstream licenses. No copyleft (no GPL/AGPL) content is vendored or required. All vendored content is permissive (MIT / Apache-2.0 / MPL-2.0) and commercially usable.
 
 Where upstream content is incorporated into first-party Alloy skills (absorbed concepts rather than verbatim copies), the Attribution section of each SKILL.md identifies the source.
 
-If you believe content has been misattributed or used outside its license terms, please open an issue at [opencode-alloy issues](https://github.com/lifeodyssey/opencode-alloy/issues).
+If you believe content has been misattributed or used outside its license terms, please open an issue at [alloy issues](https://github.com/lifeodyssey/alloy/issues).
