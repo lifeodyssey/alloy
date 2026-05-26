@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alloy — multi-runtime adapter for OpenCode / CC / Codex</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text: #0f172a;
+    --text-dim: #475569;
+    --text-dim2: #94a3b8;
+    --accent: #3b82f6;
+    --accent-soft: #dbeafe;
+    --green: #10b981;
+    --green-soft: #d1fae5;
+    --amber: #f59e0b;
+    --amber-soft: #fef3c7;
+    --pink: #ec4899;
+    --pink-soft: #fce7f3;
+    --purple: #8b5cf6;
+    --purple-soft: #ede9fe;
+    --red: #ef4444;
+    --red-soft: #fee2e2;
+    --gray: #64748b;
+    --gray-soft: #f1f5f9;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+    --code-keyword: #c084fc;
+    --code-string: #86efac;
+    --code-comment: #64748b;
+    --code-number: #fbbf24;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 30px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.04);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code, pre, .mono { font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  /* === Layout === */
+
+  .layout {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 0;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 20px 28px 32px;
+    border-right: 1px solid var(--border);
+    background: var(--card);
+  }
+
+  .sidebar-brand {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .sidebar-brand .dot { color: var(--accent); }
+  .sidebar-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 28px; }
+  .sidebar-nav { font-size: 13px; }
+  .sidebar-nav a {
+    display: block;
+    padding: 6px 0;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    padding-left: 12px;
+    transition: all 0.15s;
+  }
+  .sidebar-nav a:hover { color: var(--text); border-left-color: var(--accent); }
+  .sidebar-nav a.section-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 16px;
+    border-left: none;
+    padding-left: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sidebar-nav a.section-title:hover { background: transparent; }
+  .sidebar-nav a.sub { padding-left: 26px; font-size: 12.5px; }
+
+  .main { padding: 60px 64px 120px; min-width: 0; }
+
+  /* === Hero === */
+
+  .hero {
+    margin-bottom: 80px;
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 56px;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin: 0 0 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .hero h1 .accent { color: var(--accent); }
+  .hero-lede {
+    font-size: 20px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    max-width: 760px;
+    margin: 0 0 32px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+    margin-top: 32px;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .stat-num .unit { font-size: 14px; color: var(--text-dim2); font-weight: 500; margin-left: 2px; }
+  .stat-label { font-size: 12.5px; color: var(--text-dim); }
+
+  /* === Section === */
+
+  section { margin-bottom: 80px; scroll-margin-top: 70px; }
+
+  .section-eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 36px;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-lede {
+    font-size: 17px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 780px;
+    margin: 0 0 36px;
+  }
+  h3 {
+    font-size: 22px;
+    line-height: 1.3;
+    margin: 40px 0 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.015em;
+  }
+  h4 {
+    font-size: 16px;
+    margin: 24px 0 10px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  p { margin: 0 0 14px; color: var(--text); }
+
+  /* === Card === */
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-tight { padding: 16px 20px; }
+  .card-row { display: flex; align-items: center; gap: 16px; }
+
+  /* === Tag === */
+
+  .tag {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .tag-blue { background: var(--accent-soft); color: var(--accent); }
+  .tag-green { background: var(--green-soft); color: var(--green); }
+  .tag-amber { background: var(--amber-soft); color: var(--amber); }
+  .tag-pink { background: var(--pink-soft); color: var(--pink); }
+  .tag-purple { background: var(--purple-soft); color: var(--purple); }
+  .tag-red { background: var(--red-soft); color: var(--red); }
+  .tag-gray { background: var(--gray-soft); color: var(--gray); }
+
+  /* === Table === */
+
+  .table-wrap { overflow-x: auto; margin: 20px 0; border-radius: var(--radius); border: 1px solid var(--border); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    background: var(--card);
+  }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--gray-soft);
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(59, 130, 246, 0.03); }
+  td code { background: var(--gray-soft); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; color: var(--text); }
+
+  /* === Code block === */
+
+  pre.code {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 18px 20px;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 14px 0;
+    box-shadow: var(--shadow-sm);
+  }
+  pre.code .k { color: var(--code-keyword); }   /* keyword */
+  pre.code .s { color: var(--code-string); }    /* string */
+  pre.code .c { color: var(--code-comment); font-style: italic; }   /* comment */
+  pre.code .n { color: var(--code-number); }    /* number */
+  pre.code .f { color: #60a5fa; }               /* function */
+
+  code.inline { background: var(--gray-soft); padding: 1px 6px; border-radius: 4px; font-size: 90%; color: var(--text); }
+
+  /* === Collapsible === */
+
+  details {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 14px 0;
+    box-shadow: var(--shadow-sm);
+  }
+  details > summary {
+    padding: 14px 18px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after {
+    content: "▸";
+    color: var(--text-dim);
+    transition: transform 0.2s;
+    font-size: 12px;
+  }
+  details[open] > summary::after { transform: rotate(90deg); }
+  details > summary:hover { background: var(--gray-soft); border-radius: var(--radius) var(--radius) 0 0; }
+  details > div { padding: 0 18px 18px; border-top: 1px solid var(--border); }
+  details[open] > summary { background: var(--gray-soft); }
+
+  /* === Flow / Diagram === */
+
+  .flow {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+  .flow-box {
+    background: var(--gray-soft);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 110px;
+    text-align: center;
+  }
+  .flow-box.b-blue { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .flow-box.b-green { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+  .flow-box.b-amber { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .flow-box.b-purple { background: var(--purple-soft); border-color: var(--purple); color: var(--purple); }
+  .flow-box.b-pink { background: var(--pink-soft); border-color: var(--pink); color: var(--pink); }
+  .flow-arrow { color: var(--text-dim2); font-size: 18px; }
+
+  /* === Callout === */
+
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(59, 130, 246, 0.04);
+    padding: 14px 18px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 18px 0;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .callout.warn { border-left-color: var(--amber); background: rgba(245, 158, 11, 0.04); }
+  .callout.success { border-left-color: var(--green); background: rgba(16, 185, 129, 0.04); }
+  .callout strong { color: var(--text); }
+
+  /* === Grid for cards === */
+
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 20px 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.15s;
+  }
+  .feature-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .feature-card .icon-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .feature-card h4 { margin: 0; font-size: 15px; }
+  .feature-card p { font-size: 13.5px; color: var(--text-dim); margin: 6px 0 0; }
+
+  /* === Roadmap === */
+
+  .timeline { display: grid; grid-template-columns: 1fr; gap: 14px; margin: 24px 0; }
+  .timeline-item {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 24px;
+    padding: 16px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .timeline-version {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .timeline-version .date { display: block; font-size: 11.5px; color: var(--text-dim2); font-weight: 500; margin-top: 2px; }
+  .timeline-status { font-size: 12px; margin-top: 6px; }
+  .timeline-item h4 { margin: 0 0 4px; font-size: 15px; }
+  .timeline-item p { font-size: 13.5px; color: var(--text-dim); margin: 0; }
+
+  /* === Footer === */
+
+  footer { margin-top: 100px; padding-top: 40px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 13px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  ul, ol { padding-left: 22px; margin: 10px 0; }
+  ul li, ol li { margin: 4px 0; color: var(--text); }
+
+  a { color: var(--accent); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 40px 24px 80px; }
+    .hero h1 { font-size: 40px; }
+    .hero-lede { font-size: 17px; }
+    h2 { font-size: 28px; }
+  }
+
+  /* Inline diff layout */
+  .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .diff-side { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 13px; }
+  .diff-side h5 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); font-weight: 700; }
+  .diff-side.upstream { border-left: 3px solid var(--gray); }
+  .diff-side.alloy { border-left: 3px solid var(--accent); }
+  @media (max-width: 700px) { .diff-grid { grid-template-columns: 1fr; } }
+
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<aside class="sidebar">
+  <div class="sidebar-brand">Alloy<span class="dot">.</span></div>
+  <div class="sidebar-sub">v0.1.1 · multi-runtime adapter</div>
+  <nav class="sidebar-nav">
+    <a class="section-title">概述</a>
+    <a href="#what-is">什么是 Alloy</a>
+    <a href="#topology">系统拓扑</a>
+
+    <a class="section-title">OpenCode Hooks</a>
+    <a href="#hooks-overview">12 hooks 总览</a>
+    <a href="#hooks-flow" class="sub">运行时数据流</a>
+    <a href="#hooks-detail" class="sub">关键 hook 代码</a>
+    <a href="#hooks-tools" class="sub">4 个自定义 tool</a>
+
+    <a class="section-title">SDK / CLI</a>
+    <a href="#sdk-modules">4 个核心模块</a>
+    <a href="#sdk-commands" class="sub">15 个 subcommand</a>
+    <a href="#sdk-resolver" class="sub">Resolver 数据流</a>
+    <a href="#sdk-state" class="sub">状态文件 schema</a>
+
+    <a class="section-title">Agents</a>
+    <a href="#agents-roles">7 specialists</a>
+    <a href="#agents-workflow" class="sub">SDD pipeline</a>
+    <a href="#agents-md">Agent MD 结构</a>
+
+    <a class="section-title">Skills</a>
+    <a href="#skills-inventory">全部 Skills 清单</a>
+    <a href="#skills-sources" class="sub">来源 & License</a>
+    <a href="#skills-diff" class="sub">vs 原版差异</a>
+    <a href="#skills-deleted" class="sub">删减清单</a>
+
+    <a class="section-title">架构补充</a>
+    <a href="#packs-atoms">Packs + Atoms</a>
+    <a href="#install-flow">安装流程</a>
+    <a href="#timeline">v0.1.0 实施时间线</a>
+    <a href="#roadmap">Roadmap</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+<!-- ============ HERO ============ -->
+
+<div class="hero">
+  <span class="hero-eyebrow">v0.1.1 · 2026-05-26</span>
+  <h1>Alloy<span class="accent">.</span> 一份配置，多个运行时。</h1>
+  <p class="hero-lede">
+    Alloy 是一个 <strong>runtime-agnostic 的 adapter 层</strong>——它把 skills、agents、commands、MCPs 和 model-role 映射打成 packs，然后 materialize 进你的 AI coding agent。
+    当前版本完整支持 OpenCode，下一版加 Claude Code 与 Codex CLI。
+  </p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-num">12<span class="unit">hooks</span></div><div class="stat-label">OpenCode plugin hooks</div></div>
+    <div class="stat"><div class="stat-num">15<span class="unit">cmds</span></div><div class="stat-label">CLI subcommands</div></div>
+    <div class="stat"><div class="stat-num">7<span class="unit">agents</span></div><div class="stat-label">v3 specialists</div></div>
+    <div class="stat"><div class="stat-num">13<span class="unit">skills</span></div><div class="stat-label">first-party + baseline</div></div>
+    <div class="stat"><div class="stat-num">6<span class="unit">packs</span></div><div class="stat-label">core/frontend/backend/infra/all/atoms</div></div>
+    <div class="stat"><div class="stat-num">33<span class="unit">tests</span></div><div class="stat-label">unit + e2e passing</div></div>
+  </div>
+</div>
+
+<!-- ============ INTRO ============ -->
+
+<section id="what-is">
+  <div class="section-eyebrow">概述</div>
+  <h2>什么是 Alloy</h2>
+  <p class="section-lede">
+    Alloy 不是 AI agent，也不是 chat UI。它是 distribution + control layer——你写 packs 声明"我要这些 skill、agent、command、MCP、model 映射"，Alloy 把它们 resolve 出来 materialize 进目标 repo 的运行时目录。
+  </p>
+
+  <div class="grid-3">
+    <div class="feature-card">
+      <h4>📦 Pack 声明式分发</h4>
+      <p>用 <code class="inline">atoms.json</code> 定义原子单位，packs 通过 <code class="inline">extends</code> 组合。同一份 atoms 可以 materialize 到不同 runtime（OpenCode → <code class="inline">.opencode/</code>、未来 CC → <code class="inline">.claude/</code>）。</p>
+    </div>
+    <div class="feature-card">
+      <h4>🪝 12 hooks 深嵌 OpenCode</h4>
+      <p>用 OpenCode 全部 plugin hooks——boot 时注入 config、消息时挂 status、tool 后录 evidence、compaction 时塞 ledger、命令前路由 SDD。</p>
+    </div>
+    <div class="feature-card">
+      <h4>🛠️ 一条命令安装</h4>
+      <p><code class="inline">curl install.sh | bash</code> 自动装 CLI + 写 manifest + 装 shell completion。<code class="inline">alloy add/remove/list/upgrade</code> 后续管理。</p>
+    </div>
+    <div class="feature-card">
+      <h4>👥 7 specialist agents</h4>
+      <p>Orchestrator / Explorer / Architect / Builder / Fixer / Reviewer / Tester。SDD pipeline (spec → plan → execute → verify) 把任务路由到合适的 specialist。</p>
+    </div>
+    <div class="feature-card">
+      <h4>📚 概念吸收而非复制</h4>
+      <p>11 first-party fusion skills 把 obra/superpowers、mattpocock/skills、GSD、gstack 等开源项目的概念<strong>重写</strong>进 Alloy 体系，保留原作者 attribution。</p>
+    </div>
+    <div class="feature-card">
+      <h4>🔄 Sub-agent driven 开发</h4>
+      <p>v0.1.0 本身由 codex sub-agents 实施——5 waves / 11 cards / 14 PRs，coordinator 只做 dispatch + conflict resolution。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOPOLOGY ============ -->
+
+<section id="topology">
+  <div class="section-eyebrow">系统拓扑</div>
+  <h2>三层架构</h2>
+  <p class="section-lede">
+    从源（仓库里的 .md/.json）到 SDK（resolver + installer）到 installed outputs（<code class="inline">.opencode/</code> + <code class="inline">.alloy/</code>），再到 OpenCode runtime 加载——Alloy 是中间那层。
+  </p>
+
+  <div class="flow">
+    <div style="text-align: center; margin-bottom: 16px;">
+      <div style="font-size: 12px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">SOURCE TIER (in repo)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-blue">packs/atoms.json</div>
+      <div class="flow-box b-blue">packs/{core,frontend,backend,infra,all}.json</div>
+      <div class="flow-box b-blue">models/*.json</div>
+      <div class="flow-box b-blue">defaults.json</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-blue">universal/skills/*</div>
+      <div class="flow-box b-pink">scopes/&lt;kind&gt;/skills/*</div>
+      <div class="flow-box b-purple">vendor/skills/*</div>
+      <div class="flow-box b-blue">agents/*.md</div>
+      <div class="flow-box b-blue">commands/*.md</div>
+      <div class="flow-box b-blue">templates/opencode/alloy-plugin.ts</div>
+    </div>
+    <div style="text-align: center; margin: 16px 0;"><span class="flow-arrow">▼</span></div>
+
+    <div style="text-align: center; margin-bottom: 12px;">
+      <div style="font-size: 12px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">SDK (bin/alloy.mjs)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-green">loadAtoms()</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">loadPack(id)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">mergePack()</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">resolveConfig()</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">installCommand()</div>
+    </div>
+    <div style="text-align: center; margin: 16px 0;"><span class="flow-arrow">▼</span></div>
+
+    <div style="text-align: center; margin-bottom: 12px;">
+      <div style="font-size: 12px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">INSTALLED (in target repo)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-amber">.opencode/agents/</div>
+      <div class="flow-box b-amber">.opencode/skills/</div>
+      <div class="flow-box b-amber">.opencode/commands/</div>
+      <div class="flow-box b-amber">.opencode/plugins/alloy.ts</div>
+      <div class="flow-box b-amber">.opencode/opencode.json</div>
+      <div class="flow-box b-amber">.opencode/alloy.manifest.json</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-amber">.alloy/policies/</div>
+      <div class="flow-box b-amber">.alloy/state/*.jsonl</div>
+      <div class="flow-box b-amber">.alloy/projections/</div>
+      <div class="flow-box b-amber">.safety-net.json</div>
+    </div>
+    <div style="text-align: center; margin: 16px 0;"><span class="flow-arrow">▼</span></div>
+
+    <div style="text-align: center; margin-bottom: 12px;">
+      <div style="font-size: 12px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">RUNTIME (OpenCode loads)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box b-purple">opencode 启动</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple">12 hooks 触发</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple">读 manifest + state</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple">filter + inject + log</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>设计原则</strong>：source tier 是 runtime-agnostic 的——atoms 不知道 OpenCode 存在。
+    只有 SDK 的最后一步 (<code class="inline">installCommand</code>) 才知道目标 runtime 的目录布局。
+    所以加 Claude Code adapter 只需要写第二个 installer，不动 atoms/packs。
+  </div>
+</section>
+
+<hr>
+
+<!-- ============ HOOKS OVERVIEW ============ -->
+
+<section id="hooks-overview">
+  <div class="section-eyebrow">OpenCode 集成</div>
+  <h2>我们用了 OpenCode 的哪些 hook</h2>
+  <p class="section-lede">
+    <code class="inline">templates/opencode/alloy-plugin.ts</code> 共 <strong>674 行</strong>，导出一个 plugin 注册 <strong>12 个 hook</strong> 和 <strong>4 个自定义 tool</strong>。
+    完整列表 + 我们的用法 + 关键代码片段如下。
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%">Hook</th>
+          <th style="width: 14%">类别</th>
+          <th>我们的实现</th>
+          <th style="width: 10%">代码位置</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>config</code></td>
+          <td><span class="tag tag-blue">boot</span></td>
+          <td>注入 default agent、默认 MCP 配置；同时跑 <code>detectMagicWarnings()</code> 准备 boot 警告（manifest stale / state stale / missing manifest）。</td>
+          <td><code>L512</code></td>
+        </tr>
+        <tr>
+          <td><code>shell.env</code></td>
+          <td><span class="tag tag-blue">boot</span></td>
+          <td>注入环境变量：<code>ALLOY_PROJECT_DIR</code>、<code>ALLOY_RUN_ID</code>、<code>ALLOY_TASK_ID</code>，供子进程/skill 引用。</td>
+          <td><code>L520</code></td>
+        </tr>
+        <tr>
+          <td><code>chat.message</code></td>
+          <td><span class="tag tag-green">message</span></td>
+          <td>每条用户消息前注入 <strong>Alloy Workflow Status</strong> text part（含当前任务、阶段、待办）；boot 时一次性 emit warnings；触发 <code>maybeDelegateTaskRetry</code> + <code>maybePhaseReminder</code> OMO ports。</td>
+          <td><code>L526</code></td>
+        </tr>
+        <tr>
+          <td><code>permission.ask</code></td>
+          <td><span class="tag tag-amber">audit</span></td>
+          <td>记录到 <code>.alloy/state/runs.jsonl</code>，留 audit trail。</td>
+          <td><code>L539</code></td>
+        </tr>
+        <tr>
+          <td><code>tool.execute.before</code></td>
+          <td><span class="tag tag-red">gate</span></td>
+          <td>Defense-in-depth：拦截直接读/写 <code>.env</code> 文件。危险命令拦截 delegate 给 <code>cc-safety-net</code> plugin。</td>
+          <td><code>L548</code></td>
+        </tr>
+        <tr>
+          <td><code>tool.execute.after</code></td>
+          <td><span class="tag tag-green">evidence</span></td>
+          <td>每次 tool 执行写入 <code>.alloy/state/evidence.jsonl</code> + 跑 <code>maybeRecoverToolJson</code>（OMO port: 自动修 malformed JSON）；如果是 ralph-loop 任务执行，记 iteration counter。</td>
+          <td><code>L556</code></td>
+        </tr>
+        <tr>
+          <td><code>event</code></td>
+          <td><span class="tag tag-amber">audit</span></td>
+          <td>所有 OpenCode session events 写 <code>runs.jsonl</code>，含 iteration event 检测（ralph-loop 用）。</td>
+          <td><code>L572</code></td>
+        </tr>
+        <tr>
+          <td><code>experimental.chat.messages.transform</code></td>
+          <td><span class="tag tag-purple">filter</span></td>
+          <td><strong>filter-available-skills</strong>（port from OMO Slim）：读 <code>.opencode/alloy.manifest.json</code> 的 <code>visible.skills</code>，过滤系统消息里 <code>&lt;available_skills&gt;</code> 块——只让 agent 看到 manifest 允许的 skill。</td>
+          <td><code>L582</code></td>
+        </tr>
+        <tr>
+          <td><code>experimental.chat.system.transform</code></td>
+          <td><span class="tag tag-green">inject</span></td>
+          <td>把 <code>.alloy/projections/status.md</code> 内容 push 进 system message——比 chat.message text part 更干净的状态注入。</td>
+          <td><code>L587</code></td>
+        </tr>
+        <tr>
+          <td><code>experimental.session.compacting</code></td>
+          <td><span class="tag tag-purple">memory</span></td>
+          <td>OpenCode session 接近 token cap 时触发 compaction；我们 push <code>ledgerSummary()</code> 进 context，让 evidence + claims 在 compaction 后存活。</td>
+          <td><code>L592</code></td>
+        </tr>
+        <tr>
+          <td><code>command.execute.before</code></td>
+          <td><span class="tag tag-pink">route</span></td>
+          <td>拦截 <code>/add</code>、<code>/spec</code>、<code>/plan</code>、<code>/execute</code>、<code>/verify</code>、<code>/autopilot</code> SDD 斜杠命令；<code>/add</code> 通过 Bash tool invoke <code>alloy add</code>。</td>
+          <td><code>L598</code></td>
+        </tr>
+        <tr>
+          <td><code>tool.definition</code></td>
+          <td><span class="tag tag-amber">remind</span></td>
+          <td>rewrite bash/write tool description，加 reminder："执行前确认 task plan；改文件前 search references"。</td>
+          <td><code>L603</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout success">
+    <strong>OpenCode 1.15.10 全部 hook</strong> 我们都用到了。6 个传统 hook + 5 个 experimental + 1 个 tool.definition。
+    我们的 plugin 是 OpenCode 生态里 hook 覆盖最完整的之一。
+  </div>
+</section>
+
+<!-- ============ HOOKS FLOW ============ -->
+
+<section id="hooks-flow">
+  <h3>运行时 hook 触发顺序</h3>
+  <p>一个典型用户消息从输入到响应，会触发以下 hooks（按时序）：</p>
+
+  <div class="flow">
+    <div class="flow-row">
+      <div class="flow-box b-blue">OpenCode boot</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-blue">config</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-blue">shell.env</div>
+    </div>
+    <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-pink">用户输入 /spec</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-pink">command.execute.before</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-pink">(routed to SDD)</div>
+    </div>
+    <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-green">message 准备</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">chat.message (status part 注入)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">experimental.chat.system.transform (status.md 注入 system)</div>
+    </div>
+    <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-purple">experimental.chat.messages.transform</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple">filter-available-skills 按 manifest 裁剪</div>
+    </div>
+    <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-red">tool.execute.before (gate)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-red">tool.execute (LLM 调 tool)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green">tool.execute.after (evidence 录)</div>
+    </div>
+    <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-amber">permission.ask (若需要)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-amber">event (录 runs.jsonl)</div>
+    </div>
+    <div style="text-align: center; margin: 16px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-purple">session token 满</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple">experimental.session.compacting (ledger summary 塞 context)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOOKS DETAIL ============ -->
+
+<section id="hooks-detail">
+  <h3>关键 hook 代码细看</h3>
+
+  <details>
+    <summary><code>config</code> hook — boot 时注入默认 + 跑魔法检测</summary>
+    <div>
+      <pre class="code"><span class="k">config</span>: <span class="k">async</span> (config) =&gt; {
+  <span class="k">if</span> (!config) <span class="k">return</span>
+  <span class="f">injectConfigDefaults</span>(config)                  <span class="c">// default_agent ||= 'alloy-orchestrator', mcp baseline</span>
+  bootWarnings = <span class="k">await</span> <span class="f">detectMagicWarnings</span>(projectDir)
+  bootWarningsChecked = <span class="k">true</span>
+  bootWarningsEmitted = <span class="k">false</span>
+}</pre>
+      <p style="margin-top: 12px; font-size: 13.5px; color: var(--text-dim);">
+        <code>detectMagicWarnings()</code> 检查 3 件事：
+      </p>
+      <ul style="font-size: 13.5px; color: var(--text-dim);">
+        <li>manifest <code>installedAt</code> 是否比 <code>vendor.lock.json</code> mtime 旧 → "run alloy upgrade"</li>
+        <li>global <code>state.json</code> 的 <code>lastSyncedVendorLock</code> sha 跟当前 vendor.lock 是否不同 → "run alloy install --target global"</li>
+        <li><code>.opencode/</code> 存在但 <code>alloy.manifest.json</code> 不存在 → "run alloy install"（v0.1.1 新加）</li>
+      </ul>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>chat.message</code> hook — 每条消息注入状态 + OMO port 触发</summary>
+    <div>
+      <pre class="code"><span class="s">"chat.message"</span>: <span class="k">async</span> (input, output) =&gt; {
+  <span class="k">await</span> <span class="f">ensureBootWarnings</span>()
+  <span class="k">if</span> (bootWarnings.length &amp;&amp; !bootWarningsEmitted) {
+    output.parts.<span class="f">push</span>(<span class="f">textPart</span>(<span class="s">`## Alloy Startup Warnings\n${bootWarnings.map(w =&gt; `- ${w}`).join("\n")}`</span>))
+    bootWarningsEmitted = <span class="k">true</span>
+  }
+  <span class="k">const</span> context = <span class="s">`\n\n## Alloy Workflow Status\n${readStatus(projectDir)}`</span>
+  output.parts.<span class="f">push</span>({ type: <span class="s">"text"</span>, text: context } <span class="k">as any</span>)
+
+  <span class="f">maybeDelegateTaskRetry</span>({ ...input, message: output.message }, output)  <span class="c">// OMO port</span>
+  phaseReminderCount += <span class="n">1</span>
+  <span class="f">maybePhaseReminder</span>(projectDir, output, phaseReminderCount)               <span class="c">// OMO port</span>
+}</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>tool.execute.after</code> hook — 全部 tool 写 evidence ledger</summary>
+    <div>
+      <pre class="code"><span class="s">"tool.execute.after"</span>: <span class="k">async</span> (input, output) =&gt; {
+  <span class="f">maybeRecoverToolJson</span>(output)                                <span class="c">// OMO port: 自动修 malformed JSON</span>
+  <span class="f">appendJsonl</span>(projectDir, <span class="s">"evidence"</span>, {
+    id: <span class="f">randomUUID</span>(),
+    taskId: <span class="f">activeTaskId</span>(projectDir),
+    kind: input.tool === <span class="s">"bash"</span> ? <span class="s">"command"</span> : <span class="s">"tool"</span>,
+    source: <span class="s">"opencode-plugin"</span>,
+    summary: <span class="s">`${input.tool} executed`</span>,
+    command: input.args?.command,
+    exitCode: output?.metadata?.exitCode,
+    paths: [],
+    createdAt: <span class="k">new</span> <span class="f">Date</span>().<span class="f">toISOString</span>(),
+  })
+  <span class="k">if</span> (<span class="f">isRalphLoopToolExecution</span>(input, output))
+    <span class="f">recordIteration</span>(projectDir, <span class="f">taskIdFromHookInput</span>(input, projectDir))
+}</pre>
+      <p style="margin-top: 12px; font-size: 13.5px; color: var(--text-dim);">
+        <strong>三件事</strong>：JSON 错误修复 + 写 evidence ledger + ralph-loop iteration counter（v0.1.1 加的）。
+      </p>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>experimental.chat.messages.transform</code> — filter-available-skills (OMO port)</summary>
+    <div>
+      <pre class="code"><span class="s">"experimental.chat.messages.transform"</span>: <span class="k">async</span> (input, output) =&gt; {
+  <span class="k">if</span> (!output || !Array.<span class="f">isArray</span>(output.messages)) <span class="k">return</span>
+  <span class="k">await</span> <span class="f">filterAvailableSkills</span>(projectDir, input, output)
+}</pre>
+      <p style="margin-top: 12px; font-size: 13.5px; color: var(--text-dim);">
+        <code>filterAvailableSkills()</code> 读 <code>.opencode/alloy.manifest.json</code>，按 <code>manifest.visible.skills</code> 过滤系统消息里的 <code>&lt;available_skills&gt;</code> XML 块。
+        这是 OMO Slim 的核心机制 port——agent 只看到自己 manifest 允许的 skill，避免"全部 11 个 skill"塞进每条消息。
+      </p>
+      <div class="callout">
+        <strong>为什么重要</strong>：未过滤时，每个 agent system message 都列全部已安装 skill。filter 后，frontend agent 不会看到 backend skill 描述——节省 token + 减少幻觉调用。
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>experimental.session.compacting</code> — 让 evidence 跨 compaction 存活</summary>
+    <div>
+      <pre class="code"><span class="s">"experimental.session.compacting"</span>: <span class="k">async</span> (_input, output) =&gt; {
+  <span class="k">if</span> (!output || !Array.<span class="f">isArray</span>(output.context)) <span class="k">return</span>
+  <span class="k">const</span> summary = <span class="f">ledgerSummary</span>(projectDir)
+  <span class="k">if</span> (summary) output.context.<span class="f">push</span>(summary)
+}</pre>
+      <p style="margin-top: 12px; font-size: 13.5px; color: var(--text-dim);">
+        OpenCode 触发 compaction 时（session token 接近 cap），把 <code>.alloy/state/*.jsonl</code> 的 ledger summary 塞进保留的 context。
+        没这个 hook：compaction 后 agent 忘记之前的 evidence/claims，每次重做 verify。
+      </p>
+    </div>
+  </details>
+
+  <details>
+    <summary><code>command.execute.before</code> — 拦截 SDD 斜杠命令</summary>
+    <div>
+      <pre class="code"><span class="s">"command.execute.before"</span>: <span class="k">async</span> (input, output) =&gt; {
+  <span class="k">if</span> (!input?.command || !output || !Array.<span class="f">isArray</span>(output.parts)) <span class="k">return</span>
+  <span class="f">routeCommand</span>(input, output, projectDir)
+}
+
+<span class="c">// routeCommand 内部处理:</span>
+<span class="c">//   /add &lt;skill&gt;     → 通过 Bash invoke `alloy add &lt;skill&gt;`</span>
+<span class="c">//   /spec /plan /execute /verify /autopilot → 注入 SDD prompt 模板</span></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ============ TOOLS ============ -->
+
+<section id="hooks-tools">
+  <h3>4 个自定义 tool（给 LLM 调用）</h3>
+  <p>除了 hook，plugin 还注册 4 个 custom tool 在 OpenCode 的 tool registry。LLM 可以像调 bash/read/write 那样调它们。</p>
+
+  <div class="grid-2">
+    <div class="feature-card">
+      <h4><code>alloy_evidence</code></h4>
+      <p>记录工作流 evidence 条目：<code>{taskId, kind, summary, command?}</code> → append 到 <code>evidence.jsonl</code>。用于 verifier 后续核对。</p>
+    </div>
+    <div class="feature-card">
+      <h4><code>alloy_claim</code></h4>
+      <p>记录完成 claim：<code>{taskId, text, evidenceIds?}</code> → <code>claims.jsonl</code>。带 evidenceIds 自动标 <code>verified</code>，否则 <code>unverified</code>。</p>
+    </div>
+    <div class="feature-card">
+      <h4><code>alloy_state</code></h4>
+      <p>读取压缩 workflow status（当前 task / phase / 待办计数）。供 agent 自我感知当前状态。</p>
+    </div>
+    <div class="feature-card">
+      <h4><code>alloy_gate</code></h4>
+      <p>检查 task 是否可关闭：返回 "run alloy gate check --task-id X" 提示 + ralph-loop iteration count (1/5 ... 5/5)。</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>额外 export</strong>：<code>alloy.getIterationCount(taskId)</code>——namespace export 给 ralph-loop skill 直接读 iteration jsonl，避免每次走 file IO。
+  </div>
+</section>
+
+<hr>
+
+<!-- ============ SDK MODULES ============ -->
+
+<section id="sdk-modules">
+  <div class="section-eyebrow">SDK / CLI</div>
+  <h2>SDK 做了什么，逻辑是什么</h2>
+  <p class="section-lede">
+    Alloy 的"SDK"是 <code class="inline">bin/alloy.mjs</code>（CLI 入口 + 全部 resolver/installer 逻辑）+ 3 个 helper module + 1 个 plugin template。
+    总共约 <strong>1900 行 JavaScript/TypeScript</strong> 实现了 pack 解析、目录 materialize、manifest 管理、subcommand dispatch、shell completion、vendor 管理。
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>模块</th><th>行数</th><th>职责</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>bin/alloy.mjs</code></td>
+          <td>~1500</td>
+          <td>主 CLI 入口、参数解析、15 subcommand dispatcher、resolver pipeline (loadAtoms → loadPack → mergePack → resolveConfig)、installer (materialize 到 <code>.opencode/</code>)、doctor、help、completion 生成、SDD command dispatch。</td>
+        </tr>
+        <tr>
+          <td><code>bin/manifest.mjs</code></td>
+          <td>~80</td>
+          <td><code>.opencode/alloy.manifest.json</code> 读写：<code>{version, installedAt, pack, models, managed, visible, excluded, explicit.added}</code>。Migrate 老 schema (<code>explicit.removed</code>) 自动迁移到 <code>excluded</code>。</td>
+        </tr>
+        <tr>
+          <td><code>bin/state.mjs</code></td>
+          <td>~50</td>
+          <td><code>~/.config/alloy/state.json</code> 读写（仅 <code>--target global</code>）：跨项目同步 vendor lock sha 用于 magic detection。</td>
+        </tr>
+        <tr>
+          <td><code>bin/prereq-check.mjs</code></td>
+          <td>~50</td>
+          <td>验证 container-use 等可选依赖：检查 docker/colima/podman 二进制 + container-use 自身。missing 时给安装命令。</td>
+        </tr>
+        <tr>
+          <td><code>templates/opencode/alloy-plugin.ts</code></td>
+          <td>674</td>
+          <td>OpenCode plugin：12 hooks + 4 custom tools + ralph-loop iteration helper。Materialize 到 <code>.opencode/plugins/alloy.ts</code>。</td>
+        </tr>
+        <tr>
+          <td><code>install.sh</code></td>
+          <td>207</td>
+          <td>One-line installer：clone repo → 链接 <code>alloy</code> 到 <code>~/.local/bin/</code> → 跑 <code>alloy install --target global</code> → 装 shell completion。set -euo pipefail + 所有变量加引号。</td>
+        </tr>
+        <tr>
+          <td><code>scripts/revendor.mjs</code></td>
+          <td>~280</td>
+          <td>Vendor 维护：从上游 repo clone → diff → 应用 patches → 重算 sha256 → 更新 vendor.lock.json。v0.1.1 修了 shell injection bug (改用 spawnSync argv)。</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ SUBCOMMANDS ============ -->
+
+<section id="sdk-commands">
+  <h3>15 个 CLI subcommand</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th style="width: 16%">Subcommand</th><th style="width: 16%">何时引入</th><th>做什么</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>alloy install</code></td><td>v0 baseline</td><td>主命令。Resolve pack → materialize 到 .opencode/ 和 .alloy/。<code>--target local|global</code>、<code>--pack core|frontend|...</code>、<code>--models github-copilot|...</code>、<code>--dry-run</code>。v0.1.1 起支持位置参数 <code>alloy install frontend</code>。</td></tr>
+        <tr><td><code>alloy add &lt;skill&gt;</code></td><td>v0.1.0 Wave 3</td><td>临时加一个 skill 到 manifest.visible。container-use 等 opt-in MCP 走 prereq check。</td></tr>
+        <tr><td><code>alloy remove &lt;skill&gt;</code></td><td>v0.1.0 Wave 3</td><td>从 manifest.visible 移除，加入 manifest.excluded（v0.1.1 之前是 explicit.removed，自动迁移）。</td></tr>
+        <tr><td><code>alloy list</code></td><td>v0.1.0 Wave 3</td><td>显示当前 manifest 的 managed + visible + excluded。<code>--installed</code> alias。</td></tr>
+        <tr><td><code>alloy search &lt;query&gt;</code></td><td>v0.1.0 Wave 3</td><td>搜索内部 pack inventory + 透明 passthrough <code>npx skills find</code>（如果装了）。</td></tr>
+        <tr><td><code>alloy outdated</code></td><td>v0.1.0 Wave 3</td><td>查 GitHub releases，对比 vendor.lock 的 version。返回表格：name / installed / latest / status。</td></tr>
+        <tr><td><code>alloy upgrade &lt;name&gt;</code></td><td>v0.1.0 Wave 3</td><td>单个 vendor 升级，跑 <code>revendor.mjs --apply</code>。v0.1.1 修了 vendored-local 路径（之前 exit 2）。</td></tr>
+        <tr><td><code>alloy upgrade --self</code></td><td>v0.1.0 Wave 3</td><td>curl install.sh re-install 自身。</td></tr>
+        <tr><td><code>alloy upgrade --all-vendors</code></td><td>v0.1.0 Wave 3</td><td>跑 outdated → upgrade 每个 out-of-date 项。</td></tr>
+        <tr><td><code>alloy doctor</code></td><td>v0 baseline</td><td>验证 pack 解析、Node/Bun 可用、plugin 版本、vendor 路径、MCP URL 一致性。<strong>v0.1.1 起支持 pre-install 模式</strong>（.opencode/ 不存在也能跑）。</td></tr>
+        <tr><td><code>alloy completion bash|zsh|fish</code></td><td>v0.1.0 Wave 5</td><td>输出 shell completion script。<code>install.sh</code> 调它写 <code>~/.bash_completion.d/alloy</code> 等。</td></tr>
+        <tr><td><code>alloy init</code></td><td>v0 baseline</td><td>初始化 <code>.alloy/alloy.project.json</code>（项目配置）。</td></tr>
+        <tr><td><code>alloy resolve</code></td><td>v0 baseline</td><td>不安装，只 print 最终 resolved config（<code>--json</code> 输出）。</td></tr>
+        <tr><td><code>alloy state {add-task|add-evidence|add-claim|list}</code></td><td>v0 baseline</td><td>命令式操作 <code>.alloy/state/*.jsonl</code> ledger。</td></tr>
+        <tr><td><code>alloy gate check --task-id ID</code></td><td>v0 baseline</td><td>检查任务是否可关：evidence 充足 + 无 unverified claim + 不在 5-iter cap。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ RESOLVER DATA FLOW ============ -->
+
+<section id="sdk-resolver">
+  <h3>Resolver 数据流（install 主流程）</h3>
+
+  <pre class="code"><span class="c">// 1. CLI parse</span>
+<span class="k">const</span> args = <span class="f">parseArgs</span>(process.argv.<span class="f">slice</span>(<span class="n">2</span>))
+<span class="c">// → { command: "install", pack: "frontend", target: "local", models: "github-copilot", ... }</span>
+
+<span class="c">// 2. Load atoms (cached)</span>
+<span class="k">const</span> atoms = <span class="f">loadAtoms</span>()   <span class="c">// reads packs/atoms.json once</span>
+
+<span class="c">// 3. Load pack + expand extends</span>
+<span class="k">const</span> pack = <span class="f">loadPack</span>(<span class="s">"frontend"</span>)
+<span class="c">// expanded: skills=[alloy-tdd, alloy-brainstorm, ..., frontend-ui-ux, playwright-cli, vercel-react-best-practices]</span>
+<span class="c">//           agents=[Orchestrator, Explorer, Architect, Builder, Fixer, Reviewer, Tester]</span>
+<span class="c">//           commands=[autopilot, discuss, execute, plan, spec, verify, ...]</span>
+<span class="c">//           mcp=[context7, grep_app, exa]</span>
+<span class="c">//           modelRoles=[orchestrator, planner, executor, reviewer, verifier, explorer]</span>
+
+<span class="c">// 4. Merge with model assignment + project overrides</span>
+<span class="k">const</span> resolved = <span class="f">resolveConfig</span>({
+  pack,
+  models: <span class="f">loadModels</span>(<span class="s">"github-copilot"</span>),       <span class="c">// role → model name</span>
+  projectOverrides: <span class="f">loadProjectConfig</span>(cwd),  <span class="c">// .alloy/alloy.project.json</span>
+})
+
+<span class="c">// 5. Materialize</span>
+<span class="f">installCommand</span>(resolved)
+<span class="c">// writes:</span>
+<span class="c">//   .opencode/agents/{Orchestrator,Explorer,Architect,Builder,Fixer,Reviewer,Tester}.md</span>
+<span class="c">//   .opencode/commands/*.md</span>
+<span class="c">//   .opencode/skills/{alloy-*, git-master, humanizer, frontend-ui-ux, ...}/SKILL.md</span>
+<span class="c">//   .opencode/plugins/alloy.ts            (from templates/opencode/alloy-plugin.ts)</span>
+<span class="c">//   .opencode/opencode.json               (default_agent, mcp, agent→model map, plugin list)</span>
+<span class="c">//   .opencode/package.json                (@opencode-ai/plugin + zod pinned versions)</span>
+<span class="c">//   .opencode/alloy.manifest.json         (managed + visible + excluded + explicit.added)</span>
+<span class="c">//   .alloy/alloy.project.json             (pack + models choice)</span>
+<span class="c">//   .alloy/workflow.md + policies/*.md    (workflow docs)</span>
+<span class="c">//   .alloy/state/{tasks,claims,evidence,runs,iteration}.jsonl  (empty ledger files)</span>
+<span class="c">//   .alloy/projections/{status,current-plan}.md   (placeholder, plugin updates)</span>
+<span class="c">//   .safety-net.json                      (5 git no-verify rules at project root)</span>
+
+<span class="c">// 6. Global tier extra (--target global)</span>
+<span class="k">if</span> (resolved.target === <span class="s">"global"</span>) {
+  <span class="f">writeState</span>(<span class="s">"~/.config/alloy/state.json"</span>, {
+    version, installedAt, pack, managed,
+    lastSyncedVendorLock: <span class="f">sha256</span>(vendor.lock.json),
+  })
+}</pre>
+</section>
+
+<!-- ============ STATE FILES ============ -->
+
+<section id="sdk-state">
+  <h3>状态文件 schema</h3>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4><code>.opencode/alloy.manifest.json</code></h4>
+      <p style="font-size: 13.5px; color: var(--text-dim);">每个 installed target 一份。记录这次 install 的 inventory 与用户后续 add/remove 行为。</p>
+      <pre class="code">{
+  <span class="s">"version"</span>: <span class="s">"0.1.1"</span>,
+  <span class="s">"installedAt"</span>: <span class="s">"2026-05-26T10:00:00Z"</span>,
+  <span class="s">"pack"</span>: <span class="s">"frontend"</span>,
+  <span class="s">"models"</span>: <span class="s">"github-copilot"</span>,
+  <span class="s">"managed"</span>: {
+    <span class="s">"skills"</span>: [<span class="s">"alloy-tdd"</span>, <span class="s">"frontend-ui-ux"</span>, ...],
+    <span class="s">"agents"</span>: [<span class="s">"Orchestrator"</span>, ...],
+    <span class="s">"commands"</span>: [<span class="s">"spec"</span>, <span class="s">"plan"</span>, ...],
+    <span class="s">"mcp"</span>: [<span class="s">"context7"</span>, <span class="s">"grep_app"</span>, <span class="s">"exa"</span>]
+  },
+  <span class="s">"visible"</span>: {                          <span class="c">// filter-available-skills 读这个</span>
+    <span class="s">"skills"</span>: [<span class="s">"alloy-tdd"</span>, ...],
+    <span class="s">"agents"</span>: [<span class="s">"Orchestrator"</span>, ...]
+  },
+  <span class="s">"excluded"</span>: [<span class="s">"humanizer"</span>],            <span class="c">// v0.1.1: 从 explicit.removed 重命名</span>
+  <span class="s">"explicit"</span>: {
+    <span class="s">"added"</span>: [<span class="s">"ralph-loop"</span>]            <span class="c">// 用户后续 alloy add 的</span>
+  }
+}</pre>
+    </div>
+
+    <div class="card">
+      <h4><code>~/.config/alloy/state.json</code></h4>
+      <p style="font-size: 13.5px; color: var(--text-dim);">仅 <code>--target global</code> 时写。用于 magic detection 跨项目知道 vendor 是否过时。</p>
+      <pre class="code">{
+  <span class="s">"version"</span>: <span class="s">"0.1.1"</span>,
+  <span class="s">"installedAt"</span>: <span class="s">"2026-05-26T10:00:00Z"</span>,
+  <span class="s">"pack"</span>: <span class="s">"core"</span>,
+  <span class="s">"managed"</span>: { ... },
+  <span class="s">"lastSyncedVendorLock"</span>: <span class="s">"sha256:abc123..."</span>
+}</pre>
+      <p style="font-size: 13.5px; color: var(--text-dim); margin-top: 10px;">
+        Plugin <code>config</code> hook 启动时对比当前 <code>vendor.lock.json</code> 的 sha；不一致就 warn "run alloy install --target global"。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4><code>.alloy/state/*.jsonl</code> — 5 个 append-only ledger</h4>
+    <p style="font-size: 13.5px; color: var(--text-dim);">JSONL 格式（每行一个 JSON object），<strong>source of truth</strong>。<code>.alloy/projections/*.md</code> 是从 jsonl 生成的人读视图。</p>
+    <ul style="font-size: 13.5px; color: var(--text-dim);">
+      <li><code>tasks.jsonl</code> — Architect 写入的 task plan</li>
+      <li><code>evidence.jsonl</code> — tool execution outputs，由 <code>tool.execute.after</code> hook 自动 + LLM 调 <code>alloy_evidence</code> tool 写</li>
+      <li><code>claims.jsonl</code> — agent 声明的完成 claim，带 verified/unverified 状态</li>
+      <li><code>runs.jsonl</code> — OpenCode session events + permission asks audit trail</li>
+      <li><code>iteration.jsonl</code> — ralph-loop 计数（v0.1.1 加），记录 5-iter cap 用</li>
+    </ul>
+  </div>
+</section>
+
+<hr>
+
+<!-- ============ AGENTS ROLES ============ -->
+
+<section id="agents-roles">
+  <div class="section-eyebrow">Agents</div>
+  <h2>7 个 v3 specialist 与 workflow</h2>
+  <p class="section-lede">
+    v0.1.0 Card 4 把旧的 6 个 <code class="inline">alloy-*</code> agents（小写连字符）<strong>替换</strong>为 7 个 specialist（PascalCase）。
+    每个有明确职责边界，由 Orchestrator 根据任务类型 dispatch。
+  </p>
+
+  <div class="grid-3">
+    <div class="feature-card" style="border-left: 3px solid var(--accent);">
+      <h4>🧭 Orchestrator</h4>
+      <p><strong>Router</strong>。识别请求类型，dispatch 给 specialist。不直接干活，专注 intake + coordination + final synthesis。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--gray);">
+      <h4>🔍 Explorer</h4>
+      <p>Read-only 代码发现。grep/glob/读文件，回答"X 在哪定义/被谁调用"，给路径 + 关键 symbol + uncertainty。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--purple);">
+      <h4>🏛️ Architect</h4>
+      <p>写 <code>## Spec</code> + <code>## Plan</code>、source coverage 审计、design risk 评估。不写实现。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--green);">
+      <h4>🔨 Builder</h4>
+      <p>新代码 + 行为改动。强制走 <code>alloy-tdd</code>：failing test 先、最小实现、refactor。bounded scope。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--red);">
+      <h4>🔧 Fixer</h4>
+      <p>bug / regression / failing check。强制走 <code>alloy-debug</code>：reproduce → root cause → regression test → fix → verify。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--amber);">
+      <h4>👁️ Reviewer</h4>
+      <p>独立 review。Critical/Important/Minor 三级 severity。<strong>不修自己发现的 bug</strong>（避免利益冲突）。Critical 阻塞完成。</p>
+    </div>
+    <div class="feature-card" style="border-left: 3px solid var(--pink);">
+      <h4>🧪 Tester</h4>
+      <p>测试设计 + 独立验证 + edge case 生成。强制走 <code>alloy-verify</code> 才能 claim "complete/passing/ready"。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WORKFLOW ============ -->
+
+<section id="agents-workflow">
+  <h3>SDD pipeline workflow</h3>
+  <p>SDD = Spec → Plan → Execute → Verify。每个阶段一个 slash command + 一个 skill + 一个 specialist owner。</p>
+
+  <div class="flow">
+    <div class="flow-row">
+      <div class="flow-box b-blue" style="min-width: 140px;">
+        <div style="font-size: 16px; margin-bottom: 4px;">📝</div>
+        /spec<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-brainstorm</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Architect</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-purple" style="min-width: 140px;">
+        <div style="font-size: 16px; margin-bottom: 4px;">📐</div>
+        /plan<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-plan</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Architect</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-green" style="min-width: 140px;">
+        <div style="font-size: 16px; margin-bottom: 4px;">⚙️</div>
+        /execute<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-execute + alloy-tdd</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Builder / Fixer</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box b-pink" style="min-width: 140px;">
+        <div style="font-size: 16px; margin-bottom: 4px;">✅</div>
+        /verify<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-verify</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Reviewer + Tester</span>
+      </div>
+    </div>
+    <div style="text-align: center; margin: 18px 0;"><span class="flow-arrow">▼</span></div>
+    <div class="flow-row">
+      <div class="flow-box b-amber" style="min-width: 200px;">
+        <div style="font-size: 16px; margin-bottom: 4px;">🔁</div>
+        /autopilot<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">spec→plan→execute→verify 串行 + ralph-loop 5-iter retry</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>ralph-loop 5-iter cap</strong>：reviewer/tester request_changes 时，<code>alloy_gate</code> tool 自动驱动 executor 再做一轮。第 5 次还失败就 escalate user via plannotator inline。
+    Card 16 把 ralph-loop 集成进 plugin 作为 iteration counter。
+  </div>
+</section>
+
+<!-- ============ AGENT MD ============ -->
+
+<section id="agents-md">
+  <h3>Agent MD 文档结构</h3>
+  <p>每个 agent 是一个 markdown 文件，<code>agents/&lt;Name&gt;.md</code>。frontmatter + body 两段。</p>
+
+  <h4>Frontmatter 字段</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>description</code></td><td>string</td><td>一句话描述 agent 用途。Orchestrator 加载时基于此分发。</td></tr>
+        <tr><td><code>mode</code></td><td><code>primary | subagent</code></td><td><code>primary</code> = 用户直接对话；<code>subagent</code> = 只被其他 agent 通过 task tool 调用。</td></tr>
+        <tr><td><code>permission</code></td><td>object</td><td>细粒度权限：<code>read/grep/glob/bash/task/skill</code>。每项 <code>allow|ask|deny</code> 或 bash 命令 pattern map。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>典型 body sections</h4>
+  <ul>
+    <li><strong>Responsibility</strong> — 一段说明这个 agent 干什么、不干什么</li>
+    <li><strong>Permissions</strong> — body 重复 frontmatter 权限的人读解释</li>
+    <li><strong>Skill Guidance</strong> — 什么时候 invoke 什么 skill</li>
+    <li><strong>Intake Rules</strong>（Orchestrator 特有）— 怎么 normalize work item metadata</li>
+    <li><strong>Routing Matrix</strong>（Orchestrator 特有）— 决策树</li>
+    <li><strong>Phase Discipline</strong> — Plan / Execute / Verify 三阶段约束</li>
+    <li><strong>Global Rules</strong> — 硬规则（git no-verify 禁用、explicit file staging 等）</li>
+    <li><strong>Example Flow</strong> — 1-3 个 worked example</li>
+    <li><strong>Output Contract</strong> — 返回结果的固定格式要求</li>
+  </ul>
+
+  <details open>
+    <summary>完整示例：<code>agents/Orchestrator.md</code></summary>
+    <div>
+      <pre class="code"><span class="c">---</span>
+<span class="k">description</span>: Routes Alloy work to the smallest safe v3 specialist workflow
+<span class="k">mode</span>: primary
+<span class="k">permission</span>:
+  read: allow
+  grep: allow
+  glob: allow
+  bash:
+    <span class="s">"*"</span>: ask
+    <span class="s">"git status*"</span>: allow
+    <span class="s">"git diff*"</span>: allow
+    <span class="s">"rg *"</span>: allow
+    <span class="s">"find *"</span>: allow
+  task: ask
+  skill: allow
+<span class="c">---</span>
+
+<span class="k"># Alloy Orchestrator</span>
+
+You are the v3 Alloy router. Your job is to understand the user's request, choose the
+smallest safe workflow, and dispatch task-typed specialists without turning every
+request into process theater.
+
+<span class="k">## Responsibility</span>
+
+Route work across the six specialists:
+
+- `Explorer` for read-only source discovery and compact summaries.
+- `Architect` for specs, `## Plan` sections, source coverage audits, and design risk.
+- `Builder` for new code and behavior changes via `alloy-tdd`.
+- `Fixer` for bugs, regressions, and failing checks via `alloy-debug`.
+- `Reviewer` for independent code review with Critical / Important / Minor severity.
+- `Tester` for test design, test execution, verification evidence, and completion checks.
+
+You do not do every job yourself. Keep the main session focused on routing, intake,
+coordination, and final synthesis.
+
+<span class="k">## Skill Guidance</span>
+
+Invoke relevant skills before acting:
+
+- Use `alloy-using` at session start when available.
+- Use `alloy-discuss` for large or ambiguous product requests.
+- Use `alloy-brainstorm` when the design space is still fluid.
+- Use `alloy-plan` when a spec needs an implementation plan.
+- Use `alloy-execute` when executing a written plan.
+- Use `alloy-tdd` for code changes.
+- Use `alloy-debug` for bugs, regressions, and failing tests.
+- Use `alloy-verify` before completion claims.
+
+<span class="k">## Routing Matrix</span>
+
+<span class="k">### Read-Only Codebase Question</span>
+Dispatch `Explorer` with a narrow question and expected output shape.
+
+<span class="k">### Product Or Architecture Design</span>
+Use `alloy-discuss` or `alloy-brainstorm`, then dispatch `Architect`.
+
+<span class="k">### New Implementation</span>
+Tiny → `Builder` directly. Multi-file → `Architect` writes Plan first.
+
+<span class="k">### Bug Or Failing Test</span>
+Route to `Fixer`. Require reproduction, root cause, regression test.
+
+<span class="k">### Review / Verification</span>
+Route to `Reviewer` (independent) then `Tester` (verify).
+
+<span class="k">## Phase Discipline</span>
+
+Alloy v3 has three central phases:
+1. Plan: clarify scope, inspect code, write spec and `## Plan`.
+2. Execute: build or fix one bounded task at a time.
+3. Verify: test, review, inspect artifacts, and record evidence.
+
+<span class="k">## Global Rules</span>
+
+- Never use `--no-verify` or `-n` with git.
+- Never use `git add -A`, `git add .`, or `git add --all`.
+- Never force-push except `--force-with-lease`, and only with user approval.
+- Before deleting 5+ lines or changing public interface, search references.
+
+<span class="k">## Output Contract</span>
+
+When coordinating specialists, return:
+- route chosen and why
+- agents used
+- files changed or inspected
+- verification evidence
+- unresolved blockers or risks</pre>
+
+      <p style="font-size: 13px; color: var(--text-dim); margin-top: 14px;">
+        其他 6 个 agent MD 在 <a href="https://github.com/lifeodyssey/alloy/tree/main/agents" target="_blank">github.com/lifeodyssey/alloy/tree/main/agents</a>。
+        结构类似但更短——Orchestrator 是最长的（160 行），specialist 一般 50-100 行。
+      </p>
+    </div>
+  </details>
+</section>
+
+<hr>
+
+<!-- ============ SKILLS INVENTORY ============ -->
+
+<section id="skills-inventory">
+  <div class="section-eyebrow">Skills</div>
+  <h2>Skills 清单：从哪来，删了什么</h2>
+  <p class="section-lede">
+    Alloy 安装到目标 repo 会带 <strong>13-22 个 skill</strong>（按 pack 不同）。
+    11 个是 first-party fusion skill（我们重写，吸收上游概念），2 个 baseline，剩下按 scope 加 vendored。
+    完整 SKILL.md 内容看 <a href="https://github.com/lifeodyssey/alloy/tree/main/universal/skills" target="_blank">GitHub repo</a>；这里讲<strong>从哪来 + 改了什么 + 跟原版差异</strong>。
+  </p>
+
+  <h3>First-party fusion skills（11 个，universal/skills/alloy-*）</h3>
+  <p>"Fusion" 意思是：吸收一个或多个上游开源项目的核心概念 + 加 Alloy 的约束 + 与 ledger 集成，<strong>重新作者</strong>。原作者 attribution 保留在每个 SKILL.md 的 Attribution section。</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 14%">Skill</th>
+          <th style="width: 24%">来自哪里</th>
+          <th>跟原版差别</th>
+          <th style="width: 10%">行数</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-tdd/SKILL.md" target="_blank"><code>alloy-tdd</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-amber">mattpocock/skills</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">superpowers v5.1.0 + mattpocock TDD section</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：Iron Law、RGR cycle、anti-rationalization table、Good/Bad examples、垂直切片、design-first workflow、integration-style test 哲学。<br>
+            <strong>新增</strong>：Alloy stack constraints（Spring/Next/Postgres 特定指引）、evidence ledger 集成（要求 alloy_evidence 写记录）、<code>.alloy/state/</code> 关联。<br>
+            <strong>删减</strong>：superpowers 的 git workflow 引用（git-master 独立 skill 接管）、原版 4 stack-specific TDD 变体（合并）。<br>
+            <strong>vendored references</strong>：mattpocock 的 5 个深引用 (tests.md / mocking.md / deep-modules.md / interface-design.md / refactoring.md) 在 <code>references/</code> 下原文保留。
+          </td>
+          <td>~360</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-brainstorm/SKILL.md" target="_blank"><code>alloy-brainstorm</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">brainstorming SKILL</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：HARD-GATE blocks 等待用户批准、natural collaborative dialogue 模式、一次问一个问题。<br>
+            <strong>新增</strong>：Alloy spec 写出格式（写到 <code>.alloy/specs/&lt;id&gt;/task_plan.md</code> 的 ## Spec section）、与 <code>/spec</code> command 集成。<br>
+            <strong>删减</strong>：原版 superpowers 一些 prompting style 偏好。
+          </td>
+          <td>~200</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-debug/SKILL.md" target="_blank"><code>alloy-debug</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">systematic-debugging + GSD investigator framing</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：root cause investigation iron law（no fix without root cause）、3+ failed-fixes = question architecture、multi-component instrumentation pattern、User-as-Reporter / Claude-as-Investigator framing。<br>
+            <strong>新增</strong>：regression test 强制（修 bug 必带 test）、<code>alloy_evidence</code> 集成（每步调查写 ledger）。<br>
+            <strong>vendored references</strong>：obra/superpowers 的 5 个 deep references（root-cause-tracing.md / defense-in-depth.md / condition-based-waiting.md + .ts 示例 / find-polluter.sh）在 <code>references/</code> 原文。
+          </td>
+          <td>~340</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-plan/SKILL.md" target="_blank"><code>alloy-plan</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">subagent-driven-development + GSD plan phase</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：bite-sized plan task structure、no-placeholder rules、source coverage audit、vocabulary blocklist。<br>
+            <strong>新增</strong>：与 <code>/plan</code> command 集成、写到 <code>.alloy/specs/&lt;id&gt;/task_plan.md</code> 的 ## Plan section、Architect agent 专用。<br>
+            <strong>删减</strong>：GSD 的 sdk runtime 调用（我们用 <code>.alloy/state/</code> ledger 替代）。
+          </td>
+          <td>~180</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-execute/SKILL.md" target="_blank"><code>alloy-execute</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">subagent-driven-development + GSD wave execution</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：4-status executor codes (DONE / CONCERNS / NEEDS_CONTEXT / BLOCKED)、wave execution with files_modified intersection check。<br>
+            <strong>新增</strong>：与 Builder/Fixer 集成、强制走 alloy-tdd、evidence 写入要求。<br>
+            <strong>vendored references</strong>：obra/superpowers 的 3 个 subagent prompt 模板 (implementer / spec-reviewer / code-quality-reviewer) 在 <code>references/</code>。
+          </td>
+          <td>~180</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-verify/SKILL.md" target="_blank"><code>alloy-verify</code></a></td>
+          <td>
+            <span class="tag tag-purple">obra/superpowers</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">verification-before-completion</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：no completion claims without fresh evidence、iron law for verification。<br>
+            <strong>新增</strong>：<code>alloy_claim</code> tool 集成（claim 必须带 evidenceIds 才标 verified）、<code>alloy gate check</code> CLI 联动。<br>
+            <strong>删减</strong>：原 superpowers 内部 verification ritual。
+          </td>
+          <td>~215</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-discuss/SKILL.md" target="_blank"><code>alloy-discuss</code></a></td>
+          <td>
+            <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">GSD gray-area extraction</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：gray-area extraction interview、D-NN decision IDs。<br>
+            <strong>新增</strong>：写到 <code>.alloy/specs/&lt;id&gt;/context.md</code>、与 <code>/discuss</code> command 集成。<br>
+            <strong>删减</strong>：GSD's sdk dependency。
+          </td>
+          <td>~205</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-using/SKILL.md" target="_blank"><code>alloy-using</code></a></td>
+          <td>
+            <span class="tag tag-blue">Alloy 原创</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">session-start orientation</span>
+          </td>
+          <td>
+            <strong>原创</strong>。Session start 时 invoke。说明当前可用的 Alloy skills、命令、agent 列表，让 LLM "self-orient"。
+          </td>
+          <td>~140</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-autopilot/SKILL.md" target="_blank"><code>alloy-autopilot</code></a></td>
+          <td>
+            <span class="tag tag-amber">axledbetter/claude-autopilot</span> <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">autopilot + bounded iteration</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：phase-per-skill chaining、risk-tier review depth (low/med/high)、bounded iteration with stall detection。<br>
+            <strong>新增</strong>：与 ralph-loop 5-iter cap 集成、自动跑 spec → plan → execute → verify 全 pipeline。<br>
+            <strong>删减</strong>：autopilot 原版的 Claude-specific assumptions。
+          </td>
+          <td>~215</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-map-codebase/SKILL.md" target="_blank"><code>alloy-map-codebase</code></a></td>
+          <td>
+            <span class="tag tag-green">GSD</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">brownfield mapper</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：3-artifact pattern (architecture map / module map / dependency map)、brownfield codebase mapping。<br>
+            <strong>新增</strong>：Explorer agent 专用、输出格式 fit Alloy spec template。<br>
+            <strong>删减</strong>：GSD sdk runtime 依赖。
+          </td>
+          <td>~225</td>
+        </tr>
+        <tr>
+          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-qa/SKILL.md" target="_blank"><code>alloy-qa</code></a></td>
+          <td>
+            <span class="tag tag-amber">gstack /qa</span><br>
+            <span style="font-size: 11.5px; color: var(--text-dim);">gstack QA workflow + WTF regulator</span>
+          </td>
+          <td>
+            <strong>吸收</strong>：11-phase QA workflow、health-score rubric、WTF-likelihood self-regulator、4-tier × 7-category issue taxonomy、per-page checklist、framework-specific hints (Next/Spring/SPA)。<br>
+            <strong>删减</strong>：gstack 的 60-script <code>bin/</code> 运行时、<code>~/.gstack/</code> state 目录、preamble/telemetry/learnings/brain runtime——全 strip。
+          </td>
+          <td>~375</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Baseline skills（2 个，always installed）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Skill</th><th>来源</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>git-master</code></td><td><span class="tag tag-blue">Alloy 原创</span></td><td>git workflow 参考。被 superpowers/GSD 引用的 git 操作都集中到这里。</td></tr>
+        <tr><td><code>humanizer</code></td><td><span class="tag tag-blue">Alloy 原创</span></td><td>消除 AI 写作味——避免 emoji/路标词/对照壳。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Scoped first-party skills（按 scope 加）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Skill</th><th>Scope</th><th>来源</th></tr></thead>
+      <tbody>
+        <tr><td><code>frontend-ui-ux</code></td><td><span class="tag tag-pink">frontend</span></td><td><span class="tag tag-blue">Alloy 原创</span> UI 实现指导</td></tr>
+        <tr><td><code>playwright-cli</code></td><td><span class="tag tag-pink">frontend</span></td><td><span class="tag tag-blue">Alloy 原创</span> Playwright CLI 测试参考</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Vendored skills（保留上游原文，Renovate 追新）</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Skill</th><th>来源</th><th>License</th><th>Vendor path</th></tr></thead>
+      <tbody>
+        <tr><td><code>vercel-react-best-practices</code></td><td><a href="https://github.com/vercel-labs/agent-skills" target="_blank">vercel-labs/agent-skills</a></td><td>MIT</td><td><code>vendor/skills/scopes/frontend/</code></td></tr>
+        <tr><td><code>kotlin-backend-jpa-entity-mapping</code></td><td><a href="https://github.com/Kotlin/kotlin-agent-skills" target="_blank">Kotlin/kotlin-agent-skills</a></td><td>Apache-2.0</td><td><code>vendor/skills/scopes/backend/</code></td></tr>
+        <tr><td><code>postgres</code></td><td><a href="https://github.com/timescale/pg-aiguide" target="_blank">timescale/pg-aiguide</a></td><td>Apache-2.0</td><td><code>vendor/skills/scopes/backend/</code></td></tr>
+        <tr><td><code>design-postgres-tables</code></td><td><a href="https://github.com/timescale/pg-aiguide" target="_blank">timescale/pg-aiguide</a></td><td>Apache-2.0</td><td><code>vendor/skills/scopes/backend/</code></td></tr>
+        <tr><td><code>pgvector-semantic-search</code></td><td><a href="https://github.com/timescale/pg-aiguide" target="_blank">timescale/pg-aiguide</a></td><td>Apache-2.0</td><td><code>vendor/skills/scopes/backend/</code></td></tr>
+        <tr><td><code>terraform-skill</code></td><td><a href="https://github.com/antonbabenko/terraform-skill" target="_blank">antonbabenko/terraform-skill</a></td><td>Apache-2.0</td><td><code>vendor/skills/scopes/infra/</code></td></tr>
+        <tr><td><code>ralph-loop</code></td><td><a href="https://github.com/anthropics/claude-plugins-official" target="_blank">anthropics/claude-plugins-official</a></td><td>MIT</td><td><code>vendor/skills/external/</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Vendored reference materials（in <code>vendor/skills/superpowers/5.1.0/</code>）</h3>
+  <p>obra/superpowers v5.1.0 的 3 个完整 SKILL 原文也 vendored 进来作 reference：</p>
+  <ul>
+    <li><code>brainstorming/</code> + <code>systematic-debugging/</code> + <code>test-driven-development/</code></li>
+  </ul>
+  <p style="color: var(--text-dim); font-size: 13.5px;">不直接被任何 pack include。仅作为 alloy-brainstorm/alloy-debug/alloy-tdd 的"原貌参考"，方便对比我们改了什么。</p>
+</section>
+
+<!-- ============ DIFF ============ -->
+
+<section id="skills-diff">
+  <h3>关键差异样例：alloy-tdd vs obra/superpowers TDD</h3>
+  <p>用 alloy-tdd 做案例，跟 obra/superpowers v5.1.0 的 test-driven-development skill 对比。</p>
+
+  <div class="diff-grid">
+    <div class="diff-side upstream">
+      <h5>obra/superpowers v5.1.0 (vendored)</h5>
+      <ul style="font-size: 13px; margin: 0;">
+        <li><strong>Iron Law</strong>: NO PRODUCTION CODE WITHOUT FAILING TEST</li>
+        <li>RGR cycle (Red-Green-Refactor) 详解</li>
+        <li>Anti-rationalization table (rationalization → reality)</li>
+        <li>Good/Bad examples (5+ pairs)</li>
+        <li>4 stack-specific variants: ts-tdd, py-tdd, go-tdd, generic</li>
+        <li>引用 git workflow（commit per cycle）</li>
+        <li>Iron Law 适用于 superpowers 全套 plugin 设定</li>
+      </ul>
+      <p style="margin-top: 10px; font-size: 12px; color: var(--text-dim);">~280 lines/variant × 4 = ~1100 总行</p>
+    </div>
+    <div class="diff-side alloy">
+      <h5>universal/skills/alloy-tdd (我们的)</h5>
+      <ul style="font-size: 13px; margin: 0;">
+        <li><strong>Iron Law 保留</strong>（核心 7 行不动）</li>
+        <li>RGR cycle <strong>保留 + 加 Matt Pocock 垂直切片</strong>（Good: 一个完整路径；Bad: 全部组件 mock）</li>
+        <li>Anti-rationalization table <strong>保留</strong>（fusion 增加 5 行 alloy-specific）</li>
+        <li>4 stack 变体 <strong>合并为 1 个 universal SKILL</strong> + "stack hints" section</li>
+        <li>git workflow 引用<strong>移除</strong>（去 <code>git-master</code> skill）</li>
+        <li><strong>加</strong> Alloy ledger integration（强制写 evidence）</li>
+        <li><strong>加</strong> Builder agent 集成 + alloy-verify 联动</li>
+        <li><strong>vendored references</strong>：mattpocock 5 个深引用原文进 <code>references/</code></li>
+      </ul>
+      <p style="margin-top: 10px; font-size: 12px; color: var(--text-dim);">~360 lines + 200 行 references = ~560 总行</p>
+    </div>
+  </div>
+
+  <div class="callout success">
+    <strong>核心理念不变</strong>：Iron Law 是 obra/superpowers 的灵魂，我们 100% 保留。
+    fusion 干的是<strong>合并 4 个 stack 变体</strong>、<strong>注入 Alloy 上下文</strong>、<strong>关联 ledger 实现 evidence 闭环</strong>。
+  </div>
+</section>
+
+<!-- ============ DELETED ============ -->
+
+<section id="skills-deleted">
+  <h3>Card 1 vendor cleanup 删除清单</h3>
+  <p>v0.1.0 Wave 1 Card 1 删除了 21 个 SuperPower vendor skill 文件——这些概念已被 alloy-* fusion 吸收，原文 vendor 是冗余。</p>
+
+  <details>
+    <summary>查看完整删除列表（21 个 SuperPower skills）</summary>
+    <div>
+      <p style="font-size: 13px; color: var(--text-dim);">删除位置：<code>vendor/skills/superpowers/v5.0.x/</code> 下旧版本目录。被替代后保留 v5.1.0 的 3 个 SKILL.md（brainstorming/systematic-debugging/test-driven-development）作 reference。</p>
+      <ul style="columns: 2; font-size: 13px;">
+        <li>code-review-with-context</li>
+        <li>extracting-shared-code</li>
+        <li>finishing-a-development-branch</li>
+        <li>investigating-existing-code</li>
+        <li>moving-code</li>
+        <li>moving-features</li>
+        <li>reading-code-as-research</li>
+        <li>receiving-code-review</li>
+        <li>refactoring-bottom-up</li>
+        <li>refactoring-strategy</li>
+        <li>removing-features</li>
+        <li>requesting-code-review</li>
+        <li>simplifying-code</li>
+        <li>tracing-execution</li>
+        <li>understanding-a-codebase</li>
+        <li>using-debuggers</li>
+        <li>using-git-history</li>
+        <li>using-git-worktrees</li>
+        <li>writing-good-changelogs</li>
+        <li>writing-good-commit-messages</li>
+        <li>writing-meaningful-comments</li>
+      </ul>
+      <p style="font-size: 13px; color: var(--text-dim); margin-top: 10px;">
+        多数已被吸收：refactoring/extracting/moving → <code>alloy-execute</code> + alloy 语义；code-review → <code>alloy-verify</code> + Reviewer agent；
+        using-git-* → <code>git-master</code> baseline skill；commit/changelog → <code>git-master</code> + project conventions。
+      </p>
+    </div>
+  </details>
+</section>
+
+<hr>
+
+<!-- ============ PACKS + ATOMS ============ -->
+
+<section id="packs-atoms">
+  <div class="section-eyebrow">架构补充</div>
+  <h2>Pack 体系：atoms + extends</h2>
+  <p class="section-lede">
+    v0.1.0 Card 3 把 "monolithic pack"（每个 pack inline 列全部 skill/agent/command）改成"atoms-extends-pack"组合模式。
+    类似 Tailwind v4 的 <code class="inline">@layer</code> 或 npm <code class="inline">peerDependencies</code>。
+  </p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h4>Before (v0 monolithic)</h4>
+      <pre class="code"><span class="c">// packs/frontend.json</span>
+{
+  <span class="s">"id"</span>: <span class="s">"frontend"</span>,
+  <span class="s">"skills"</span>: [
+    <span class="s">"alloy-tdd"</span>, <span class="s">"alloy-brainstorm"</span>, ...
+    <span class="s">"git-master"</span>, <span class="s">"humanizer"</span>,
+    <span class="s">"frontend-ui-ux"</span>, ...
+  ],
+  <span class="s">"agents"</span>: [
+    <span class="s">"alloy-orchestrator"</span>, <span class="s">"alloy-planner"</span>, ...
+  ],
+  <span class="s">"commands"</span>: [<span class="s">"handoff"</span>, <span class="s">"init-deep"</span>, ...]
+}</pre>
+      <p style="font-size: 13px; color: var(--text-dim);">每个 pack 重复维护一遍 7+ 通用条目。改一处要改 5 个 pack。</p>
+    </div>
+    <div class="card">
+      <h4>After (v0.1.0+ atoms+extends)</h4>
+      <pre class="code"><span class="c">// packs/atoms.json</span>
+{
+  <span class="s">"atoms"</span>: {
+    <span class="s">"alloy-baseline-5"</span>: {
+      <span class="s">"skills"</span>: [<span class="s">"alloy-tdd"</span>, <span class="s">"git-master"</span>, ...]
+    },
+    <span class="s">"frontend-skills"</span>: {
+      <span class="s">"skills"</span>: [<span class="s">"frontend-ui-ux"</span>, ...]
+    },
+    <span class="s">"alloy-v3-agents"</span>: {
+      <span class="s">"agents"</span>: [<span class="s">"Orchestrator"</span>, <span class="s">"Explorer"</span>, ...]
+    }
+  }
+}
+
+<span class="c">// packs/frontend.json</span>
+{
+  <span class="s">"id"</span>: <span class="s">"frontend"</span>,
+  <span class="s">"extends"</span>: [
+    <span class="s">"alloy-baseline-5"</span>,
+    <span class="s">"frontend-skills"</span>,
+    <span class="s">"alloy-v3-agents"</span>,
+    <span class="s">"alloy-v3-modelRoles"</span>,
+    <span class="s">"alloy-sdd-commands"</span>,
+    <span class="s">"mcp-baseline"</span>
+  ]
+}</pre>
+      <p style="font-size: 13px; color: var(--text-dim);">改 atoms 一处自动传播到全部使用该 atom 的 pack。</p>
+    </div>
+  </div>
+
+  <h3>当前 11 个 atoms</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Atom</th><th>种类</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td><code>alloy-baseline-5</code></td><td>skills</td><td>alloy-tdd, alloy-brainstorm, alloy-debug, git-master, humanizer (核心 5)</td></tr>
+        <tr><td><code>alloy-workflow-extras</code></td><td>skills</td><td>alloy-plan, alloy-discuss, alloy-execute, alloy-verify, alloy-using, alloy-autopilot, alloy-map-codebase, alloy-qa (扩展 8)</td></tr>
+        <tr><td><code>alloy-v3-agents</code></td><td>agents</td><td>Orchestrator, Explorer, Architect, Builder, Fixer, Reviewer, Tester</td></tr>
+        <tr><td><code>alloy-v3-modelRoles</code></td><td>modelRoles</td><td>orchestrator, planner, executor, reviewer, verifier, explorer</td></tr>
+        <tr><td><code>alloy-sdd-commands</code></td><td>commands</td><td>autopilot, discuss, execute, plan, spec, verify (SDD pipeline 6)</td></tr>
+        <tr><td><code>alloy-legacy-commands</code></td><td>commands</td><td>handoff, init-deep, refactor, start-work, stop-continuation, ultrawork, ulw-loop (旧 7，DEPRECATED 注释)</td></tr>
+        <tr><td><code>ralph-loop-skills</code></td><td>skills</td><td>ralph-loop</td></tr>
+        <tr><td><code>ralph-loop-commands</code></td><td>commands</td><td>ralph-loop, cancel-ralph</td></tr>
+        <tr><td><code>mcp-baseline</code></td><td>mcp</td><td>context7, grep_app, exa</td></tr>
+        <tr><td><code>frontend-skills</code></td><td>skills</td><td>frontend-ui-ux, playwright-cli, vercel-react-best-practices</td></tr>
+        <tr><td><code>backend-skills</code></td><td>skills</td><td>kotlin-backend-jpa-entity-mapping, postgres, design-postgres-tables, pgvector-semantic-search</td></tr>
+        <tr><td><code>infra-skills</code></td><td>skills</td><td>terraform-skill</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>5 个 pack 的 extends 组合</h3>
+  <pre class="code"><span class="c">core    </span> = alloy-baseline-5 + alloy-workflow-extras + alloy-v3-agents + alloy-v3-modelRoles + alloy-sdd-commands + alloy-legacy-commands + mcp-baseline
+<span class="c">frontend</span> = alloy-baseline-5 + frontend-skills + alloy-v3-agents + alloy-v3-modelRoles + alloy-sdd-commands + alloy-legacy-commands + mcp-baseline
+<span class="c">backend </span> = alloy-baseline-5 + backend-skills + alloy-v3-agents + alloy-v3-modelRoles + alloy-sdd-commands + alloy-legacy-commands + mcp-baseline
+<span class="c">infra   </span> = alloy-baseline-5 + infra-skills + alloy-v3-agents + alloy-v3-modelRoles + alloy-sdd-commands + alloy-legacy-commands + mcp-baseline
+<span class="c">all     </span> = alloy-baseline-5 + alloy-workflow-extras + ralph-loop-skills + alloy-v3-agents + alloy-v3-modelRoles + alloy-sdd-commands + alloy-legacy-commands + ralph-loop-commands + mcp-baseline + frontend-skills + backend-skills + infra-skills</pre>
+
+  <div class="callout">
+    <strong>Backward compat 故意保留</strong>：旧 inline pack 格式（直接列 skills/agents/...）仍可加载。<code>loadPack</code> 检测有无 <code>extends</code> 字段，二者互斥。
+  </div>
+</section>
+
+<!-- ============ INSTALL FLOW ============ -->
+
+<section id="install-flow">
+  <h2>安装 / 分发 sequence</h2>
+
+  <pre class="code"><span class="c">## User 一行命令</span>
+$ curl -fsSL https://raw.githubusercontent.com/lifeodyssey/alloy/main/install.sh | bash
+
+<span class="c">## install.sh 内部</span>
+<span class="n">1.</span> check_prereqs        <span class="c"># node ≥ 20, bun ≥ 1.1, git, curl</span>
+<span class="n">2.</span> download_repo        <span class="c"># git clone --depth 1 https://github.com/lifeodyssey/alloy /tmp/alloy-XXX</span>
+<span class="n">3.</span> install_alloy_bin    <span class="c"># symlink → ~/.local/bin/alloy</span>
+<span class="n">4.</span> run_global_install   <span class="c"># alloy install --target global</span>
+<span class="n">5.</span> install_completion   <span class="c"># alloy completion zsh > ~/.zsh/completions/_alloy</span>
+<span class="n">6.</span> verify               <span class="c"># alloy --version + alloy list</span>
+
+<span class="c">## alloy install --target global 内部</span>
+<span class="n">1.</span> parseArgs → { target: <span class="s">"global"</span>, pack: <span class="s">"core"</span>, models: <span class="s">"github-copilot"</span> }
+<span class="n">2.</span> loadAtoms()
+<span class="n">3.</span> loadPack(<span class="s">"core"</span>) → expand extends
+<span class="n">4.</span> resolveConfig() → final inventory + model assignments
+<span class="n">5.</span> materialize:
+   ~/.config/opencode/
+     ├── agents/        ← copy from /tmp/alloy-XXX/agents/
+     ├── skills/        ← copy from universal/skills/ + scopes/<kind>/skills/ + vendor/skills/
+     ├── commands/      ← copy from commands/
+     ├── plugins/alloy.ts  ← copy from templates/opencode/alloy-plugin.ts
+     ├── opencode.json  ← generated (default_agent, mcp, agent→model, plugin list)
+     ├── package.json   ← generated (@opencode-ai/plugin + zod pinned)
+     └── alloy.manifest.json ← generated
+<span class="n">6.</span> write ~/.config/alloy/state.json (sha256 of vendor.lock.json)
+<span class="n">7.</span> seed .alloy/state/*.jsonl (empty ledger)</pre>
+
+  <h3>用户后续操作</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>命令</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr><td><code>alloy add ralph-loop</code></td><td>把 ralph-loop 加进 manifest.visible + manifest.explicit.added</td></tr>
+        <tr><td><code>alloy remove humanizer</code></td><td>从 manifest.visible 移除 + 加入 manifest.excluded</td></tr>
+        <tr><td><code>alloy list</code></td><td>显示当前 manifest 全部 managed/visible/excluded</td></tr>
+        <tr><td><code>alloy outdated</code></td><td>查 GitHub releases，对比 vendor.lock — 哪些 vendor 有新版</td></tr>
+        <tr><td><code>alloy upgrade vercel-react-best-practices</code></td><td>跑 revendor.mjs 更新单个 vendor</td></tr>
+        <tr><td><code>alloy upgrade --self</code></td><td>curl install.sh 升级 CLI 自身</td></tr>
+        <tr><td><code>alloy doctor</code></td><td>验证一切（pack 解析、vendor 路径、MCP URL 一致性）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ TIMELINE ============ -->
+
+<section id="timeline">
+  <h2>v0.1.0 实施时间线（sub-agent driven）</h2>
+  <p class="section-lede">
+    整个 v0.1.0 由 codex sub-agents 实施。Coordinator (claude) 只做 dispatch、conflict resolution、merge orchestration。
+    5 个 wave 11 个 card 共 <strong>14 个 PR</strong>，wall clock <strong>~3-4 小时</strong>（spec 原估 11-13 小时）。
+  </p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 1<span class="date">2026-05-25 21:00</span></div>
+        <div class="timeline-status"><span class="tag tag-green">6 cards parallel</span></div>
+      </div>
+      <div>
+        <h4>Foundation: vendor cleanup + cc-safety-net + v3 agents + SDD commands + docs + Renovate</h4>
+        <p>6 个独立 PR (#3/#4/#5/#6/#7/#8) 同时派发 6 个 codex executor。冲突最低（不同文件面）。所有 reviewer/tester verdict 处理后串行合并。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 2<span class="date">2026-05-26 01:00</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">1 card serial</span></div>
+      </div>
+      <div>
+        <h4>Card 3: atoms.json + universal/scopes restructure + CLI baseline</h4>
+        <p>大型 refactor（140 文件 +409/-298），改 bin/alloy.mjs + 移动 skills 目录。Codex 完成实施 hang，coordinator 接力 commit + push。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 3<span class="date">2026-05-26 01:30</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">1 card serial</span></div>
+      </div>
+      <div>
+        <h4>Card 6+7+12: CLI v3 surface (manifest + add/remove/list/search/outdated/upgrade + container-use prereq)</h4>
+        <p>bin/alloy.mjs +401 LOC + 新 helpers (manifest.mjs/state.mjs/prereq-check.mjs) + 12 个新 e2e tests。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 4a<span class="date">2026-05-26 02:00</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">1 card serial</span></div>
+      </div>
+      <div>
+        <h4>Card 8+9+10: alloy-plugin.ts 11 hooks + OMO ports</h4>
+        <p>plugin 186 → 586 行。加 5 个新 hook + 3 个 OMO port (json-error-recovery / delegate-task-retry / phase-reminder)。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 4b<span class="date">2026-05-26 02:15</span></div>
+        <div class="timeline-status"><span class="tag tag-pink">serial after 4a</span></div>
+      </div>
+      <div>
+        <h4>Card 16 (partial): ralph-loop vendor + slash commands</h4>
+        <p>vendor ralph-loop 进 vendor.lock + 加 atoms.json + ralph-loop slash command + CREDITS。Plugin iteration counter 延期到 v0.1.1（避免与 Wave 4a 并行编辑 plugin 文件）。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">Wave 5<span class="date">2026-05-26 02:20</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">1 card serial</span></div>
+      </div>
+      <div>
+        <h4>Card 13: install.sh one-line onboarding + alloy completion + setup.sh shim</h4>
+        <p>install.sh 207 行 (set -euo pipefail + 引号 + 无 eval)。alloy completion bash|zsh|fish。INSTALL.md curl 一行装。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">v0.1.0<span class="date">2026-05-26 02:19</span></div>
+        <div class="timeline-status"><span class="tag tag-green">released</span></div>
+      </div>
+      <div>
+        <h4>Tag v0.1.0 + PR #2 merged to main (8ac504e)</h4>
+        <p>30 unit + e2e tests passing. 全部 5 个 wave 完成。Tag pushed to GitHub。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version">v0.1.1<span class="date">2026-05-26 11:35</span></div>
+        <div class="timeline-status"><span class="tag tag-green">released</span></div>
+      </div>
+      <div>
+        <h4>5 follow-up bugs + repo rename + brand reposition</h4>
+        <p>修：alloy upgrade vendored-local / manifest schema (excluded top-level) / plugin null guards / positional pack arg / plugin iteration counter。Brand: opencode-team-config → alloy (npm <code>@lifeodyssey/alloy</code>, GitHub <code>lifeodyssey/alloy</code>)。33 tests passing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+
+<section id="roadmap">
+  <h2>Roadmap</h2>
+  <p class="section-lede">
+    Alloy 的核心承诺是 runtime-agnostic 的 atoms+packs 架构。下一步是验证它真能加 runtime adapter 而不动核心。
+  </p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version" style="color: var(--green);">v0.1.x<span class="date">2026-05-26</span></div>
+        <div class="timeline-status"><span class="tag tag-green">✅ shipped</span></div>
+      </div>
+      <div>
+        <h4>OpenCode runtime adapter（基础）</h4>
+        <p>完整 12 hooks + 4 custom tools + CLI surface + ralph-loop。foundation for everything else.</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version" style="color: var(--amber);">v0.2<span class="date">Q3 2026 planned</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">📋 planned</span></div>
+      </div>
+      <div>
+        <h4>Claude Code runtime adapter</h4>
+        <p>Materialize 到 <code>.claude/</code> 而非 <code>.opencode/</code>。重用 atoms.json / packs/*.json / agents/ / commands/ / universal/skills/——只写第二个 installer + claude code plugin/hook adapter。验证 runtime-neutral 的承诺。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version" style="color: var(--amber);">v0.3<span class="date">Q4 2026 planned</span></div>
+        <div class="timeline-status"><span class="tag tag-amber">📋 planned</span></div>
+      </div>
+      <div>
+        <h4>Codex CLI adapter</h4>
+        <p>同上但 target Codex CLI (OpenAI)。三 runtime 完成后，atoms 抽象的价值正式验证。</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div>
+        <div class="timeline-version" style="color: var(--gray);">v0.4+<span class="date">future</span></div>
+        <div class="timeline-status"><span class="tag tag-gray">💭 ideas</span></div>
+      </div>
+      <div>
+        <h4>探索方向</h4>
+        <p>cross-runtime skill compatibility matrix · pack registry (类似 vercel-labs/skills) · web UI 用 visual pack builder · IDE 扩展直接 install pack.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <strong>Alloy v0.1.1</strong> · MIT License ·
+    <a href="https://github.com/lifeodyssey/alloy" target="_blank">github.com/lifeodyssey/alloy</a> ·
+    <a href="https://github.com/lifeodyssey/alloy/blob/main/CREDITS.md" target="_blank">CREDITS</a> ·
+    <a href="https://github.com/lifeodyssey/alloy/blob/main/CHANGELOG.md" target="_blank">CHANGELOG</a> ·
+    <a href="https://github.com/lifeodyssey/alloy/blob/main/INSTALL.md" target="_blank">INSTALL</a>
+  </p>
+  <p style="font-size: 12px; margin-top: 16px;">
+    本文档由 Alloy coordinator 在 2026-05-26 生成，反映 main HEAD <code>73f69ef</code> 状态。
+    所有源代码引用都链回 GitHub repo。
+  </p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  // sticky nav active section highlight
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.sidebar-nav a[href^="#"]');
+
+  function updateActiveNav() {
+    let current = '';
+    const scrollY = window.scrollY + 100;
+    sections.forEach(section => {
+      if (section.offsetTop <= scrollY) {
+        current = section.getAttribute('id');
+      }
+    });
+    navLinks.forEach(link => {
+      link.style.color = '';
+      link.style.borderLeftColor = 'transparent';
+      const href = link.getAttribute('href');
+      if (href === '#' + current) {
+        link.style.color = 'var(--accent)';
+        link.style.borderLeftColor = 'var(--accent)';
+      }
+    });
+  }
+
+  window.addEventListener('scroll', updateActiveNav, { passive: true });
+  updateActiveNav();
+</script>
+
+</body>
+</html>
