@@ -22,7 +22,27 @@ type TextPart = {
 
 type JsonRecord = Record<string, unknown>
 
+interface PresetSpec {
+  agents: string[]
+  skills_visible: string[] | "all"
+  mcps_enabled: string[] | "all"
+}
+
+interface PresetsDef {
+  presets: Record<string, PresetSpec>
+}
+
 const DEFAULT_AGENT = "Orchestrator"
+
+// === OMO preset hot-swap (Task 9) ===
+let activePreset = "default"
+let presetsDef: PresetsDef | null = null
+
+const FALLBACK_PRESETS: PresetsDef = {
+  presets: {
+    default: { agents: [], skills_visible: "all", mcps_enabled: "all" },
+  },
+}
 
 const DEFAULT_MCP: Record<string, JsonRecord> = {
   context7: { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true },
@@ -74,6 +94,34 @@ function appendJsonl(directory: string, name: string, record: Record<string, unk
   const path = statePath(directory, name)
   mkdirSync(join(alloyDir(directory), "state"), { recursive: true })
   appendFileSync(path, `${JSON.stringify(record)}\n`, "utf8")
+}
+
+function loadPresets(directory: string): PresetsDef {
+  if (presetsDef) return presetsDef
+  const path = join(directory, ".opencode", "presets.json")
+  if (!existsSync(path)) return FALLBACK_PRESETS
+  presetsDef = JSON.parse(readFileSync(path, "utf8")) as PresetsDef
+  return presetsDef
+}
+
+function getActivePreset(directory: string): PresetSpec {
+  const defs = loadPresets(directory)
+  return defs.presets[activePreset] ?? defs.presets.default ?? FALLBACK_PRESETS.presets.default
+}
+
+function applyPreset(directory: string, name: string): boolean {
+  const defs = loadPresets(directory)
+  if (!defs.presets[name]) return false
+  const prev = activePreset
+  activePreset = name
+  appendJsonl(directory, "preset", {
+    id: randomUUID(),
+    event: "preset_changed",
+    from: prev,
+    to: name,
+    ts: new Date().toISOString(),
+  })
+  return true
 }
 
 function readStatus(directory: string) {
@@ -454,6 +502,12 @@ function shouldKeepSkillLine(line: string, visibleSkills: Set<string>, managedSk
   return true
 }
 
+function shouldKeepPresetSkillLine(line: string, presetSkills: Set<string>) {
+  const name = skillNameFromLine(line)
+  if (!name) return true
+  return presetSkills.has(name)
+}
+
 function filterAvailableSkillsBlock(text: string, manifest: AlloyManifest, agent?: string) {
   const visibleAgents = new Set(manifest.visible?.agents ?? [])
   const agentCanSeeSkills = !agent || visibleAgents.size === 0 || visibleAgents.has(agent)
@@ -464,6 +518,17 @@ function filterAvailableSkillsBlock(text: string, manifest: AlloyManifest, agent
   return text.replace(/<available_skills>([\s\S]*?)<\/available_skills>/gi, (_match, body: string) => {
     const lines = body.split(/\r?\n/)
     const filtered = lines.filter((line) => shouldKeepSkillLine(line, visibleSkills, managedSkills))
+    return `<available_skills>${filtered.join("\n")}</available_skills>`
+  })
+}
+
+function filterPresetSkillsBlock(text: string, preset: PresetSpec) {
+  if (preset.skills_visible === "all") return text
+  const presetSkills = new Set(preset.skills_visible)
+
+  return text.replace(/<available_skills>([\s\S]*?)<\/available_skills>/gi, (_match, body: string) => {
+    const lines = body.split(/\r?\n/)
+    const filtered = lines.filter((line) => shouldKeepPresetSkillLine(line, presetSkills))
     return `<available_skills>${filtered.join("\n")}</available_skills>`
   })
 }
@@ -482,6 +547,15 @@ async function filterAvailableSkills(directory: string, input: any, output: { me
   if (!manifest) return
   for (const message of output.messages ?? []) {
     mutateTextParts(message, (text) => filterAvailableSkillsBlock(text, manifest, input?.agent))
+  }
+}
+
+function filterByPreset(directory: string, _input: any, output: { messages: any[] }) {
+  const preset = getActivePreset(directory)
+  if (preset.skills_visible === "all") return
+  for (const message of output.messages ?? []) {
+    if (message?.role !== "system") continue
+    mutateTextParts(message, (text) => filterPresetSkillsBlock(text, preset))
   }
 }
 
@@ -512,6 +586,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     config: async (config) => {
       if (!config) return
       injectConfigDefaults(config)
+      loadPresets(projectDir)
       bootWarnings = await detectMagicWarnings(projectDir)
       bootWarningsChecked = true
       bootWarningsEmitted = false
@@ -582,6 +657,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     "experimental.chat.messages.transform": async (input, output) => {
       if (!output || !Array.isArray(output.messages)) return
       await filterAvailableSkills(projectDir, input, output)
+      filterByPreset(projectDir, input, output)
     },
 
     "experimental.chat.system.transform": async (_input, output) => {
@@ -605,6 +681,19 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     },
 
     tool: {
+      alloy_switch_preset: tool({
+        description: "Switch the active Alloy preset (plan-mode / execute-mode / review-mode / default) without restarting session.",
+        args: {
+          preset: tool.schema.string(),
+        },
+        async execute(args) {
+          const ok = applyPreset(projectDir, args.preset)
+          return ok
+            ? `Preset switched to ${args.preset}. Skills/agents/MCPs hot-reloaded.`
+            : `Unknown preset: ${args.preset}. Available: ${Object.keys(loadPresets(projectDir).presets).join(", ")}`
+        },
+      }),
+
       alloy_evidence: tool({
         description: "Record Alloy workflow evidence for the current task.",
         args: {

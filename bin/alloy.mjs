@@ -55,6 +55,7 @@ const MANAGED_NAMES = [
   "plugins",
   "alloy-runtime",
   "alloy.manifest.json",
+  "presets.json",
   "agents",
   "commands",
   "skills",
@@ -565,6 +566,7 @@ function installCommand(options, projectDir = process.cwd()) {
   installCoreFiles(resolved, options.dryRun)
   installPlugin(resolved, projectDir, options.dryRun)
   writeOpenCodeConfig(resolved, options.dryRun)
+  writePresets(resolved.targetDir, options.dryRun)
   writeInstallManifest(resolved, installedAt, options.dryRun)
   if (options.target === "global") writeGlobalInstallState(resolved, installedAt, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
@@ -640,6 +642,12 @@ function writeOpenCodeConfig(resolved, dryRun = false) {
   writeJson(configPath, config, dryRun)
 }
 
+function writePresets(targetDir, dryRun = false) {
+  const sourcePath = join(REPO_ROOT, "packs", "presets.json")
+  if (!pathExists(sourcePath)) return
+  copyFile(sourcePath, join(targetDir, "presets.json"), dryRun)
+}
+
 function mergeOpenCodeConfig(existing, generated) {
   const merged = mergeConfigValue(generated, existing)
   merged.plugin = unique([...(Array.isArray(existing.plugin) ? existing.plugin : []), ...(Array.isArray(generated.plugin) ? generated.plugin : [])])
@@ -706,7 +714,7 @@ function validateTargetFiles(resolved) {
   for (const agent of resolved.agents) if (!pathExists(join(resolved.targetDir, "agents", `${agent}.md`))) failures.push(`Target missing agent: ${agent}`)
   for (const command of resolved.commands) if (!pathExists(join(resolved.targetDir, "commands", `${command}.md`))) failures.push(`Target missing command: ${command}`)
   for (const skill of resolved.skills) if (!pathExists(join(resolved.targetDir, "skills", skill, "SKILL.md"))) failures.push(`Target missing skill: ${skill}`)
-  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts", "alloy.manifest.json"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
+  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts", "alloy.manifest.json", "presets.json"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
   return failures
 }
 

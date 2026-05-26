@@ -146,6 +146,17 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertIn(("am", ("--no-verify",)), safety_net_rules)
         self.assertIn(("am", ("-n",)), safety_net_rules)
 
+    def test_install_writes_presets_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_setup(cwd, "--pack", "core", "--target", "local")
+            presets = json.loads((cwd / ".opencode" / "presets.json").read_text())
+
+        self.assertIn("default", presets["presets"])
+        self.assertIn("plan-mode", presets["presets"])
+        self.assertIn("execute-mode", presets["presets"])
+        self.assertIn("review-mode", presets["presets"])
+
     def test_install_writes_manifest_with_managed_visible_and_explicit_sections(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)

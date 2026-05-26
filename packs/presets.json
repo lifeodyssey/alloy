@@ -1,0 +1,24 @@
+{
+  "presets": {
+    "default": {
+      "agents": ["Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"],
+      "skills_visible": "all",
+      "mcps_enabled": "all"
+    },
+    "plan-mode": {
+      "agents": ["Orchestrator", "Explorer", "Architect"],
+      "skills_visible": ["alloy-plan", "alloy-discuss", "alloy-brainstorm", "alloy-map-codebase"],
+      "mcps_enabled": ["context7", "grep_app"]
+    },
+    "execute-mode": {
+      "agents": ["Builder", "Fixer"],
+      "skills_visible": ["alloy-tdd", "alloy-execute", "alloy-debug"],
+      "mcps_enabled": ["context7"]
+    },
+    "review-mode": {
+      "agents": ["Reviewer", "Tester"],
+      "skills_visible": ["alloy-verify", "alloy-qa"],
+      "mcps_enabled": ["context7", "exa"]
+    }
+  }
+}
