@@ -3,8 +3,7 @@
   "description": "OpenCode Alloy infra pack: core plus Terraform/OpenTofu guidance.",
   "target": "local",
   "extends": [
-    "alloy-core-skills",
-    "alloy-baseline-skills",
+    "alloy-baseline-5",
     "alloy-v3-agents",
     "alloy-v3-modelRoles",
     "alloy-sdd-commands",
