@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.1.2] - 2026-05-27
+
+### Architecture & Vision (Task 1+2)
+- Added 6 design beliefs to CLAUDE.md (最强约束 / plugin-first / 不替用户做选择 / vendor over rewrite / 状态外置但极简 / 零依赖运行时)
+- Added "What Alloy is NOT" section (not chat UI / not agent / not SaaS / not framework)
+- README repositioned: "The harness that lets one person run an AI agent team — with zero compromise on control"
+
+### Phase Pipeline (Task 6)
+- **BREAKING**: spec phase merged into plan phase
+- `pending → spec → plan → execute → verify → done` (6 phases) → `pending → plan → execute → verify → done` (5 phases)
+- `commands/spec.md` deleted; `/spec` now redirects/aliases to `/plan` if encountered in legacy code
+- `commands/plan.md` rewritten to combine brainstorm + plan workflow
+- `packs/atoms.json` `alloy-sdd-commands` atom: removed "spec" from commands array
+- `templates/opencode/alloy-plugin.ts` COMMAND_SKILLS: removed `spec: alloy-plan` entry
+- `.alloy/specs/` directory renamed to `.alloy/plans/`; `bin/alloy.mjs installCommand` auto-migrates on install
+- `universal/skills/alloy-brainstorm/` deleted; content merged into `universal/skills/alloy-plan/SKILL.md`
+- 7 agents/*.md: `/spec` → `/plan`, `alloy-brainstorm` → `alloy-plan` references updated
+- `docs/alloy-overview.html` SDD pipeline diagram updated
+
+### Phase Pipeline Documentation (Task 8)
+- Added "## Phase Pipeline" section to all 7 v3 specialist agent .md files (Orchestrator/Explorer/Architect/Builder/Fixer/Reviewer/Tester)
+- Documents 5-phase pipeline (plan/execute/verify/done) + required tool usage + capability isolation (v0.1.4+ enforcement noted)
+
+### Skill restructure (Task 7)
+- `alloy-tdd` SKILL.md grew 348 → ~1300 lines: inline 4 sources verbatim (per "字数 only more not less" + "能用原文就用原文" principle)
+  - Section 1-2: obra/superpowers v5.1.0 test-driven-development (Iron Law + anti-rationalization)
+  - Section 3-7: mattpocock/skills/engineering/tdd 5 references (tests/mocking/deep-modules/interface-design/refactoring)
+  - Section 8: alloy team-tdd legacy (98 lines, recovered from git commit 60a9207) — code constraints + Stack Companions routing
+  - Section 9: alloy v3 fusion + evidence ledger integration
+- `alloy-qa` SKILL.md: rewritten and expanded to ~500 lines (NOT inline gstack — gstack runtime too heavy)
+  - Kept: 11-phase workflow / 8-category rubric / WTF-likelihood / Phase 8e.5 regression discipline
+  - Stripped: gstack-* binaries / $B browse / ~/.gstack/ / preamble / learnings / telemetry
+  - Added: alloy_evidence integration / playwright-cli abstraction / .alloy/qa-reports/ paths / --report-only flag
+  - Attribution: "inspired by gstack /qa, rewritten for alloy-portable"
+- 9 other alloy-* skills: case-by-case (inline upstream where available + Attribution section)
+
+### Multi-agent runtime orchestration (Task 9)
+- NEW: `packs/presets.json` — 4 presets (default / plan-mode / execute-mode / review-mode)
+- NEW: `alloy_switch_preset(name)` plugin tool — hot-swap preset without restarting session
+- `templates/opencode/alloy-plugin.ts` grew ~150 LOC for preset state + filterByPreset + pre-load on boot
+- `bin/alloy.mjs` `writePresets()` writes `.opencode/presets.json` on install
+- Inspired by `alvinunreal/oh-my-opencode-slim` runtime preset tracking
+
+### Vendor additions (Task 3+4+5)
+- **Task 3**: Vendored `mattpocock/skills/productivity/handoff` (MIT) → `vendor/skills/external/mattpocock/<v>/handoff/`
+  - New atom `mattpocock-handoff` added to packs/atoms.json
+  - Added to core/frontend/backend/infra/all pack extends
+  - Use case: cross-session conversation handoff (compact to /tmp + suggested skills)
+- **Task 4**: NEW `packs/dcp.json` — OpenCode Dynamic Context Pruning as opt-in pack
+  - Plugin: `@tarquinen/opencode-dcp`
+  - Trade-off: 50-70% token saving BUT breaks prompt cache (use carefully)
+- **Task 5**: NEW `core-infrastructure` atom (in atoms.json) pre-installs CodeGraph + RTK
+  - CodeGraph: AST 索引 (zhenjia article Step 2 减少无效探索 推荐)
+  - RTK: CLI 输出压缩 (zhenjia article Step 3 预防上下文膨胀 推荐)
+
+### Documentation (Task 10)
+- `docs/redesign/PLAN-v0.1.2-and-beyond.md` — full v0.1.2 implementation plan (752 insertions)
+  - 3 rounds of plannotator review
+  - Includes TDD 4-way comparison table (superpowers/mattpocock/team-tdd/alloy-tdd)
+  - Includes gstack /qa real implementation deep-dive
+
+### Versioning policy decision
+- v0.2/v0.3 major version bumps **canceled** for this iteration
+- All originally-planned v0.2 content folded into v0.1.x series (per plannotator round 1 feedback "这些都算 1.2")
+
+### Migration notes for users upgrading from v0.1.1
+
+1. `/spec` command no longer exists. Use `/plan` for the full brainstorm + plan workflow.
+2. `.alloy/specs/` directory will be auto-renamed to `.alloy/plans/` on next `alloy install`.
+3. `alloy-brainstorm` skill replaced by extended `alloy-plan` skill.
+4. New preset system: try `alloy_switch_preset("plan-mode")` in chat for focused planning context.
+
+---
+
 All notable changes to Alloy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

@@ -105,6 +105,37 @@ If a regression test is impossible, explain why and choose another guard such as
 4. Patch prompt/inventory consistently.
 5. Re-run audit and installer tests.
 
+## Phase Pipeline (alloy v0.1.2+)
+
+Alloy 5-phase pipeline: `pending → plan → execute → verify → done`
+
+Pending is intake only: clarify ownership, phase, and evidence target before specialist work starts.
+Do not claim phase completion from pending.
+
+Each phase has strict role + skill + tool constraints. Phase advance via `alloy_phase_advance` SDK tool.
+
+| Phase | Skill | Owner | Your role |
+|---|---|---|---|
+| **plan** (合并 spec+brainstorm) | `alloy-plan` | Architect | Consumes the plan or bug brief; asks Architect for missing scope. |
+| **execute** | `alloy-execute` + `alloy-debug` | Builder / Fixer | Owns execute phase for bug fixes; strict `alloy-debug`. |
+| **verify** | `alloy-verify` | Reviewer + Tester | Provides reproduction and fix evidence; does not self-verify final. |
+| **done** | mattpocock `handoff` (if cross-session) | Orchestrator | Hands off root-cause notes; does not close the task. |
+
+### Required tool usage in your phase
+
+- Phase entry: invoke matching skill (e.g., Fixer enters execute → must invoke `alloy-debug`)
+- Mid-phase: use `alloy_evidence` to record tool execution results
+- Phase exit: use `alloy_claim` (with evidenceIds for Tester) before `alloy_phase_advance`
+
+### Capability isolation (will enforce in v0.1.4)
+
+Current v0.1.2: documented only.
+Future v0.1.4: hard-enforce per-phase tool whitelist.
+
+- plan phase: NO write-code / run-tests / git-commit tools
+- execute phase: NO edit-spec / edit-plan / git-commit-to-main tools
+- verify phase: read-only + alloy_claim + alloy_gate only
+
 ## Output Contract
 
 Return:

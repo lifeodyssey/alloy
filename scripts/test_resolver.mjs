@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -28,6 +28,8 @@ import {
 import {
   checkContainerUsePrereqs,
 } from "../bin/prereq-check.mjs"
+
+const PACKAGE_VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
 test("defaults.json exposes the pinned plugin and MCP shape", () => {
   assert.equal(typeof DEFAULTS.plugin["@opencode-ai/plugin"], "string")
@@ -224,7 +226,7 @@ test("createManifest records managed inventory, visible inventory, and explicit 
   const resolved = resolveConfig({ pack: "core", target: "local", models: "github-copilot", explicitPack: true })
   const manifest = createManifest(resolved, "2026-05-26T00:00:00.000Z")
 
-  assert.equal(manifest.version, "0.1.0")
+  assert.equal(manifest.version, PACKAGE_VERSION)
   assert.equal(manifest.installedAt, "2026-05-26T00:00:00.000Z")
   assert.equal(manifest.pack, "core")
   assert.equal(manifest.models, "github-copilot")
@@ -285,7 +287,7 @@ test("createGlobalState records global install state and vendor lock hash", () =
   const resolved = resolveConfig({ pack: "core", target: "global", models: "github-copilot", explicitPack: true })
   const state = createGlobalState(resolved, "2026-05-26T00:00:00.000Z")
 
-  assert.equal(state.version, "0.1.0")
+  assert.equal(state.version, PACKAGE_VERSION)
   assert.equal(state.installedAt, "2026-05-26T00:00:00.000Z")
   assert.equal(state.pack, "core")
   assert.deepEqual(state.managed.skills, resolved.skills)

@@ -1,0 +1,6 @@
+{
+  "id": "dcp",
+  "description": "OpenCode Dynamic Context Pruning — opt-in 50-70% token saving (会破 prompt cache)",
+  "extends": ["mcp-baseline"],
+  "plugins": ["@tarquinen/opencode-dcp"]
+}

@@ -204,7 +204,10 @@ alloy_evidence { kind: "autopilot_done", taskId, summary: "PR #234 ready, 0 veri
 
 ## Attribution
 
-Fuses:
-- **axledbetter/claude-autopilot** — phase-per-skill chaining pattern, risk-tier review depth, on-disk state for resume (concept; we re-author against Alloy's existing 3-phase pipeline)
-- **GSD bounded iteration** — max-iters + stall detection escalation, autopilot.jsonl ledger
-- **Alloy** — 4 status codes from alloy-execute drive the loop, integration with our existing skill chain
+Concept-only rewrite from:
+
+- **axledbetter/claude-autopilot** (MIT) — phase-per-skill chaining pattern, risk-tier review depth, on-disk state for resume. No upstream skill file was vendored in this sandbox; Alloy re-authors the flow against its existing 3-phase pipeline.
+- **GSD bounded iteration** (rokicool/gsd-opencode and gsd-build/get-shit-done, MIT) — max-iters + stall detection escalation, autopilot.jsonl ledger.
+- **Alloy** (MIT / first-party) — 4 status codes from alloy-execute drive the loop, integration with our existing skill chain.
+
+See `/CREDITS.md` at repo root for the full attribution chain.

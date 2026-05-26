@@ -15,6 +15,23 @@ Authors:  contributors of the `alloy` (Alloy) project.
 
 These skills absorb design ideas from the projects listed below; see each SKILL.md's "Attribution" section for specifics.
 
+## Inline content inside first-party Alloy skills
+
+The following first-party `universal/skills/alloy-*` files include upstream text inline so agents can use the source material without lazy-loading separate reference files. Upstream license notices remain preserved here and in each skill's Attribution section.
+
+| Alloy skill | Inline sources | Source repo | License |
+|---|---|---|---|
+| `alloy-tdd` | `skills/test-driven-development/SKILL.md`, `testing-anti-patterns.md` | obra/superpowers v5.1.0 | MIT |
+| `alloy-tdd` | `skills/engineering/tdd/tests.md`, `mocking.md`, `deep-modules.md`, `interface-design.md`, `refactoring.md` | mattpocock/skills | MIT |
+| `alloy-tdd` | historical Team TDD body from `git show 60a9207:skills/team-tdd/SKILL.md` | Alloy git history | MIT / first-party Alloy |
+| `alloy-brainstorm` | `skills/brainstorming/SKILL.md` | obra/superpowers v5.1.0 | MIT |
+| `alloy-debug` | `skills/systematic-debugging/SKILL.md`, `root-cause-tracing.md`, `defense-in-depth.md`, `condition-based-waiting.md`, `condition-based-waiting-example.ts`, `find-polluter.sh` | obra/superpowers v5.1.0 | MIT |
+| `alloy-execute` | `skills/subagent-driven-development/SKILL.md`, `implementer-prompt.md`, `spec-reviewer-prompt.md`, `code-quality-reviewer-prompt.md` | obra/superpowers v5.1.0 | MIT |
+| `alloy-verify` | `skills/verification-before-completion/SKILL.md` | obra/superpowers v5.1.0 | MIT |
+| `alloy-plan` | `skills/writing-plans/SKILL.md` | obra/superpowers v5.1.0 | MIT |
+
+Some inline Superpowers and historical Alloy text references retired entrypoint names in upstream form. In `universal/skills/`, those dependency names are normalized to current Alloy skill names where required by `scripts/audit_prompt_dependencies.py`; the source chain remains documented here.
+
 ## Absorbed concepts (we re-authored, kept the ideas)
 
 ### obra/superpowers (MIT)
@@ -55,6 +72,8 @@ Repos:
 
 **Note:** GSD requires its `gsd-sdk` CLI runtime. We absorbed concepts only — none of GSD's command files or agent prompts are vendored, all skills are re-authored to use Alloy's `.alloy/state/*.jsonl` ledger instead.
 
+For Task 7, this concept-only treatment remains intentional for `alloy-discuss`, `alloy-map-codebase`, and the GSD portions of `alloy-plan` / `alloy-autopilot`: the workflows are rewritten into Alloy's portable skill vocabulary rather than copying GSD runtime-dependent files.
+
 ### gstack (MIT)
 
 - **`/qa` 11-phase workflow** with health-score rubric — adopted in `alloy-qa`
@@ -65,6 +84,8 @@ Repos:
 Repo: https://github.com/garrytan/gstack (local fork at `~/.gstack/repos/gstack/`)
 
 **Note:** gstack requires its 60-script `bin/` runtime + `~/.gstack/` state directory. We absorbed `qa` content only — gstack's preamble/telemetry/learnings/brain runtime are all stripped.
+
+For Task 7, `alloy-qa` remains rewritten rather than vendored. It adopts the 11-phase workflow, 8-category health rubric, WTF-likelihood self-regulator, and Phase 8e.5 regression discipline, while replacing gstack runtime calls with `playwright-cli`, `.alloy/qa-reports/`, and Alloy evidence ledger events.
 
 ### OMO Slim (alvinunreal/oh-my-opencode-slim — MIT)
 
@@ -81,6 +102,8 @@ Repo: https://github.com/alvinunreal/oh-my-opencode-slim
 - **Risk-tier review depth** (low/med/high) — adopted in `alloy-autopilot`
 
 Repo: https://github.com/axledbetter/claude-autopilot
+
+For Task 7, `alloy-autopilot` stays concept-only because no local upstream skill file was available in this sandbox; the skill remains an Alloy rewrite around phase chaining, risk-tier review depth, and resumable on-disk state.
 
 ### Anthropic skills (anthropics/skills — MIT)
 
@@ -169,3 +192,26 @@ Vendored content retains upstream licenses. No copyleft (no GPL/AGPL) content is
 Where upstream content is incorporated into first-party Alloy skills (absorbed concepts rather than verbatim copies), the Attribution section of each SKILL.md identifies the source.
 
 If you believe content has been misattributed or used outside its license terms, please open an issue at [alloy issues](https://github.com/lifeodyssey/alloy/issues).
+
+## v0.1.2 Additions
+
+### Matt Pocock handoff skill (MIT)
+
+- **`handoff` productivity skill** — vendored verbatim to `vendor/skills/external/mattpocock/main/handoff/`
+
+Repo: https://github.com/mattpocock/skills
+Upstream path: `skills/productivity/handoff`
+
+### OpenCode Dynamic Context Pruning (AGPL-3.0-or-later)
+
+- **`@tarquinen/opencode-dcp` optional OpenCode plugin** — referenced by the opt-in `dcp` pack, not vendored
+- **Dynamic context pruning** for token reduction, with the cache trade-off documented in `packs/dcp.json`
+
+Package: https://www.npmjs.com/package/@tarquinen/opencode-dcp
+
+### CodeGraph + RTK core infrastructure (TBD - vendoring strategy)
+
+- **CodeGraph** — intended AST/code graph infrastructure, but `codegraph` and `@anthropic-ai/codegraph` did not resolve as npm plugin packages during this pass
+- **RTK / Rust Token Killer** — intended CLI output/token compression infrastructure, but `rtk` did not resolve as an npm plugin package during this pass
+
+Strategy: keep `core-infrastructure` as an empty plugin atom until the install source is confirmed, then add the exact package/source with its license and lock metadata.

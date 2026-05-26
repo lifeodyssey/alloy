@@ -220,6 +220,9 @@ alloy_evidence { kind: "codebase_mapped", taskId, summary: "3 maps written: N mo
 
 ## Attribution
 
-Fuses:
-- **GSD codebase-mapper / brownfield onboarding** — three-artifact pattern (architecture / modules / boundaries), context-budget discipline (concept, not code)
-- **Alloy** — `.alloy/codebase/` location, integration with downstream skills, evidence
+Concept-only rewrite from:
+
+- **GSD codebase-mapper / brownfield onboarding** (rokicool/gsd-opencode and gsd-build/get-shit-done, MIT) — three-artifact pattern (architecture / modules / boundaries), context-budget discipline. No GSD command files or `gsd-sdk` runtime are vendored.
+- **Alloy** (MIT / first-party) — `.alloy/codebase/` location, integration with downstream skills, evidence.
+
+See `/CREDITS.md` at repo root for the full attribution chain.

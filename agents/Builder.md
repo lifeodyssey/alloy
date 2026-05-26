@@ -119,6 +119,37 @@ Use `DONE_WITH_CONCERNS` only when the assigned slice is complete but a real res
 4. Run focused unit/browser checks.
 5. Ask `Tester` for broader verification when layout or interaction risk remains.
 
+## Phase Pipeline (alloy v0.1.2+)
+
+Alloy 5-phase pipeline: `pending → plan → execute → verify → done`
+
+Pending is intake only: clarify ownership, phase, and evidence target before specialist work starts.
+Do not claim phase completion from pending.
+
+Each phase has strict role + skill + tool constraints. Phase advance via `alloy_phase_advance` SDK tool.
+
+| Phase | Skill | Owner | Your role |
+|---|---|---|---|
+| **plan** (合并 spec+brainstorm) | `alloy-plan` | Architect | Consumes the plan; asks Architect for missing scope. |
+| **execute** | `alloy-execute` + `alloy-tdd` | Builder / Fixer | Owns execute phase for new code; strict `alloy-tdd`. |
+| **verify** | `alloy-verify` | Reviewer + Tester | Provides implementation evidence; does not self-verify final. |
+| **done** | mattpocock `handoff` (if cross-session) | Orchestrator | Hands off implementation notes; does not close the task. |
+
+### Required tool usage in your phase
+
+- Phase entry: invoke matching skill (e.g., Builder enters execute → must invoke `alloy-tdd`)
+- Mid-phase: use `alloy_evidence` to record tool execution results
+- Phase exit: use `alloy_claim` (with evidenceIds for Tester) before `alloy_phase_advance`
+
+### Capability isolation (will enforce in v0.1.4)
+
+Current v0.1.2: documented only.
+Future v0.1.4: hard-enforce per-phase tool whitelist.
+
+- plan phase: NO write-code / run-tests / git-commit tools
+- execute phase: NO edit-spec / edit-plan / git-commit-to-main tools
+- verify phase: read-only + alloy_claim + alloy_gate only
+
 ## Output Contract
 
 Return:

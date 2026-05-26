@@ -199,6 +199,9 @@ alloy_evidence { kind: "decision", taskId, summary: "D-01: cookie sessions chose
 
 ## Attribution
 
-Fuses:
-- **GSD discuss-phase** — User/Builder framing, gray-area extraction, no-generic-categories rule, scope-creep redirection to deferred, D-NN decision IDs (concept, not code — GSD's command requires gsd-sdk runtime which we don't ship)
-- **Alloy** — `.alloy/plans/<id>/context.md` artifact, evidence integration, hand-off to plan
+Concept-only rewrite from:
+
+- **GSD discuss-phase** (rokicool/gsd-opencode and gsd-build/get-shit-done, MIT) — User/Builder framing, gray-area extraction, no-generic-categories rule, scope-creep redirection to deferred, D-NN decision IDs. No GSD command files or `gsd-sdk` runtime are vendored.
+- **Alloy** (MIT / first-party) — `.alloy/plans/<id>/context.md` artifact, evidence integration, hand-off to plan.
+
+See `/CREDITS.md` at repo root for the full attribution chain.

@@ -1,5 +1,39 @@
 # Alloy
 
+> **The harness that lets one person run an AI agent team — with zero compromise on control.**
+
+## Vision
+
+Alloy 是一个给"一个人带 AI agent 团队"的人用的 harness——在 OpenCode/Claude Code 里给 agents 装好规则、流程、上下文管理，让 agent 走最强约束、不替用户做选择。
+
+**Who its for**: 自用 + 一小撮认同 harness engineering 的 OSS 朋友. **不是商业产品**。"未来面试看你带 agent 团队" 是核心 use case。
+
+**What Alloy is NOT**:
+- Not a chat UI — 用户在 OpenCode/Claude Code 现有 UI 里工作
+- Not an agent — 不是 LLM agent，是给 agent 套规则的外壳
+- Not a SaaS — 在你自己电脑上跑，状态在你自己 repo 里
+- Not a framework — 不强迫你重写代码，是配置+集成
+
+## 6 Design Beliefs
+
+| # | Belief | Means |
+|---|---|---|
+| 1 | **最强约束** | 关键流程靠 code 强制走对，不靠 prompt 建议 |
+| 2 | **Plugin-first, CLI-minimal** | 用户在 chat 里完成 99% 操作，CLI 只用于 install + doctor |
+| 3 | **不替用户做选择** | 用户装了 GitHub or GitLab、Linear or Jira，alloy 不替你判，全 visible |
+| 4 | **Vendor over rewrite** | Skills 走 inline copy 原版 + append alloy 段，不重写不删除 |
+| 5 | **状态外置但极简** | JSONL append-only ledger + state machine guard，不上数据库 |
+| 6 | **零依赖运行时** | .mjs + zod + jsdoc，没 build step，install 即可用 |
+
+## Use Cases
+
+- 睡前 fire-and-forget 任务，第二天看结果
+- 一个 dev 用 alloy 协调多个 agent (Orchestrator + 6 specialists) 跨多 phase 工作
+- Sub-agent rate limit 触发后自动恢复 (claude-auto-retry + alloy plugin)
+- Skill / agent 配置版本化、可分发、跨 runtime 一致 (OpenCode now, Claude Code/Codex planned)
+
+---
+
 Alloy v0.1.0 — multi-runtime config distribution for AI coding agents
 
 ## What is Alloy?
