@@ -2,56 +2,13 @@
   "id": "core",
   "description": "OpenCode Alloy core pack: native Alloy agents, commands, core skills, Bun plugin support, and the minimal MCP baseline.",
   "target": "local",
-  "skills": [
-    "alloy-tdd",
-    "alloy-brainstorm",
-    "alloy-debug",
-    "alloy-plan",
-    "alloy-discuss",
-    "alloy-execute",
-    "alloy-verify",
-    "alloy-using",
-    "alloy-autopilot",
-    "alloy-map-codebase",
-    "alloy-qa",
-    "git-master",
-    "humanizer"
-  ],
-  "agents": [
-    "Orchestrator",
-    "Explorer",
-    "Architect",
-    "Builder",
-    "Fixer",
-    "Reviewer",
-    "Tester"
-  ],
-  "commands": [
-    "autopilot",
-    "discuss",
-    "execute",
-    "handoff",
-    "init-deep",
-    "plan",
-    "refactor",
-    "spec",
-    "start-work",
-    "stop-continuation",
-    "ultrawork",
-    "ulw-loop",
-    "verify"
-  ],
-  "mcp": [
-    "context7",
-    "grep_app",
-    "exa"
-  ],
-  "modelRoles": [
-    "orchestrator",
-    "planner",
-    "executor",
-    "reviewer",
-    "verifier",
-    "explorer"
+  "extends": [
+    "alloy-baseline-5",
+    "alloy-workflow-extras",
+    "alloy-v3-agents",
+    "alloy-v3-modelRoles",
+    "alloy-sdd-commands",
+    "alloy-legacy-commands",
+    "mcp-baseline"
   ]
 }

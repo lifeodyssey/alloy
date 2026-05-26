@@ -4,10 +4,12 @@ import assert from "node:assert/strict"
 import {
   DEFAULTS,
   parseArgs,
+  loadAtoms,
   loadPack,
   mergePack,
   defaultProjectConfig,
   detectMcpConflicts,
+  resolveConfig,
 } from "../bin/alloy.mjs"
 
 test("defaults.json exposes the pinned plugin and MCP shape", () => {
@@ -16,6 +18,10 @@ test("defaults.json exposes the pinned plugin and MCP shape", () => {
   assert.ok(DEFAULTS.mcp.context7?.url?.startsWith("https://"))
   assert.ok(DEFAULTS.mcp.grep_app?.url?.startsWith("https://"))
   assert.ok(DEFAULTS.mcp.exa?.url?.startsWith("https://"))
+  for (const name of ["chrome-devtools", "sequential-thinking", "figma-official", "a11y-mcp", "container-use"]) {
+    assert.ok(DEFAULTS.mcp[name]?.url?.startsWith("https://"))
+    assert.equal(DEFAULTS.mcp[name].enabled, false)
+  }
 })
 
 test("parseArgs defaults to install/core/local", () => {
@@ -58,6 +64,39 @@ test("loadPack: deleted workflow pack no longer resolves", () => {
   assert.throws(() => loadPack("workflow"), /Unknown pack/)
 })
 
+test("loadAtoms exposes atomic pack building blocks", () => {
+  const atoms = loadAtoms()
+  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"])
+  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-plan"))
+  assert.deepEqual(atoms["mcp-baseline"].mcp, ["context7", "grep_app", "exa"])
+  assert.ok(atoms["frontend-skills"].skills.includes("frontend-ui-ux"))
+})
+
+test("loadPack expands extends into concrete arrays", () => {
+  const frontend = loadPack("frontend")
+  assert.ok(frontend.skills.includes("alloy-tdd"))
+  assert.ok(!frontend.skills.includes("alloy-plan"))
+  assert.ok(frontend.skills.includes("frontend-ui-ux"))
+  assert.deepEqual(frontend.mcp, ["context7", "grep_app", "exa"])
+  assert.equal(frontend.extends, undefined)
+})
+
+test("loadPack reports unknown atoms used in extends", () => {
+  assert.throws(
+    () => mergePack({ id: "synthetic-pack", extends: ["nonexistent-atom"] }, { id: "extra" }),
+    /Unknown atom "nonexistent-atom" in pack synthetic-pack/,
+  )
+})
+
+test("mergePack loads empty extends as empty inventories", () => {
+  const merged = mergePack({ id: "empty-pack", extends: [] }, { id: "extra-pack", extends: [] })
+  assert.deepEqual(merged.skills, [])
+  assert.deepEqual(merged.agents, [])
+  assert.deepEqual(merged.commands, [])
+  assert.deepEqual(merged.mcp, [])
+  assert.deepEqual(merged.modelRoles, [])
+})
+
 test("mergePack unions arrays and deduplicates", () => {
   const a = { id: "a", skills: ["s1"], agents: ["x"], commands: [], mcp: ["m1"], modelRoles: ["planner"] }
   const b = { id: "b", skills: ["s2", "s1"], agents: ["y"], commands: ["c1"], mcp: ["m1", "m2"], modelRoles: ["executor"] }
@@ -74,6 +113,16 @@ test("mergePack tolerates missing fields", () => {
   const merged = mergePack({ id: "x" }, { id: "y" })
   assert.deepEqual(merged.skills, [])
   assert.deepEqual(merged.agents, [])
+})
+
+test("mergePack expands extends while preserving inline pack compatibility", () => {
+  const a = { id: "a", extends: ["mcp-baseline"], skills: ["inline-skill"], agents: ["InlineAgent"] }
+  const b = { id: "b", extends: ["frontend-skills"], skills: ["frontend-ui-ux"], commands: ["inline-command"] }
+  const merged = mergePack(a, b)
+  assert.deepEqual(merged.mcp, ["context7", "grep_app", "exa"])
+  assert.deepEqual(merged.skills, ["inline-skill", "frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"])
+  assert.deepEqual(merged.agents, ["InlineAgent"])
+  assert.deepEqual(merged.commands, ["inline-command"])
 })
 
 test("defaultProjectConfig infers frontend by default", () => {
@@ -122,6 +171,13 @@ test("detectMcpConflicts is silent when configuration is consistent", () => {
   const project = { mcp: { baseline: ["context7", "grep_app"], disabled: ["context7"] } }
   const warnings = detectMcpConflicts(project, [])
   assert.deepEqual(warnings, [])
+})
+
+test("resolveConfig maps skills to universal and scoped source directories", () => {
+  const resolved = resolveConfig({ pack: "frontend", target: "local", explicitPack: true })
+  assert.match(resolved.skillSources["alloy-tdd"], /universal\/skills\/alloy-tdd$/)
+  assert.match(resolved.skillSources["frontend-ui-ux"], /scopes\/frontend\/skills\/frontend-ui-ux$/)
+  assert.match(resolved.skillSources["vercel-react-best-practices"], /vendor\/skills\/scopes\/frontend\/vercel-react-best-practices$/)
 })
 
 test("real packs only reference MCPs declared in defaults.json", () => {

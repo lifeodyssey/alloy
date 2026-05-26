@@ -65,19 +65,19 @@ bin/alloy.mjs  (resolveConfig)
 
 `bin/alloy.mjs` is the single CLI entry. Subcommands: `init`, `resolve`, `install` (default), `doctor`, `state {add-task|add-evidence|add-claim|list ...}`, `gate check`, `sync`. The flow:
 
-1. `loadPack(id)` reads `packs/<id>.json` (with `PACK_ALIASES` mapping `default`/`team`/`profile` → `core`).
-2. `mergePack` unions skills/agents/commands/mcp/modelRoles when a project's `packs` array lists multiple ids.
+1. `loadPack(id)` reads `packs/<id>.json` (with `PACK_ALIASES` mapping `default`/`team`/`profile` → `core`) and expands `extends` entries from `packs/atoms.json`.
+2. `mergePack` unions skills/agents/commands/mcp/modelRoles when a project's `packs` array lists multiple ids; old inline pack arrays still work during migration.
 3. `resolveConfig` combines the pack with `models/<name>.json` (role → model assignments) and the project's `.alloy/alloy.project.json` overrides.
-4. The installer copies repo-local `agents/`, `skills/`, `commands/`, and `templates/opencode/alloy-plugin.ts` into the target `.opencode/`, generates `opencode.json` + `package.json`, and seeds `.alloy/` from `templates/alloy/`.
+4. The installer copies repo-local `agents/`, `commands/`, scoped skills from `universal/skills/` + `scopes/<repoKind>/skills/`, vendored scoped skills from `vendor/skills/`, and `templates/opencode/alloy-plugin.ts` into the target `.opencode/`, generates `opencode.json` + `package.json`, and seeds `.alloy/` from `templates/alloy/`.
 5. `MANAGED_NAMES` defines what the installer owns inside `.opencode/`; anything else is left untouched.
 
 ### Packs (declarative inventory)
 
-`packs/*.json` declare what to install. Every pack lists the same 6 agents and 7 commands; what varies is `skills` and `mcp`:
+`packs/*.json` declare what to install by extending atoms from `packs/atoms.json`. Every pack includes the same 7 agents, model roles, command groups, and minimal MCP baseline; what varies is the scope skill atom:
 
 | Pack | Adds beyond core skills |
 |---|---|
-| `core` | base 5 skills only (`alloy-tdd`, `alloy-brainstorm`, `alloy-debug`, `git-master`, `humanizer`) |
+| `core` | Alloy core skills plus `git-master` and `humanizer` |
 | `frontend` | + `frontend-ui-ux`, `playwright-cli`, `vercel-react-best-practices` |
 | `backend` | + `kotlin-backend-jpa-entity-mapping`, `postgres`, `design-postgres-tables`, `pgvector-semantic-search` |
 | `infra` | + `terraform-skill` |
@@ -87,7 +87,7 @@ MCP baseline is always `context7`, `grep_app`, `exa`. GitHub/Azure/Postgres use 
 
 ### Source-of-truth split
 
-- **Repo-level sources** (what Alloy ships): `agents/*.md`, `skills/*/SKILL.md`, `commands/*.md`, `packs/*.json`, `models/*.json`, `templates/`, `vendor/`.
+- **Repo-level sources** (what Alloy ships): `agents/*.md`, `universal/skills/*/SKILL.md`, `scopes/<kind>/skills/*/SKILL.md`, `commands/*.md`, `packs/*.json`, `models/*.json`, `templates/`, `vendor/`.
 - **Installed-into-target outputs**: `.opencode/` (machine-readable for OpenCode) and `.alloy/` (workflow state + Markdown policies).
 - Inside `.alloy/`: **JSONL files are source of truth**, Markdown in `policies/` is human/agent-readable policy, Markdown in `projections/` is generated from JSONL.
 
@@ -99,10 +99,10 @@ MCP baseline is always `context7`, `grep_app`, `exa`. GitHub/Azure/Postgres use 
 
 These constraints are enforced by code and tests. Violating them will fail `npm test`, `bash setup.sh --doctor`, or `audit_prompt_dependencies.py`.
 
-- **No non-deterministic per-skill install commands**. Skills are installed by copying from `skills/` or `vendor/skills/` into the target `.opencode/skills/`.
+- **No non-deterministic per-skill install commands**. Skills are installed by copying from `universal/skills/`, `scopes/<kind>/skills/`, legacy `skills/`, or `vendor/skills/` into the target `.opencode/skills/`.
 - **No OMO Slim and no GSD runtime/commands**. The `--with`/`--without` flags are removed and now throw. `DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]` and `DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]` must not appear in prompts or packs.
 - **No global writes by default**. `--target local` (current repo `.opencode/`) is the default; `--target global` writes to `~/.config/opencode/` and should be used explicitly.
-- **MCP baseline is fixed** to `context7`, `grep_app`, `exa`. Do not introduce GitHub/Azure/Postgres MCP servers — use the CLI replacements.
+- **MCP baseline is fixed** to `context7`, `grep_app`, `exa`. Additional MCPs in `defaults.json` must stay `enabled: false` unless explicitly opted in. Do not introduce GitHub/Azure/Postgres MCP servers — use the CLI replacements.
 - **Plugin dependency versions and MCP URLs are pinned in `defaults.json`** (single source of truth). `bin/alloy.mjs` reads `DEFAULTS.plugin` and `DEFAULTS.mcp` at startup. Doctor's `validateRootOpencodeConfig` fails if root `opencode.json` MCP URLs drift from `defaults.json`. When bumping plugin versions, edit only `defaults.json` and re-run doctor.
 - **`--profile` is a deprecated alias** for `--pack` and must keep working during migration.
 - **Prompt → installable consistency**: every skill/agent/MCP/CLI referenced in `agents/*.md`, `commands/*.md`, `README.md`, or `INSTALL.md` must be installable by some pack or be a real system CLI. `scripts/audit_prompt_dependencies.py` is the gate; it is wired into `setup.sh`'s flow and tested by `scripts/test_audit_prompt_dependencies.py`.
@@ -125,6 +125,6 @@ When changing pack content, plugin versions, MCP baseline, or installer behavior
 ## Project Conventions
 
 - Keep agents (`agents/*.md`) and commands (`commands/*.md`) as the single source of OpenCode prompts — the installer copies them verbatim.
-- New skills go under `skills/<name>/SKILL.md`. Vendored skills go under `vendor/skills/<source>/<version>/<name>/` and get registered in `vendor.lock.json`.
-- When adding a skill/agent/command, also add it to the appropriate `packs/*.json` — otherwise it will not be installed into any target repo.
+- New universal first-party skills go under `universal/skills/<name>/SKILL.md`; scope-only first-party skills go under `scopes/<kind>/skills/<name>/SKILL.md`. Vendored skills stay under `vendor/skills/` and get registered in `vendor.lock.json`.
+- When adding a skill/agent/command, also add it to the appropriate atom in `packs/atoms.json` and extend that atom from a pack — otherwise it will not be installed into any target repo.
 - `templates/AGENTS.md` is the per-target-repo `AGENTS.md` template (different from this `CLAUDE.md`); customize it after `setup.sh` runs.

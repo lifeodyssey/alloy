@@ -46,7 +46,7 @@
     "license": "MIT",
     "sha256": "71d954ceb4567d80ad114b6999211440530446bd815cf13714fe1e849d1619f0",
     "paths": [
-      "vendor/skills/external/vercel-react-best-practices"
+      "vendor/skills/scopes/frontend/vercel-react-best-practices"
     ],
     "vendoredAt": "2026-05-24"
   },
@@ -58,7 +58,7 @@
     "license": "Apache-2.0",
     "sha256": "599037e78611cefb1dd9b714e283986677908d2f70cb600ee970ba28002af917",
     "paths": [
-      "vendor/skills/external/kotlin-backend-jpa-entity-mapping"
+      "vendor/skills/scopes/backend/kotlin-backend-jpa-entity-mapping"
     ],
     "vendoredAt": "2026-05-24"
   },
@@ -70,7 +70,7 @@
     "license": "Apache-2.0",
     "sha256": "cbaf0ef49a227310e48b98eb54108afe5515292d5a371c6b309c20d2f137a1cd",
     "paths": [
-      "vendor/skills/external/postgres"
+      "vendor/skills/scopes/backend/postgres"
     ],
     "vendoredAt": "2026-05-24"
   },
@@ -82,7 +82,7 @@
     "license": "Apache-2.0",
     "sha256": "a190a20f186ff799e6bccb1d87b6da46267721f4ac06839b5bf0f70f32cb104f",
     "paths": [
-      "vendor/skills/external/design-postgres-tables"
+      "vendor/skills/scopes/backend/design-postgres-tables"
     ],
     "vendoredAt": "2026-05-24"
   },
@@ -94,7 +94,7 @@
     "license": "Apache-2.0",
     "sha256": "418e2af69fbb5fab79ed9a4a833bf6966c80758569da7289a4c75360e961b2be",
     "paths": [
-      "vendor/skills/external/pgvector-semantic-search"
+      "vendor/skills/scopes/backend/pgvector-semantic-search"
     ],
     "vendoredAt": "2026-05-24"
   },
@@ -106,7 +106,7 @@
     "license": "Apache-2.0",
     "sha256": "ff80374c54130b195748746d37b42c69cab34cbccc2e67a52146f62ef3b37a5d",
     "paths": [
-      "vendor/skills/external/terraform-skill"
+      "vendor/skills/scopes/infra/terraform-skill"
     ],
     "vendoredAt": "2026-05-24"
   }
