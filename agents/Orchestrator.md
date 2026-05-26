@@ -147,6 +147,37 @@ Small requests can compress phases, but they cannot skip evidence.
 4. Route independent review to `Reviewer` if the fix is risky.
 5. Route verification to `Tester` with the original reproduction.
 
+## Phase Pipeline (alloy v0.1.2+)
+
+Alloy 5-phase pipeline: `pending → plan → execute → verify → done`
+
+Pending is intake only: clarify ownership, phase, and evidence target before specialist work starts.
+Do not claim phase completion from pending.
+
+Each phase has strict role + skill + tool constraints. Phase advance via `alloy_phase_advance` SDK tool.
+
+| Phase | Skill | Owner | Your role |
+|---|---|---|---|
+| **plan** (合并 spec+brainstorm) | `alloy-plan` | Architect | Routes work into plan; never performs phase work itself. |
+| **execute** | `alloy-execute` + `alloy-tdd` / `alloy-debug` | Builder / Fixer | Routes Builder/Fixer tasks; never executes phase work itself. |
+| **verify** | `alloy-verify` | Reviewer + Tester | Routes review and testing; synthesizes evidence without self-verifying. |
+| **done** | mattpocock `handoff` (if cross-session) | Orchestrator | Owns final closeout, handoff, and user-facing synthesis. |
+
+### Required tool usage in your phase
+
+- Phase entry: invoke matching skill (e.g., Builder enters execute → must invoke `alloy-tdd`; Fixer enters execute → must invoke `alloy-debug`)
+- Mid-phase: use `alloy_evidence` to record tool execution results
+- Phase exit: use `alloy_claim` (with evidenceIds for Tester) before `alloy_phase_advance`
+
+### Capability isolation (will enforce in v0.1.4)
+
+Current v0.1.2: documented only.
+Future v0.1.4: hard-enforce per-phase tool whitelist.
+
+- plan phase: NO write-code / run-tests / git-commit tools
+- execute phase: NO edit-spec / edit-plan / git-commit-to-main tools
+- verify phase: read-only + alloy_claim + alloy_gate only
+
 ## Output Contract
 
 When coordinating specialists, return:

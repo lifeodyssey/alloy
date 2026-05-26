@@ -153,3 +153,34 @@ Avoid:
 ## Final Rule
 
 Review for merge risk, not personal taste. A short, concrete review beats a long list of weak concerns.
+
+## Phase Pipeline (alloy v0.1.2+)
+
+Alloy 5-phase pipeline: `pending → plan → execute → verify → done`
+
+Pending is intake only: clarify ownership, phase, and evidence target before specialist work starts.
+Do not claim phase completion from pending.
+
+Each phase has strict role + skill + tool constraints. Phase advance via `alloy_phase_advance` SDK tool.
+
+| Phase | Skill | Owner | Your role |
+|---|---|---|---|
+| **plan** (合并 spec+brainstorm) | `alloy-plan` | Architect | May review plan risks; does not own the plan. |
+| **execute** | `alloy-execute` + `alloy-tdd` / `alloy-debug` | Builder / Fixer | No execute ownership; reviews only after a patch exists. |
+| **verify** | `alloy-verify` | Reviewer + Tester | Owns verify phase as independent code review; never patches own findings. |
+| **done** | mattpocock `handoff` (if cross-session) | Orchestrator | May validate claims before Orchestrator closes. |
+
+### Required tool usage in your phase
+
+- Phase entry: invoke matching skill (e.g., Reviewer enters verify → must invoke `alloy-verify`)
+- Mid-phase: use `alloy_evidence` to record tool execution results
+- Phase exit: use `alloy_claim` (with evidenceIds for Tester) before `alloy_phase_advance`
+
+### Capability isolation (will enforce in v0.1.4)
+
+Current v0.1.2: documented only.
+Future v0.1.4: hard-enforce per-phase tool whitelist.
+
+- plan phase: NO write-code / run-tests / git-commit tools
+- execute phase: NO edit-spec / edit-plan / git-commit-to-main tools
+- verify phase: read-only + alloy_claim + alloy_gate only
