@@ -109,5 +109,16 @@
       "vendor/skills/scopes/infra/terraform-skill"
     ],
     "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "ralph-loop",
+    "kind": "skill",
+    "source": "anthropics/claude-plugins-official",
+    "version": "0.1.0",
+    "license": "MIT",
+    "sha256": "<placeholder>",
+    "paths": [
+      "vendor/skills/external/ralph-loop"
+    ]
   }
 ]

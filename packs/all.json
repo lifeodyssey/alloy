@@ -5,10 +5,12 @@
   "extends": [
     "alloy-core-skills",
     "alloy-baseline-skills",
+    "ralph-loop-skills",
     "alloy-v3-agents",
     "alloy-v3-modelRoles",
     "alloy-sdd-commands",
     "alloy-legacy-commands",
+    "ralph-loop-commands",
     "mcp-baseline",
     "frontend-skills",
     "backend-skills",

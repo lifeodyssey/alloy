@@ -21,6 +21,11 @@
         "humanizer"
       ]
     },
+    "ralph-loop-skills": {
+      "skills": [
+        "ralph-loop"
+      ]
+    },
     "alloy-v3-agents": {
       "agents": [
         "Orchestrator",
@@ -61,6 +66,12 @@
         "stop-continuation",
         "ultrawork",
         "ulw-loop"
+      ]
+    },
+    "ralph-loop-commands": {
+      "commands": [
+        "ralph-loop",
+        "cancel-ralph"
       ]
     },
     "mcp-baseline": {
