@@ -7,12 +7,17 @@ import { spawnSync } from "node:child_process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
+const PACKAGE = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8"))
 export const DEFAULTS = JSON.parse(readFileSync(join(REPO_ROOT, "defaults.json"), "utf8"))
 const OPENCODE_PLUGIN_VERSION = DEFAULTS.plugin["@opencode-ai/plugin"]
 const ZOD_VERSION = DEFAULTS.plugin.zod
 const MCP_CONFIGS = DEFAULTS.mcp
 const PACK_FIELDS = ["skills", "agents", "commands", "mcp", "modelRoles"]
 const SCOPE_KINDS = ["frontend", "backend", "infra"]
+const COMPLETION_COMMANDS = ["install", "add", "remove", "list", "search", "outdated", "upgrade", "doctor", "completion"]
+const COMPLETION_PACKS = ["core", "frontend", "backend", "infra", "all"]
+const COMPLETION_TARGETS = ["local", "global"]
+const COMPLETION_SHELLS = ["bash", "zsh", "fish"]
 let atomsCache
 let vendorSkillPathsCache
 
@@ -52,7 +57,9 @@ Usage:
   alloy init [--pack core] [--models github-copilot] [--target local]
   alloy resolve [--pack core] [--json]
   alloy install [--pack core] [--target local] [--models github-copilot] [--dry-run]
+  alloy list [--pack core] [--target local] [--models github-copilot]
   alloy doctor [--pack core] [--target local]
+  alloy completion bash|zsh|fish
   alloy state add-task --title TITLE [--kind code]
   alloy state add-evidence --task-id ID --kind test --summary TEXT
   alloy state add-claim --task-id ID --text TEXT [--evidence-id ID]
@@ -66,7 +73,7 @@ Aliases:
 }
 
 export function parseArgs(argv) {
-  const commands = new Set(["init", "resolve", "install", "doctor", "state", "gate", "sync", "help"])
+  const commands = new Set(["init", "resolve", "install", "add", "remove", "list", "search", "outdated", "upgrade", "doctor", "completion", "state", "gate", "sync", "help"])
   let command = commands.has(argv[0]) ? argv.shift() : "install"
   const positionals = []
   const options = {
@@ -135,6 +142,7 @@ export function parseArgs(argv) {
       case "dryRun":
       case "json":
       case "help":
+      case "version":
       case "doctor":
       case "auditOnly":
       case "refreshVendor":
@@ -146,6 +154,7 @@ export function parseArgs(argv) {
   }
   options.positionals = positionals
   if (!["local", "global"].includes(options.target)) throw new Error("--target must be local or global")
+  if (options.version) options.command = "version"
   if (options.doctor && options.command === "install") options.command = "doctor"
   if (options.help || options.command === "help") options.command = "help"
   return options
@@ -702,6 +711,140 @@ function resolveCommand(options, projectDir = process.cwd()) {
   return 0
 }
 
+function listCommand(options, projectDir = process.cwd()) {
+  const resolved = resolveConfig(options, projectDir)
+  const summary = {
+    version: PACKAGE.version,
+    pack: resolved.pack.id,
+    target: resolved.target,
+    targetDir: resolved.targetDir,
+    models: resolved.modelName,
+    agents: resolved.agents,
+    skills: resolved.skills,
+    commands: resolved.commands,
+    mcp: Object.keys(resolved.mcp),
+  }
+  if (options.json) {
+    console.log(JSON.stringify(summary, null, 2))
+  } else {
+    console.log(`OpenCode Alloy ${summary.version}`)
+    console.log(`Pack: ${summary.pack}`)
+    console.log(`Target: ${summary.target} (${summary.targetDir})`)
+    console.log(`Models: ${summary.models}`)
+    console.log(`Agents: ${summary.agents.join(", ")}`)
+    console.log(`Skills: ${summary.skills.join(", ")}`)
+    console.log(`Commands: ${summary.commands.join(", ")}`)
+    console.log(`MCP: ${summary.mcp.join(", ")}`)
+  }
+  return 0
+}
+
+function versionCommand() {
+  console.log(PACKAGE.version)
+  return 0
+}
+
+function completionCommand(options) {
+  const [shell] = options.positionals
+  if (!COMPLETION_SHELLS.includes(shell)) throw new Error("Usage: alloy completion bash|zsh|fish")
+  console.log(completionScript(shell))
+  return 0
+}
+
+function completionScript(shell) {
+  if (shell === "bash") return bashCompletionScript()
+  if (shell === "zsh") return zshCompletionScript()
+  return fishCompletionScript()
+}
+
+function bashCompletionScript() {
+  const commands = COMPLETION_COMMANDS.join(" ")
+  const packs = COMPLETION_PACKS.join(" ")
+  const targets = COMPLETION_TARGETS.join(" ")
+  const shells = COMPLETION_SHELLS.join(" ")
+  return [
+    "#!/usr/bin/env bash",
+    "",
+    "_alloy_complete() {",
+    "  local cur prev commands packs targets shells opts",
+    `  commands="${commands}"`,
+    `  packs="${packs}"`,
+    `  targets="${targets}"`,
+    `  shells="${shells}"`,
+    '  opts="--pack --profile --target --models --dry-run --json --help --doctor --audit-only --config"',
+    '  cur="${COMP_WORDS[COMP_CWORD]}"',
+    '  prev="${COMP_WORDS[COMP_CWORD-1]}"',
+    "",
+    '  case "${prev}" in',
+    '    --pack|--profile) COMPREPLY=( $(compgen -W "${packs}" -- "${cur}") ); return 0 ;;',
+    '    --target) COMPREPLY=( $(compgen -W "${targets}" -- "${cur}") ); return 0 ;;',
+    "  esac",
+    "",
+    '  if [[ "${COMP_CWORD}" -eq 1 ]]; then',
+    '    COMPREPLY=( $(compgen -W "${commands}" -- "${cur}") )',
+    "    return 0",
+    "  fi",
+    "",
+    '  case "${COMP_WORDS[1]}" in',
+    '    completion) COMPREPLY=( $(compgen -W "${shells}" -- "${cur}") ) ;;',
+    '    install|doctor|list) COMPREPLY=( $(compgen -W "${opts} ${packs}" -- "${cur}") ) ;;',
+    '    *) COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") ) ;;',
+    "  esac",
+    "}",
+    "",
+    "complete -F _alloy_complete alloy",
+  ].join("\n")
+}
+
+function zshCompletionScript() {
+  return [
+    "#compdef alloy",
+    "",
+    "_alloy() {",
+    "  if (( CURRENT == 2 )); then",
+    `    _values 'command' ${COMPLETION_COMMANDS.join(" ")}`,
+    "    return",
+    "  fi",
+    "",
+    '  case "$words[2]" in',
+    "    completion)",
+    `      _values 'shell' ${COMPLETION_SHELLS.join(" ")}`,
+    "      ;;",
+    "    install|doctor|list)",
+    "      _arguments \\",
+    "        '--pack[pack id]:pack:(core frontend backend infra all)' \\",
+    "        '--profile[deprecated alias for --pack]:pack:(core frontend backend infra all)' \\",
+    "        '--target[install target]:target:(local global)' \\",
+    "        '--models[model map]' \\",
+    "        '--dry-run[print install plan without writing]' \\",
+    "        '--json[print JSON output]' \\",
+    "        '--help[show help]'",
+    "      ;;",
+    "    *)",
+    "      _arguments '--help[show help]'",
+    "      ;;",
+    "  esac",
+    "}",
+    "",
+    "_alloy \"$@\"",
+  ].join("\n")
+}
+
+function fishCompletionScript() {
+  return [
+    "complete -c alloy -f",
+    `complete -c alloy -n "__fish_use_subcommand" -a "${COMPLETION_COMMANDS.join(" ")}" -d "Alloy command"`,
+    `complete -c alloy -n "__fish_seen_subcommand_from completion" -a "${COMPLETION_SHELLS.join(" ")}"`,
+    `complete -c alloy -n "__fish_seen_subcommand_from install doctor list" -l pack -r -a "${COMPLETION_PACKS.join(" ")}"`,
+    `complete -c alloy -n "__fish_seen_subcommand_from install doctor list" -l profile -r -a "${COMPLETION_PACKS.join(" ")}" -d "Deprecated alias for --pack"`,
+    `complete -c alloy -n "__fish_seen_subcommand_from install doctor list" -l target -r -a "${COMPLETION_TARGETS.join(" ")}"`,
+    "complete -c alloy -n \"__fish_seen_subcommand_from install doctor list\" -l models -r",
+    "complete -c alloy -n \"__fish_seen_subcommand_from install doctor list\" -l dry-run",
+    "complete -c alloy -n \"__fish_seen_subcommand_from install doctor list\" -l json",
+    "complete -c alloy -l help",
+  ].join("\n")
+}
+
 function appendRecord(projectDir, name, record) {
   const dir = join(projectDir, ".alloy", "state")
   mkdirSync(dir, { recursive: true })
@@ -867,9 +1010,12 @@ async function main(argv) {
       console.log(usage())
       return 0
     }
+    if (options.command === "version") return versionCommand()
     if (options.command === "init") return initCommand(options)
     if (options.command === "resolve") return resolveCommand(options)
     if (options.command === "install") return installCommand(options)
+    if (options.command === "list") return listCommand(options)
+    if (options.command === "completion") return completionCommand(options)
     if (options.command === "doctor") return doctorCommand(options)
     if (options.command === "state") return stateCommand(options)
     if (options.command === "gate") return gateCommand(options)
