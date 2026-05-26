@@ -108,8 +108,8 @@ test("loadPack: deleted workflow pack no longer resolves", () => {
 
 test("loadAtoms exposes atomic pack building blocks", () => {
   const atoms = loadAtoms()
-  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"])
-  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-plan"))
+  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-plan", "alloy-debug", "git-master", "humanizer"])
+  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-execute"))
   assert.deepEqual(atoms["mcp-baseline"].mcp, ["context7", "grep_app", "exa"])
   assert.ok(atoms["frontend-skills"].skills.includes("frontend-ui-ux"))
 })
@@ -117,7 +117,7 @@ test("loadAtoms exposes atomic pack building blocks", () => {
 test("loadPack expands extends into concrete arrays", () => {
   const frontend = loadPack("frontend")
   assert.ok(frontend.skills.includes("alloy-tdd"))
-  assert.ok(!frontend.skills.includes("alloy-plan"))
+  assert.ok(frontend.skills.includes("alloy-plan"))
   assert.ok(frontend.skills.includes("frontend-ui-ux"))
   assert.deepEqual(frontend.mcp, ["context7", "grep_app", "exa"])
   assert.equal(frontend.extends, undefined)

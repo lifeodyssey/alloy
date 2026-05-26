@@ -128,8 +128,8 @@ The phase model is intentionally small:
 The expected artifact shape is based on the redesign docs:
 
 ```text
-.alloy/specs/<id>/
-  task_plan.md       # required Spec + Plan sections
+.alloy/plans/<id>/
+  plan.md       # required design, acceptance criteria, and Plan tasks
   findings.md        # research and codebase notes
   progress.md        # execution log
   verification.md    # final evidence and gate result
@@ -160,16 +160,15 @@ The full visual catalog is in
 
 That catalog documents the first public target shape:
 
-- 15 first-party skills total
-- 11 first-party fusion skills
+- 14 first-party skills total
+- 10 first-party fusion skills
 - 4 kept first-party skills
 - 22+ vendored skills tracked independently
 - 8 MCP entries across universal, frontend opt-in, and sandbox opt-in tiers
 
-The 11 fusion skills named in the redesign summary are:
+The 10 fusion skills named in the redesign summary are:
 
 - `alloy-using`
-- `alloy-brainstorm`
 - `alloy-plan`
 - `alloy-execute`
 - `alloy-tdd`

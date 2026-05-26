@@ -525,7 +525,7 @@ Load the plan, review critically, execute all tasks, report when complete. Each 
 
 ### Step 1: Load and Review Plan
 
-1. Read `.alloy/specs/<id>/task_plan.md`
+1. Read `.alloy/plans/<id>/plan.md`
 2. Review critically — identify questions or concerns about the plan
 3. If concerns: raise them with the user BEFORE starting
 4. If no concerns: create a TodoWrite-style task list and proceed
@@ -560,7 +560,7 @@ alloy_evidence { kind: "task_status", taskId, summary: "Task 3 DONE", paths: ["s
 
 ### Step 3: Update Progress
 
-After each task, update `.alloy/specs/<id>/progress.md`:
+After each task, update `.alloy/plans/<id>/progress.md`:
 
 ```markdown
 - [x] Task 1: <name> — DONE (commit abc123)
@@ -573,7 +573,7 @@ This file survives `/clear` so any session can resume.
 
 ### Step 4: Capture Findings
 
-Anything discovered during execution that wasn't in the plan goes to `.alloy/specs/<id>/findings.md`:
+Anything discovered during execution that wasn't in the plan goes to `.alloy/plans/<id>/findings.md`:
 
 - New dependency you needed to install
 - Codebase convention you discovered
@@ -672,7 +672,7 @@ alloy_evidence { kind: "execute_done", taskId, summary: "All N tasks complete" }
 When dispatching sub-agents (Sub-Agent Dispatch section above), use these prompt templates verbatim — they encode the right discipline:
 
 - **`references/implementer-prompt.md`** — Prompt for a fresh sub-agent that will implement ONE task (SuperPower subagent-driven-development)
-- **`references/spec-reviewer-prompt.md`** — Prompt for the spec-compliance reviewer pass (does this match the plan?)
+- **`references/plan-reviewer-prompt.md`** — Prompt for the plan-compliance reviewer pass (does this match the plan?)
 - **`references/code-quality-reviewer-prompt.md`** — Prompt for the code-quality reviewer pass (is this code good, regardless of spec?)
 
 Read these and adapt only the project-specific bits (file paths, language idioms). The discipline encoded in the prompts has been battle-tested.

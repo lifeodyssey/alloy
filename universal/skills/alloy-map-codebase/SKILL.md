@@ -182,7 +182,7 @@ This becomes `boundaries.md` — the most important file for downstream agents b
 
 ### Phase 6: Hand Off
 
-> "Codebase maps written to `.alloy/codebase/{architecture,modules,boundaries}.md`. These survive `/clear` and downstream skills will reference them. Ready for `alloy-brainstorm` / `alloy-plan` / `alloy-debug` to use this context selectively."
+> "Codebase maps written to `.alloy/codebase/{architecture,modules,boundaries}.md`. These survive `/clear` and downstream skills will reference them. Ready for `alloy-plan` / `alloy-debug` to use this context selectively."
 
 ## Anti-Patterns
 
@@ -214,7 +214,6 @@ alloy_evidence { kind: "codebase_mapped", taskId, summary: "3 maps written: N mo
 ## Related Skills
 
 - **alloy-discuss** — calls this before generating gray areas
-- **alloy-brainstorm** — reads the maps when picking design approach
 - **alloy-plan** — reads `boundaries.md` for "don't change X" constraints
 - **alloy-debug** — reads `modules.md` when debug surfaces in unfamiliar module
 - **zoom-out** (vendor: Matt Pocock) — for in-the-moment "I'm lost, give me higher context" during an active task

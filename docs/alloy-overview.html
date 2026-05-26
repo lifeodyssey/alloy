@@ -532,7 +532,7 @@
     </div>
     <div class="feature-card">
       <h4>👥 7 specialist agents</h4>
-      <p>Orchestrator / Explorer / Architect / Builder / Fixer / Reviewer / Tester。SDD pipeline (spec → plan → execute → verify) 把任务路由到合适的 specialist。</p>
+      <p>Orchestrator / Explorer / Architect / Builder / Fixer / Reviewer / Tester。SDD pipeline (plan → execute → verify) 把任务路由到合适的 specialist。</p>
     </div>
     <div class="feature-card">
       <h4>📚 概念吸收而非复制</h4>
@@ -716,7 +716,7 @@
         <tr>
           <td><code>command.execute.before</code></td>
           <td><span class="tag tag-pink">route</span></td>
-          <td>拦截 <code>/add</code>、<code>/spec</code>、<code>/plan</code>、<code>/execute</code>、<code>/verify</code>、<code>/autopilot</code> SDD 斜杠命令；<code>/add</code> 通过 Bash tool invoke <code>alloy add</code>。</td>
+          <td>拦截 <code>/add</code>、<code>/plan</code>、<code>/plan</code>、<code>/execute</code>、<code>/verify</code>、<code>/autopilot</code> SDD 斜杠命令；<code>/add</code> 通过 Bash tool invoke <code>alloy add</code>。</td>
           <td><code>L598</code></td>
         </tr>
         <tr>
@@ -751,7 +751,7 @@
     </div>
     <div style="text-align: center; margin: 12px 0;"><span class="flow-arrow">▼</span></div>
     <div class="flow-row">
-      <div class="flow-box b-pink">用户输入 /spec</div>
+      <div class="flow-box b-pink">用户输入 /plan</div>
       <div class="flow-arrow">→</div>
       <div class="flow-box b-pink">command.execute.before</div>
       <div class="flow-arrow">→</div>
@@ -906,7 +906,7 @@
 
 <span class="c">// routeCommand 内部处理:</span>
 <span class="c">//   /add &lt;skill&gt;     → 通过 Bash invoke `alloy add &lt;skill&gt;`</span>
-<span class="c">//   /spec /plan /execute /verify /autopilot → 注入 SDD prompt 模板</span></pre>
+<span class="c">//   /plan /execute /verify /autopilot → 注入 SDD prompt 模板</span></pre>
     </div>
   </details>
 </section>
@@ -1044,7 +1044,7 @@
 
 <span class="c">// 3. Load pack + expand extends</span>
 <span class="k">const</span> pack = <span class="f">loadPack</span>(<span class="s">"frontend"</span>)
-<span class="c">// expanded: skills=[alloy-tdd, alloy-brainstorm, ..., frontend-ui-ux, playwright-cli, vercel-react-best-practices]</span>
+<span class="c">// expanded: skills=[alloy-tdd, alloy-plan, ..., frontend-ui-ux, playwright-cli, vercel-react-best-practices]</span>
 <span class="c">//           agents=[Orchestrator, Explorer, Architect, Builder, Fixer, Reviewer, Tester]</span>
 <span class="c">//           commands=[autopilot, discuss, execute, plan, spec, verify, ...]</span>
 <span class="c">//           mcp=[context7, grep_app, exa]</span>
@@ -1165,7 +1165,7 @@
     </div>
     <div class="feature-card" style="border-left: 3px solid var(--purple);">
       <h4>🏛️ Architect</h4>
-      <p>写 <code>## Spec</code> + <code>## Plan</code>、source coverage 审计、design risk 评估。不写实现。</p>
+      <p>写 approved <code>plan.md</code>、source coverage 审计、design risk 评估。不写实现。</p>
     </div>
     <div class="feature-card" style="border-left: 3px solid var(--green);">
       <h4>🔨 Builder</h4>
@@ -1190,15 +1190,10 @@
 
 <section id="agents-workflow">
   <h3>SDD pipeline workflow</h3>
-  <p>SDD = Spec → Plan → Execute → Verify。每个阶段一个 slash command + 一个 skill + 一个 specialist owner。</p>
+  <p>SDD = Plan → Execute → Verify。每个阶段一个 slash command + 一个 skill + 一个 specialist owner。</p>
 
   <div class="flow">
     <div class="flow-row">
-      <div class="flow-box b-blue" style="min-width: 140px;">
-        <div style="font-size: 16px; margin-bottom: 4px;">📝</div>
-        /spec<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-brainstorm</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Architect</span>
-      </div>
-      <div class="flow-arrow">→</div>
       <div class="flow-box b-purple" style="min-width: 140px;">
         <div style="font-size: 16px; margin-bottom: 4px;">📐</div>
         /plan<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">alloy-plan</span><br><span style="font-size: 10.5px; color: inherit; opacity: 0.6;">→ Architect</span>
@@ -1218,7 +1213,7 @@
     <div class="flow-row">
       <div class="flow-box b-amber" style="min-width: 200px;">
         <div style="font-size: 16px; margin-bottom: 4px;">🔁</div>
-        /autopilot<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">spec→plan→execute→verify 串行 + ralph-loop 5-iter retry</span>
+        /autopilot<br><span style="font-size: 11px; font-weight: 400; color: inherit; opacity: 0.7;">plan→execute→verify 串行 + ralph-loop 5-iter retry</span>
       </div>
     </div>
   </div>
@@ -1306,7 +1301,7 @@ Invoke relevant skills before acting:
 
 - Use `alloy-using` at session start when available.
 - Use `alloy-discuss` for large or ambiguous product requests.
-- Use `alloy-brainstorm` when the design space is still fluid.
+- Use `alloy-plan` when the design space is still fluid.
 - Use `alloy-plan` when a spec needs an implementation plan.
 - Use `alloy-execute` when executing a written plan.
 - Use `alloy-tdd` for code changes.
@@ -1319,7 +1314,7 @@ Invoke relevant skills before acting:
 Dispatch `Explorer` with a narrow question and expected output shape.
 
 <span class="k">### Product Or Architecture Design</span>
-Use `alloy-discuss` or `alloy-brainstorm`, then dispatch `Architect`.
+Use `alloy-discuss` or `alloy-plan`, then dispatch `Architect`.
 
 <span class="k">### New Implementation</span>
 Tiny → `Builder` directly. Multi-file → `Architect` writes Plan first.
@@ -1403,19 +1398,6 @@ When coordinating specialists, return:
           <td>~360</td>
         </tr>
         <tr>
-          <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-brainstorm/SKILL.md" target="_blank"><code>alloy-brainstorm</code></a></td>
-          <td>
-            <span class="tag tag-purple">obra/superpowers</span><br>
-            <span style="font-size: 11.5px; color: var(--text-dim);">brainstorming SKILL</span>
-          </td>
-          <td>
-            <strong>吸收</strong>：HARD-GATE blocks 等待用户批准、natural collaborative dialogue 模式、一次问一个问题。<br>
-            <strong>新增</strong>：Alloy spec 写出格式（写到 <code>.alloy/specs/&lt;id&gt;/task_plan.md</code> 的 ## Spec section）、与 <code>/spec</code> command 集成。<br>
-            <strong>删减</strong>：原版 superpowers 一些 prompting style 偏好。
-          </td>
-          <td>~200</td>
-        </tr>
-        <tr>
           <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-debug/SKILL.md" target="_blank"><code>alloy-debug</code></a></td>
           <td>
             <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-green">GSD</span><br>
@@ -1432,14 +1414,14 @@ When coordinating specialists, return:
           <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-plan/SKILL.md" target="_blank"><code>alloy-plan</code></a></td>
           <td>
             <span class="tag tag-purple">obra/superpowers</span> <span class="tag tag-green">GSD</span><br>
-            <span style="font-size: 11.5px; color: var(--text-dim);">subagent-driven-development + GSD plan phase</span>
+            <span style="font-size: 11.5px; color: var(--text-dim);">brainstorming + writing-plans + GSD plan phase</span>
           </td>
           <td>
-            <strong>吸收</strong>：bite-sized plan task structure、no-placeholder rules、source coverage audit、vocabulary blocklist。<br>
-            <strong>新增</strong>：与 <code>/plan</code> command 集成、写到 <code>.alloy/specs/&lt;id&gt;/task_plan.md</code> 的 ## Plan section、Architect agent 专用。<br>
+            <strong>吸收</strong>：HARD-GATE、natural collaborative dialogue、一次问一个问题、bite-sized task structure、no-placeholder rules、source coverage audit、vocabulary blocklist。<br>
+            <strong>新增</strong>：与 <code>/plan</code> command 集成、写到 <code>.alloy/plans/&lt;id&gt;/plan.md</code>、Architect agent 专用。<br>
             <strong>删减</strong>：GSD 的 sdk runtime 调用（我们用 <code>.alloy/state/</code> ledger 替代）。
           </td>
-          <td>~180</td>
+          <td>~320</td>
         </tr>
         <tr>
           <td><a href="https://github.com/lifeodyssey/alloy/blob/main/universal/skills/alloy-execute/SKILL.md" target="_blank"><code>alloy-execute</code></a></td>
@@ -1475,7 +1457,7 @@ When coordinating specialists, return:
           </td>
           <td>
             <strong>吸收</strong>：gray-area extraction interview、D-NN decision IDs。<br>
-            <strong>新增</strong>：写到 <code>.alloy/specs/&lt;id&gt;/context.md</code>、与 <code>/discuss</code> command 集成。<br>
+            <strong>新增</strong>：写到 <code>.alloy/plans/&lt;id&gt;/context.md</code>、与 <code>/discuss</code> command 集成。<br>
             <strong>删减</strong>：GSD's sdk dependency。
           </td>
           <td>~205</td>
@@ -1499,7 +1481,7 @@ When coordinating specialists, return:
           </td>
           <td>
             <strong>吸收</strong>：phase-per-skill chaining、risk-tier review depth (low/med/high)、bounded iteration with stall detection。<br>
-            <strong>新增</strong>：与 ralph-loop 5-iter cap 集成、自动跑 spec → plan → execute → verify 全 pipeline。<br>
+            <strong>新增</strong>：与 ralph-loop 5-iter cap 集成、自动跑 plan → execute → verify 全 pipeline。<br>
             <strong>删减</strong>：autopilot 原版的 Claude-specific assumptions。
           </td>
           <td>~215</td>
@@ -1512,7 +1494,7 @@ When coordinating specialists, return:
           </td>
           <td>
             <strong>吸收</strong>：3-artifact pattern (architecture map / module map / dependency map)、brownfield codebase mapping。<br>
-            <strong>新增</strong>：Explorer agent 专用、输出格式 fit Alloy spec template。<br>
+            <strong>新增</strong>：Explorer agent 专用、输出格式 fit Alloy plan template。<br>
             <strong>删减</strong>：GSD sdk runtime 依赖。
           </td>
           <td>~225</td>
@@ -1576,7 +1558,7 @@ When coordinating specialists, return:
   <ul>
     <li><code>brainstorming/</code> + <code>systematic-debugging/</code> + <code>test-driven-development/</code></li>
   </ul>
-  <p style="color: var(--text-dim); font-size: 13.5px;">不直接被任何 pack include。仅作为 alloy-brainstorm/alloy-debug/alloy-tdd 的"原貌参考"，方便对比我们改了什么。</p>
+  <p style="color: var(--text-dim); font-size: 13.5px;">不直接被任何 pack include。仅作为 alloy-plan/alloy-debug/alloy-tdd 的"原貌参考"，方便对比我们改了什么。</p>
 </section>
 
 <!-- ============ DIFF ============ -->
@@ -1681,7 +1663,7 @@ When coordinating specialists, return:
 {
   <span class="s">"id"</span>: <span class="s">"frontend"</span>,
   <span class="s">"skills"</span>: [
-    <span class="s">"alloy-tdd"</span>, <span class="s">"alloy-brainstorm"</span>, ...
+    <span class="s">"alloy-tdd"</span>, <span class="s">"alloy-plan"</span>, ...
     <span class="s">"git-master"</span>, <span class="s">"humanizer"</span>,
     <span class="s">"frontend-ui-ux"</span>, ...
   ],
@@ -1730,7 +1712,7 @@ When coordinating specialists, return:
     <table>
       <thead><tr><th>Atom</th><th>种类</th><th>内容</th></tr></thead>
       <tbody>
-        <tr><td><code>alloy-baseline-5</code></td><td>skills</td><td>alloy-tdd, alloy-brainstorm, alloy-debug, git-master, humanizer (核心 5)</td></tr>
+        <tr><td><code>alloy-baseline-5</code></td><td>skills</td><td>alloy-tdd, alloy-plan, alloy-debug, git-master, humanizer (核心 5)</td></tr>
         <tr><td><code>alloy-workflow-extras</code></td><td>skills</td><td>alloy-plan, alloy-discuss, alloy-execute, alloy-verify, alloy-using, alloy-autopilot, alloy-map-codebase, alloy-qa (扩展 8)</td></tr>
         <tr><td><code>alloy-v3-agents</code></td><td>agents</td><td>Orchestrator, Explorer, Architect, Builder, Fixer, Reviewer, Tester</td></tr>
         <tr><td><code>alloy-v3-modelRoles</code></td><td>modelRoles</td><td>orchestrator, planner, executor, reviewer, verifier, explorer</td></tr>

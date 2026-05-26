@@ -56,7 +56,6 @@ const DEFAULT_MCP: Record<string, JsonRecord> = {
 }
 
 const COMMAND_SKILLS: Record<string, string> = {
-  spec: "alloy-plan",
   plan: "alloy-plan",
   execute: "alloy-execute",
   verify: "alloy-verify",

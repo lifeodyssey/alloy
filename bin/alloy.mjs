@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto"
-import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, copyFileSync, chmodSync, appendFileSync, accessSync, realpathSync } from "node:fs"
+import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, copyFileSync, chmodSync, appendFileSync, accessSync, realpathSync, renameSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
@@ -561,6 +561,7 @@ function installCommand(options, projectDir = process.cwd()) {
     return 2
   }
   preflight(resolved)
+  migrateSpecsToPlans(projectDir, options.dryRun)
   ensureAlloyProject(projectDir, resolved, options.dryRun, options.config)
   backupManaged(resolved.targetDir, options.dryRun)
   installCoreFiles(resolved, options.dryRun)
@@ -578,6 +579,19 @@ function installCommand(options, projectDir = process.cwd()) {
   updateProjections(projectDir)
   console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "Alloy pack installed")
   return auditTarget(resolved, projectDir)
+}
+
+function migrateSpecsToPlans(projectDir, dryRun = false) {
+  const specsDir = join(projectDir, ".alloy", "specs")
+  const plansDir = join(projectDir, ".alloy", "plans")
+  if (!existsSync(specsDir) || existsSync(plansDir)) return
+  if (dryRun) {
+    logAction(`migrate ${relative(projectDir, specsDir)} to ${relative(projectDir, plansDir)}`, true)
+    return
+  }
+  mkdirSync(dirname(plansDir), { recursive: true })
+  renameSync(specsDir, plansDir)
+  console.log("Migrated .alloy/specs to .alloy/plans")
 }
 
 function writeInstallManifest(resolved, installedAt, dryRun = false) {

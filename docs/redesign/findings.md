@@ -1,6 +1,6 @@
 # Alloy v3 Redesign — Findings
 
-> Consolidated insights from 14+ sub-agent research dispatches across 5 rounds. Per planning-with-files security rules, external content lives HERE not in task_plan.md.
+> Consolidated insights from 14+ sub-agent research dispatches across 5 rounds. Per planning-with-files security rules, external content lives HERE not in plan.md.
 
 ## F1: Three-layer fusion thesis
 
@@ -27,7 +27,7 @@ Sub-agent compared SKILL.md files line-by-line:
 
 - `alloy-tdd` (60 LOC) ≈ `superpowers/test-driven-development` (371 LOC) **minus** rationalizations table, example code, "human partner" cues; **plus** Stack Companions routing + Evidence-To-Report block. Verdict: derived-but-diverged.
 - `alloy-debug` (23 LOC) ≈ `superpowers/systematic-debugging` (296 LOC) minus root-cause-tracing/defense-in-depth/3-failed-fix rule. Verdict: thinned.
-- `alloy-brainstorm` (29 LOC) ≈ `superpowers/brainstorming` (164 LOC) minus HARD-GATE, visual companion, spec self-review. Verdict: thinned.
+- `alloy-plan` (29 LOC) ≈ `superpowers/brainstorming` (164 LOC) minus HARD-GATE, visual companion, spec self-review. Verdict: thinned.
 
 **Critical bug**: `all.json` ships BOTH versions, causing trigger collision (OpenCode non-deterministically picks one). `vendor/skills/superpowers/brainstorming` references `writing-plans` skill we don't ship — broken chain.
 
@@ -65,7 +65,7 @@ Verified from `@opencode-ai/plugin@1.15.10` .d.ts:
 - `experimental.chat.messages.transform` — needed for `filter-available-skills` port
 - `experimental.chat.system.transform` — cleaner status injection than chat.message
 - `experimental.session.compacting` — inject ledger summary to survive compaction
-- `command.execute.before` — intercept `/spec /plan` etc. for Alloy-specific routing
+- `command.execute.before` — intercept `/plan` etc. for Alloy-specific routing
 - `tool.definition` — rewrite tool descriptions to remind about gates
 
 Does NOT exist: `session.start`, `session.end`, `model.invoke.*`, `error.recover`. OMO simulates these via `event` hook.
@@ -154,7 +154,7 @@ Conductor (Mac app, YC-backed, parallel Claude Code workspaces) has NO plugin/ex
 |---|---|---|
 | alloy-tdd | first-party (thinned superpowers/tdd) | absorb superpowers content + delete vendor copy |
 | alloy-debug | first-party (thinned superpowers/sys-debug) | absorb + delete vendor copy |
-| alloy-brainstorm | first-party (thinned superpowers/brainstorm) | absorb + delete vendor copy |
+| alloy-plan | first-party (thinned superpowers/brainstorm) | absorb + delete vendor copy |
 | (new) alloy-plan | absorb superpowers/writing-plans | first-party, fixes broken chain |
 | (new) alloy-execute | absorb superpowers/executing-plans | first-party |
 | (new) alloy-verify | absorb superpowers/verification-before-completion | first-party |

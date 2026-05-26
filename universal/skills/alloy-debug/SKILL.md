@@ -1226,7 +1226,7 @@ If you catch yourself thinking:
 If systematic investigation reveals issue is truly environmental, timing-dependent, or external:
 
 1. You've completed the process
-2. Document what you investigated in `.alloy/specs/<id>/findings.md`
+2. Document what you investigated in `.alloy/plans/<id>/findings.md`
 3. Implement appropriate handling (retry, timeout, error message)
 4. Add monitoring/logging for future investigation
 

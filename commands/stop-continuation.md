@@ -1,5 +1,5 @@
 ---
-description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Stop Alloy workflow continuation for this session
+description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Stop Alloy workflow continuation for this session
 ---
 
 # /stop-continuation

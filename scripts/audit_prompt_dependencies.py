@@ -94,7 +94,6 @@ RULES = (
 
 DEPENDENCIES = (
     Dependency("alloy-tdd", "alloy-tdd", "skill", "repo", "skill", "keep: Alloy TDD entrypoint"),
-    Dependency("alloy-brainstorm", "alloy-brainstorm", "skill", "repo", "skill", "keep: Alloy brainstorming entrypoint"),
     Dependency("alloy-debug", "alloy-debug", "skill", "repo", "skill", "keep: Alloy systematic debugging entrypoint"),
     Dependency("alloy-using", "alloy-using", "skill", "repo", "skill", "keep: Alloy skill bootstrap entrypoint"),
     Dependency("alloy-discuss", "alloy-discuss", "skill", "repo", "skill", "keep: Alloy decision-discussion entrypoint"),
@@ -376,7 +375,7 @@ def render_report(
             "",
             "## Policy",
             "",
-            "- `alloy-tdd`, `alloy-brainstorm`, and `alloy-debug` are Alloy-owned entrypoints.",
+            "- `alloy-tdd`, `alloy-plan`, and `alloy-debug` are Alloy-owned entrypoints.",
             "- GSD and OMO Slim runtimes are not installable through Alloy v2.",
             "- Default configs must not include OMO plugins, GSD command paths, or wildcard skill pools.",
             "- GitHub, Azure DevOps, and Postgres workflows use `gh`, `az devops`, and `psql`.",

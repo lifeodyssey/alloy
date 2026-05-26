@@ -1,6 +1,6 @@
 ---
 name: alloy-autopilot
-description: Use when you have a spec and want unattended execution through the full plan→execute→verify→ship pipeline. Risk-tiered review depth and bounded iteration. Stop on first BLOCKED status.
+description: Use when you have an approved plan and want unattended execution through the full execute→verify→ship pipeline. Risk-tiered review depth and bounded iteration. Stop on first BLOCKED status.
 ---
 
 # Alloy Autopilot
@@ -10,18 +10,18 @@ description: Use when you have a spec and want unattended execution through the 
 `alloy-autopilot` chains the existing Alloy phase pipeline into an unattended run:
 
 ```
-spec (input) → alloy-plan → alloy-execute → alloy-verify → alloy-ship → done
-                  ↑                              ↓
-                  └─── (on fail × N) ────────────┘
+plan (input) → alloy-execute → alloy-verify → alloy-ship → done
+                  ↑                         ↓
+                  └── (on fail × N) ────────┘
 ```
 
 It does NOT add new agent capabilities — it removes the human between phases. Use it when:
-- You trust the spec (already user-approved)
+- You trust the approved plan
 - The work is bounded (clear acceptance criteria, time-boxed)
 - You want to walk away while it runs (overnight, weekend batch)
 
 Do NOT use it when:
-- The spec is ambiguous (run `alloy-discuss` + `alloy-brainstorm` first)
+- The plan is ambiguous (run `alloy-discuss` + `alloy-plan` first)
 - The task touches production secrets or sensitive infrastructure (always supervise)
 - You don't have a fresh test suite (verify gate will be unreliable)
 - It's a one-off / exploratory task (the ceremony overhead isn't worth it)
@@ -29,7 +29,7 @@ Do NOT use it when:
 ## Invocation
 
 ```
-/autopilot <spec-id> [--risk low|med|high] [--max-iters N] [--resume]
+/autopilot <plan-id> [--risk low|med|high] [--max-iters N] [--resume]
 ```
 
 | Flag | Default | Meaning |
@@ -41,22 +41,17 @@ Do NOT use it when:
 ## The Loop
 
 ```
-load spec from .alloy/specs/<id>/task_plan.md
+load plan from .alloy/plans/<id>/plan.md
 
 if --resume:
     read .alloy/state/autopilot.jsonl
     determine last completed phase
     set current_phase = next phase
 else:
-    set current_phase = plan
+    set current_phase = execute
 
 while current_phase != "done":
-    if current_phase == "plan":
-        invoke alloy-plan
-        if plan written OK: → execute
-        else: BLOCKED → stop
-
-    elif current_phase == "execute":
+    if current_phase == "execute":
         invoke alloy-execute
         for each task:
             if status == DONE: continue
@@ -150,7 +145,7 @@ After each phase transition, append to `.alloy/state/autopilot.jsonl`:
 **Hard cap:** autopilot will not run past `--max-iters * N_phases` (default 5 × 4 = 20 phase invocations).
 
 After cap, it stops with full state preserved. The user can:
-- Review what was done (read `.alloy/state/autopilot.jsonl` + `.alloy/specs/<id>/`)
+- Review what was done (read `.alloy/state/autopilot.jsonl` + `.alloy/plans/<id>/`)
 - Resume with higher cap (`/autopilot <id> --resume --max-iters 10`)
 - Fix the root cause and resume
 
@@ -173,19 +168,19 @@ This lets you walk away.
 | Don't | Do |
 |---|---|
 | Use autopilot for first-time / exploratory tasks | Use direct `/plan` `/execute` `/verify` so you're in the loop |
-| Skip the user-approved spec | Always run `alloy-brainstorm` or `alloy-discuss` first to lock the spec |
-| Set `--max-iters 100` to push through | If iter > 5, the spec or codebase has a real problem; investigate, don't brute-force |
-| Trust the final report without reading | Always read `.alloy/specs/<id>/progress.md` + `findings.md` after autopilot returns |
+| Skip the approved plan | Always run `alloy-plan` or `alloy-discuss` first to lock the plan |
+| Set `--max-iters 100` to push through | If iter > 5, the plan or codebase has a real problem; investigate, don't brute-force |
+| Trust the final report without reading | Always read `.alloy/plans/<id>/progress.md` + `findings.md` after autopilot returns |
 | Use for ship-to-production deploys | Autopilot ends at "PR ready"; humans approve the merge |
 
 ## Hand-Off
 
 After done:
 
-> "Autopilot complete for spec `<id>`.
+> "Autopilot complete for plan `<id>`.
 > - Phase report: see `.alloy/state/autopilot.jsonl`
-> - Concerns: `.alloy/specs/<id>/findings.md`
-> - Verification: `.alloy/specs/<id>/verification.md`
+> - Concerns: `.alloy/plans/<id>/findings.md`
+> - Verification: `.alloy/plans/<id>/verification.md`
 > - PR: <url> (ready for human review)
 >
 > Recommend: read findings.md before merging."
@@ -200,9 +195,9 @@ alloy_evidence { kind: "autopilot_done", taskId, summary: "PR #234 ready, 0 veri
 
 ## Related Skills
 
-- **alloy-plan** — phase 1
-- **alloy-execute** — phase 2 (uses 4 status codes; NEEDS_CONTEXT and BLOCKED stop autopilot)
-- **alloy-verify** — phase 3 (run with risk-tier review depth)
+- **alloy-plan** — prepares the approved input plan
+- **alloy-execute** — phase 1 (uses 4 status codes; NEEDS_CONTEXT and BLOCKED stop autopilot)
+- **alloy-verify** — phase 2 (run with risk-tier review depth)
 - **alloy-ship** (vendor: SuperPower finishing-a-development-branch) — phase 4
 - **alloy-debug** — invoked on retry to investigate failures
 - **plan-eng-review** / **cso** (vendor: gstack) — additional review passes at med/high risk tiers

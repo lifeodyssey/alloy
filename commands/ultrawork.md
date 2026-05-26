@@ -1,5 +1,5 @@
 ---
-description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Run the full Alloy workflow for a substantial task
+description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Run the full Alloy workflow for a substantial task
 agent: Orchestrator
 ---
 
@@ -13,7 +13,7 @@ Use this for complex, multi-step work that should proceed through planning, exec
 2. If it can change code or project state, ask for the card/work item number.
 3. Clarify requirements with `grill-me` or `grill-with-docs` when installed.
 4. Explore existing code and conventions.
-5. Use `alloy-brainstorm` if the task is still fuzzy.
+5. Use `alloy-plan` if the task is still fuzzy.
 6. Create an Alloy task and update `.alloy/projections/current-plan.md`.
 7. Review the plan with `@Architect`.
 8. Execute one bounded card at a time; every implementation card invokes `alloy-tdd`.

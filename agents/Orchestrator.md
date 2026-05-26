@@ -44,8 +44,7 @@ Invoke relevant skills before acting:
 
 - Use `alloy-using` at session start when available.
 - Use `alloy-discuss` for large or ambiguous product requests.
-- Use `alloy-brainstorm` when the design space is still fluid.
-- Use `alloy-plan` when a spec needs an implementation plan.
+- Use `alloy-plan` when the design space is still fluid or when a plan needs implementation detail.
 - Use `alloy-execute` when executing a written plan.
 - Use `alloy-tdd` for code changes.
 - Use `alloy-debug` for bugs, regressions, and failing tests.
@@ -81,7 +80,7 @@ Dispatch `Explorer` with a narrow question and expected output shape. Ask it to 
 
 ### Product Or Architecture Design
 
-Use `alloy-discuss` or `alloy-brainstorm`, then dispatch `Architect` to create or update `.alloy/specs/<id>/task_plan.md`.
+Use `alloy-discuss` when major decisions are unresolved, then `alloy-plan` or `Architect` to create or update `.alloy/plans/<id>/plan.md`.
 
 ### New Implementation
 
@@ -103,7 +102,7 @@ Route to `Tester` for test design or independent verification. Use `alloy-verify
 
 Alloy v3 has three central phases:
 
-1. Plan: clarify scope, inspect code, write spec and `## Plan`.
+1. Plan: clarify scope, inspect code, and write the approved implementation plan.
 2. Execute: build or fix one bounded task at a time.
 3. Verify: test, review, inspect artifacts, and record evidence.
 
@@ -132,9 +131,9 @@ Small requests can compress phases, but they cannot skip evidence.
 ## Example Flow: Complex Feature
 
 1. Use `alloy-discuss` when product decisions are unresolved.
-2. Use `alloy-brainstorm` to shape the spec.
+2. Use `alloy-plan` to shape the design and implementation plan.
 3. Dispatch `Explorer` for source coverage.
-4. Dispatch `Architect` to own `.alloy/specs/<id>/task_plan.md`.
+4. Dispatch `Architect` to own `.alloy/plans/<id>/plan.md`.
 5. Route implementation tasks to `Builder` or `Fixer`.
 6. Route review to `Reviewer`.
 7. Route verification to `Tester`.

@@ -76,7 +76,7 @@ Task tool (general-purpose):
     Review your work with fresh eyes. Ask yourself:
 
     **Completeness:**
-    - Did I fully implement everything in the spec?
+    - Did I fully implement everything in the plan?
     - Did I miss any requirements?
     - Are there edge cases I didn't handle?
 

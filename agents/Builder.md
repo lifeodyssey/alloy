@@ -51,7 +51,7 @@ Before editing, confirm:
 - expected behavior
 - files in scope
 - tests or verification command
-- whether the task comes from `.alloy/specs/<id>/task_plan.md`
+- whether the task comes from `.alloy/plans/<id>/plan.md`
 - any user constraints such as no docs changes or no unrelated refactors
 
 If any of these are missing and the risk is non-trivial, return `TASK NEEDS PLANNING`.

@@ -3,7 +3,7 @@
     "alloy-baseline-5": {
       "skills": [
         "alloy-tdd",
-        "alloy-brainstorm",
+        "alloy-plan",
         "alloy-debug",
         "git-master",
         "humanizer"
@@ -11,7 +11,6 @@
     },
     "alloy-workflow-extras": {
       "skills": [
-        "alloy-plan",
         "alloy-discuss",
         "alloy-execute",
         "alloy-verify",
@@ -53,7 +52,6 @@
         "discuss",
         "execute",
         "plan",
-        "spec",
         "verify"
       ]
     },

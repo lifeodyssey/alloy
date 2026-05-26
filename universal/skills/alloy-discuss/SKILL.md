@@ -1,20 +1,20 @@
 ---
 name: alloy-discuss
-description: Use BEFORE planning for large or ambiguous features. Extracts implementation gray areas through adaptive questioning so downstream planning has decision-locked context. Use when a feature is too large for direct brainstorming, or when the user says "let's think this through first."
+description: Use BEFORE planning for large or ambiguous features. Extracts implementation gray areas through adaptive questioning so downstream planning has decision-locked context. Use when a feature is too large for direct planning, or when the user says "let's think this through first."
 ---
 
 # Alloy Discuss
 
 ## Overview
 
-`alloy-discuss` extracts implementation decisions that downstream agents (Architect, Builder) need — so they don't have to ask the user again. It's **deeper than brainstorming**: brainstorming asks "what are we building?", discuss asks "what are the gray areas we need to lock down before we can plan?"
+`alloy-discuss` extracts implementation decisions that downstream agents (Architect, Builder) need — so they don't have to ask the user again. It is deeper than normal planning: planning asks "what are we building and how?", discuss asks "what gray areas must be locked down first?"
 
-**When to use this vs alloy-brainstorm:**
-- Use `alloy-brainstorm` for everyday features where the design space is small
+**When to use this vs alloy-plan:**
+- Use `alloy-plan` for everyday features where the design space is small
 - Use `alloy-discuss` for large features, ambiguous requirements, or "let's think this through" requests
-- Use `alloy-discuss` when prior brainstorming surfaced too many unresolved gray areas
+- Use `alloy-discuss` when prior planning surfaced too many unresolved gray areas
 
-**Output:** `.alloy/specs/<id>/context.md` — decisions clear enough that downstream agents can act without asking the user again.
+**Output:** `.alloy/plans/<id>/context.md` — decisions clear enough that downstream agents can act without asking the user again.
 
 ## Roles (from GSD)
 
@@ -38,7 +38,7 @@ description: Use BEFORE planning for large or ambiguous features. Extracts imple
 Before any questions:
 
 1. Read `.alloy/projections/status.md` — what's the current state?
-2. Read prior specs in `.alloy/specs/` — what has the team decided before?
+2. Read prior plans in `.alloy/plans/` — what has the team decided before?
 3. Read project `AGENTS.md` / `CLAUDE.md` / `README.md` — what conventions exist?
 4. Skim recent commits — what was just shipped?
 
@@ -123,7 +123,7 @@ When user mentions something OUTSIDE the current feature ("oh and while we're at
 
 ```
 > "X is interesting but it's outside the scope of this feature. I'm capturing it 
->  in `.alloy/deferred-ideas.md` so we don't lose it. We can spec it as a 
+>  in `.alloy/deferred-ideas.md` so we don't lose it. We can plan it as a 
 >  separate feature after this one ships."
 ```
 
@@ -137,7 +137,7 @@ Write to `.alloy/deferred-ideas.md`:
 
 ### Phase 7: Write context.md
 
-Save decisions to `.alloy/specs/<id>/context.md`:
+Save decisions to `.alloy/plans/<id>/context.md`:
 
 ```markdown
 # Context for <feature>
@@ -164,7 +164,7 @@ Save decisions to `.alloy/specs/<id>/context.md`:
 - Anti-pattern to avoid: don't reinvent password hashing — use existing `BCryptHasher`
 
 ## Next Step
-Invoke `alloy-brainstorm` (which now reads this context) to produce the final `## Spec` section, then `alloy-plan` to generate `## Plan`.
+Invoke `alloy-plan`, which now reads this context and produces the final design plus implementation tasks.
 ```
 
 ## Anti-Patterns
@@ -182,7 +182,7 @@ Invoke `alloy-brainstorm` (which now reads this context) to produce the final `#
 
 After context.md is written and reviewed:
 
-> "Context locked at `.alloy/specs/<id>/context.md`. N decisions made, M deferred. Ready for `alloy-brainstorm` to produce the final spec, then `alloy-plan` for implementation tasks."
+> "Context locked at `.alloy/plans/<id>/context.md`. N decisions made, M deferred. Ready for `alloy-plan` to produce the implementation plan."
 
 ## Evidence
 
@@ -194,8 +194,7 @@ alloy_evidence { kind: "decision", taskId, summary: "D-01: cookie sessions chose
 ## Related Skills
 
 - **alloy-map-codebase** — pre-discuss codebase scout
-- **alloy-brainstorm** — turns context into a final spec
-- **alloy-plan** — uses context + spec to generate implementation tasks
+- **alloy-plan** — turns context into the final design and implementation tasks
 - **grill-me** (vendor: Matt Pocock) — alternative for one-on-one decision pressure-testing on a single topic
 
 ## Attribution
@@ -203,6 +202,6 @@ alloy_evidence { kind: "decision", taskId, summary: "D-01: cookie sessions chose
 Concept-only rewrite from:
 
 - **GSD discuss-phase** (rokicool/gsd-opencode and gsd-build/get-shit-done, MIT) — User/Builder framing, gray-area extraction, no-generic-categories rule, scope-creep redirection to deferred, D-NN decision IDs. No GSD command files or `gsd-sdk` runtime are vendored.
-- **Alloy** (MIT / first-party) — `.alloy/specs/<id>/context.md` artifact, evidence integration, hand-off to brainstorm/plan.
+- **Alloy** (MIT / first-party) — `.alloy/plans/<id>/context.md` artifact, evidence integration, hand-off to plan.
 
 See `/CREDITS.md` at repo root for the full attribution chain.
