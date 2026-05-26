@@ -4,6 +4,24 @@ import { constants, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, st
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
+import {
+  addManagedMcp,
+  addVisibleItem,
+  createManifest,
+  manifestPathForTarget,
+  normalizeManifest,
+  readManifest,
+  removeVisibleItem,
+  writeManifest as writeProjectManifest,
+} from "./manifest.mjs"
+import {
+  createGlobalState,
+  globalStatePath,
+  vendorLockPath,
+} from "./state.mjs"
+import {
+  checkContainerUsePrereqs,
+} from "./prereq-check.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
@@ -15,7 +33,7 @@ const ZOD_VERSION = DEFAULTS.plugin.zod
 const MCP_CONFIGS = DEFAULTS.mcp
 const PACK_FIELDS = ["skills", "agents", "commands", "mcp", "modelRoles"]
 const SCOPE_KINDS = ["frontend", "backend", "infra"]
-const COMPLETION_COMMANDS = ["install", "add", "remove", "list", "search", "outdated", "upgrade", "doctor", "completion"]
+const COMPLETION_COMMANDS = ["install", "add", "remove", "list", "search", "outdated", "upgrade", "version", "doctor", "completion"]
 const COMPLETION_PACKS = ["core", "frontend", "backend", "infra", "all"]
 const COMPLETION_TARGETS = ["local", "global"]
 const COMPLETION_SHELLS = ["bash", "zsh", "fish"]
@@ -36,6 +54,7 @@ const MANAGED_NAMES = [
   "package.json",
   "plugins",
   "alloy-runtime",
+  "alloy.manifest.json",
   "agents",
   "commands",
   "skills",
@@ -70,7 +89,15 @@ Usage:
   alloy init [--pack core] [--models github-copilot] [--target local]
   alloy resolve [--pack core] [--json]
   alloy install [--pack core] [--target local] [--models github-copilot] [--dry-run]
-  alloy list [--pack core] [--target local] [--models github-copilot]
+  alloy add <skill-or-agent>
+  alloy remove <skill-or-agent>
+  alloy list [--installed]
+  alloy search <query>
+  alloy outdated
+  alloy upgrade <vendor-name>
+  alloy upgrade --self
+  alloy upgrade --all-vendors
+  alloy version
   alloy doctor [--pack core] [--target local]
   alloy completion bash|zsh|fish
   alloy state add-task --title TITLE [--kind code]
@@ -86,7 +113,7 @@ Aliases:
 }
 
 export function parseArgs(argv) {
-  const commands = new Set(["init", "resolve", "install", "add", "remove", "list", "search", "outdated", "upgrade", "doctor", "completion", "state", "gate", "sync", "help"])
+  const commands = new Set(["init", "resolve", "install", "add", "remove", "list", "search", "outdated", "upgrade", "version", "doctor", "completion", "state", "gate", "sync", "help"])
   let command = commands.has(argv[0]) ? argv.shift() : "install"
   const positionals = []
   const options = {
@@ -159,6 +186,9 @@ export function parseArgs(argv) {
       case "doctor":
       case "auditOnly":
       case "refreshVendor":
+      case "installed":
+      case "self":
+      case "allVendors":
         options[key] = true
         break
       default:
@@ -507,6 +537,7 @@ function runCapture(cmd) {
 function installCommand(options, projectDir = process.cwd()) {
   const resolved = resolveConfig(options, projectDir)
   if (options.auditOnly) return auditTarget(resolved, projectDir)
+  const installedAt = new Date().toISOString()
   console.log("OpenCode Alloy Setup")
   console.log(`Pack: ${resolved.pack.id}`)
   if (options.usedProfileAlias) console.log("Profile alias: deprecated; use --pack going forward")
@@ -523,6 +554,8 @@ function installCommand(options, projectDir = process.cwd()) {
   installCoreFiles(resolved, options.dryRun)
   installPlugin(resolved, projectDir, options.dryRun)
   writeOpenCodeConfig(resolved, options.dryRun)
+  writeInstallManifest(resolved, installedAt, options.dryRun)
+  if (options.target === "global") writeGlobalInstallState(resolved, installedAt, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
   if (options.dryRun) {
     console.log(resolved.pack.id === "core" ? "Alloy core pack installed (dry-run plan only)" : "OpenCode Alloy pack installed (dry-run plan only)")
@@ -532,6 +565,16 @@ function installCommand(options, projectDir = process.cwd()) {
   updateProjections(projectDir)
   console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "OpenCode Alloy pack installed")
   return auditTarget(resolved, projectDir)
+}
+
+function writeInstallManifest(resolved, installedAt, dryRun = false) {
+  const manifest = createManifest(resolved, installedAt)
+  writeJson(manifestPathForTarget(resolved.targetDir), manifest, dryRun)
+}
+
+function writeGlobalInstallState(resolved, installedAt, dryRun = false) {
+  const state = createGlobalState(resolved, installedAt)
+  writeJson(globalStatePath(), state, dryRun)
 }
 
 function installCoreFiles(resolved, dryRun = false) {
@@ -652,7 +695,7 @@ function validateTargetFiles(resolved) {
   for (const agent of resolved.agents) if (!pathExists(join(resolved.targetDir, "agents", `${agent}.md`))) failures.push(`Target missing agent: ${agent}`)
   for (const command of resolved.commands) if (!pathExists(join(resolved.targetDir, "commands", `${command}.md`))) failures.push(`Target missing command: ${command}`)
   for (const skill of resolved.skills) if (!pathExists(join(resolved.targetDir, "skills", skill, "SKILL.md"))) failures.push(`Target missing skill: ${skill}`)
-  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
+  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts", "alloy.manifest.json"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
   return failures
 }
 
@@ -759,32 +802,352 @@ function resolveCommand(options, projectDir = process.cwd()) {
   return 0
 }
 
-function listCommand(options, projectDir = process.cwd()) {
-  const resolved = resolveConfig(options, projectDir)
-  const summary = {
-    version: PACKAGE.version,
-    pack: resolved.pack.id,
-    target: resolved.target,
-    targetDir: resolved.targetDir,
-    models: resolved.modelName,
-    agents: resolved.agents,
-    skills: resolved.skills,
-    commands: resolved.commands,
-    mcp: Object.keys(resolved.mcp),
-  }
-  if (options.json) {
-    console.log(JSON.stringify(summary, null, 2))
-  } else {
-    console.log(`OpenCode Alloy ${summary.version}`)
-    console.log(`Pack: ${summary.pack}`)
-    console.log(`Target: ${summary.target} (${summary.targetDir})`)
-    console.log(`Models: ${summary.models}`)
-    console.log(`Agents: ${summary.agents.join(", ")}`)
-    console.log(`Skills: ${summary.skills.join(", ")}`)
-    console.log(`Commands: ${summary.commands.join(", ")}`)
-    console.log(`MCP: ${summary.mcp.join(", ")}`)
-  }
+function addCommand(options, projectDir = process.cwd()) {
+  const [name] = options.positionals
+  if (!name) throw new Error("Usage: alloy add <skill-or-agent>")
+  if (name === "container-use") return addContainerUseCommand(projectDir)
+
+  const manifest = readManifest(projectDir)
+  const targetDir = join(projectDir, ".opencode")
+  const item = findInstallableItem(name, targetDir)
+  if (!item) throw new Error(`No Alloy skill or agent named "${name}" was found`)
+
+  const wasManaged = manifest.managed[item.kind]?.includes(item.name)
+  if (item.kind === "skills") installSkill(item.name, targetDir)
+  else installAgent(item.name, targetDir)
+  addVisibleItem(manifest, item.kind, item.name, { explicit: !wasManaged })
+  writeProjectManifest(projectDir, manifest)
+  console.log(`Added ${item.type}: ${item.name}`)
   return 0
+}
+
+function removeCommand(options, projectDir = process.cwd()) {
+  const [name] = options.positionals
+  if (!name) throw new Error("Usage: alloy remove <skill-or-agent>")
+  const manifest = readManifest(projectDir)
+  if (name === "container-use") return removeContainerUseCommand(projectDir, manifest)
+  const item = findManifestItem(manifest, name) ?? findInstallableItem(name, join(projectDir, ".opencode"))
+  if (!item || !["skills", "agents"].includes(item.kind)) throw new Error(`No visible Alloy skill or agent named "${name}" was found`)
+  removeVisibleItem(manifest, item.kind, item.name)
+  writeProjectManifest(projectDir, manifest)
+  console.log(`Removed ${item.type}: ${item.name}`)
+  return 0
+}
+
+function listCommand(options, projectDir = process.cwd()) {
+  const manifest = readManifest(projectDir)
+  const lines = [
+    `Alloy manifest: ${manifest.pack} (${manifest.version})`,
+    `Models: ${manifest.models}`,
+    `Managed skills: ${manifest.managed.skills.join(", ") || "(none)"}`,
+    `Visible skills: ${manifest.visible.skills.join(", ") || "(none)"}`,
+    `Managed agents: ${manifest.managed.agents.join(", ") || "(none)"}`,
+    `Visible agents: ${manifest.visible.agents.join(", ") || "(none)"}`,
+    `Managed commands: ${manifest.managed.commands.join(", ") || "(none)"}`,
+    `Managed MCP: ${manifest.managed.mcp.join(", ") || "(none)"}`,
+    `Explicit added: ${manifest.explicit.added.join(", ") || "(none)"}`,
+    `Explicit removed: ${manifest.explicit.removed.join(", ") || "(none)"}`,
+  ]
+  console.log(lines.join("\n"))
+  return 0
+}
+
+function searchCommand(options) {
+  const [query] = options.positionals
+  if (!query) throw new Error("Usage: alloy search <query>")
+  const normalized = query.toLowerCase()
+  const matches = internalInventory().filter((item) => `${item.name} ${item.kind} ${item.source ?? ""}`.toLowerCase().includes(normalized))
+  console.log("Internal inventory")
+  if (matches.length) {
+    for (const item of matches) console.log(`- ${item.kind}: ${item.name}${item.source ? ` (${item.source})` : ""}`)
+  } else {
+    console.log("- no internal matches")
+  }
+  const npxPath = which("npx")
+  if (!npxPath) return 0
+  console.log("")
+  console.log("External skills search (npx skills find)")
+  const result = spawnSync("npx", ["skills", "find", query], { encoding: "utf8" })
+  if (result.stdout) process.stdout.write(result.stdout)
+  if (result.stderr) process.stderr.write(result.stderr)
+  if (result.error) console.error(`WARN: npx skills find failed: ${result.error.message}`)
+  return 0
+}
+
+function addContainerUseCommand(projectDir) {
+  const prereqs = checkContainerUsePrereqs()
+  if (!prereqs.ok) {
+    console.error(`Missing container-use prerequisites: ${prereqs.missing.join(", ")}`)
+    console.error(prereqs.installHint)
+    return 1
+  }
+
+  const manifest = readManifest(projectDir)
+  const targetDir = join(projectDir, ".opencode")
+  installSkill("using-sandboxes", targetDir)
+  addVisibleItem(manifest, "skills", "using-sandboxes", { explicit: true })
+  addManagedMcp(manifest, "container-use", { explicit: true })
+  writeProjectManifest(projectDir, manifest)
+  enableMcpInOpenCodeConfig(targetDir, "container-use")
+  console.log("Added container-use MCP and using-sandboxes skill")
+  return 0
+}
+
+function removeContainerUseCommand(projectDir, manifest) {
+  removeVisibleItem(manifest, "skills", "using-sandboxes")
+  manifest.managed.mcp = manifest.managed.mcp.filter((item) => item !== "container-use")
+  manifest.explicit.removed = unique([...manifest.explicit.removed, "container-use"])
+  manifest.explicit.added = manifest.explicit.added.filter((item) => item !== "container-use")
+  writeProjectManifest(projectDir, manifest)
+  const targetDir = join(projectDir, ".opencode")
+  const configPath = join(targetDir, "opencode.json")
+  if (pathExists(configPath)) {
+    const config = readJson(configPath)
+    if (config.mcp?.["container-use"]) config.mcp["container-use"].enabled = false
+    writeJson(configPath, config)
+  }
+  console.log("Removed container-use MCP visibility")
+  return 0
+}
+
+function enableMcpInOpenCodeConfig(targetDir, name) {
+  const configPath = join(targetDir, "opencode.json")
+  if (!pathExists(configPath)) throw new Error(`Missing OpenCode config: ${configPath}. Run alloy install first.`)
+  const config = readJson(configPath)
+  config.mcp ??= {}
+  if (!MCP_CONFIGS[name]) throw new Error(`Unknown MCP: ${name}`)
+  config.mcp[name] = { ...MCP_CONFIGS[name], enabled: true }
+  writeJson(configPath, config)
+}
+
+function findManifestItem(manifest, name) {
+  const normalized = normalizeManifest(manifest)
+  for (const kind of ["skills", "agents"]) {
+    const found = [...normalized.managed[kind], ...normalized.visible[kind]].find((item) => item === name)
+    if (found) return { kind, type: kind.slice(0, -1), name: found }
+  }
+  return null
+}
+
+function findInstallableItem(name, targetDir) {
+  const inventory = internalInventory()
+  const exact = inventory.find((item) => ["skill", "agent"].includes(item.kind) && item.name === name)
+  const item = exact ?? findUniquePrefix(inventory.filter((entry) => ["skill", "agent"].includes(entry.kind)), name)
+  if (item) return { kind: `${item.kind}s`, type: item.kind, name: item.name }
+  if (pathExists(join(targetDir, "skills", name, "SKILL.md"))) return { kind: "skills", type: "skill", name }
+  if (pathExists(join(targetDir, "agents", `${name}.md`))) return { kind: "agents", type: "agent", name }
+  return null
+}
+
+function findUniquePrefix(items, query) {
+  const matches = items.filter((item) => item.name.startsWith(query))
+  return matches.length === 1 ? matches[0] : null
+}
+
+function installSkill(name, targetDir) {
+  if (pathExists(join(targetDir, "skills", name, "SKILL.md"))) return
+  const source = findSkillSourcePath(name, "frontend")
+  if (!source) throw new Error(`Missing source directory for skill: ${name}`)
+  copyDir(source, join(targetDir, "skills", name))
+}
+
+function installAgent(name, targetDir) {
+  const dest = join(targetDir, "agents", `${name}.md`)
+  if (pathExists(dest)) return
+  copyFile(join(REPO_ROOT, "agents", `${name}.md`), dest)
+}
+
+function internalInventory() {
+  const items = new Map()
+  const add = (kind, name, source) => {
+    if (!name) return
+    const key = `${kind}:${name}`
+    if (!items.has(key)) items.set(key, { kind, name, source })
+  }
+  for (const packId of ["core", "frontend", "backend", "infra", "all"]) {
+    const pack = loadPack(packId)
+    for (const skill of pack.skills ?? []) add("skill", skill, `pack:${packId}`)
+    for (const agent of pack.agents ?? []) add("agent", agent, `pack:${packId}`)
+    for (const command of pack.commands ?? []) add("command", command, `pack:${packId}`)
+    for (const mcp of pack.mcp ?? []) add("mcp", mcp, `pack:${packId}`)
+  }
+  for (const skill of scanSkillNames()) add("skill", skill, "source")
+  for (const agent of scanAgentNames()) add("agent", agent, "source")
+  for (const command of scanCommandNames()) add("command", command, "source")
+  for (const mcp of Object.keys(MCP_CONFIGS)) add("mcp", mcp, "defaults")
+  return [...items.values()].sort((a, b) => `${a.kind}:${a.name}`.localeCompare(`${b.kind}:${b.name}`))
+}
+
+function scanSkillNames() {
+  const names = []
+  const roots = [
+    join(REPO_ROOT, "universal", "skills"),
+    ...SCOPE_KINDS.map((kind) => join(REPO_ROOT, "scopes", kind, "skills")),
+    join(REPO_ROOT, "skills"),
+    ...SCOPE_KINDS.map((kind) => join(REPO_ROOT, "vendor", "skills", "scopes", kind)),
+    join(REPO_ROOT, "vendor", "skills", "external"),
+  ]
+  for (const root of roots) {
+    if (!pathExists(root)) continue
+    for (const entry of readdirSync(root)) {
+      if (pathExists(join(root, entry, "SKILL.md"))) names.push(entry)
+    }
+  }
+  const lockPath = vendorLockPath()
+  if (pathExists(lockPath)) {
+    for (const entry of readJson(lockPath)) {
+      if (entry.kind === "skill" && entry.name) names.push(entry.name)
+    }
+  }
+  return unique(names)
+}
+
+function scanAgentNames() {
+  const dir = join(REPO_ROOT, "agents")
+  if (!pathExists(dir)) return []
+  return readdirSync(dir).filter((name) => name.endsWith(".md")).map((name) => name.slice(0, -3))
+}
+
+function scanCommandNames() {
+  const dir = join(REPO_ROOT, "commands")
+  if (!pathExists(dir)) return []
+  return readdirSync(dir).filter((name) => name.endsWith(".md")).map((name) => name.slice(0, -3))
+}
+
+async function outdatedCommand() {
+  const rows = await collectVendorOutdatedRows()
+  printVendorTable(rows)
+  return 0
+}
+
+async function upgradeCommand(options) {
+  if (options.self) return upgradeSelf()
+  if (options.allVendors) {
+    const rows = await collectVendorOutdatedRows()
+    printVendorTable(rows)
+    const outdated = rows.filter((row) => row.status === "outdated")
+    if (!outdated.length) {
+      console.log("No out-of-date vendors found")
+      return 0
+    }
+    for (const row of outdated) {
+      const code = runRevendor(row.name)
+      if (code !== 0) return code
+    }
+    return 0
+  }
+  const [query] = options.positionals
+  if (!query) throw new Error("Usage: alloy upgrade <vendor-name>|--self|--all-vendors")
+  const name = resolveVendorName(query)
+  return runRevendor(name)
+}
+
+async function collectVendorOutdatedRows() {
+  const entries = readVendorLock()
+  const rows = []
+  for (const entry of entries) rows.push(await vendorOutdatedRow(entry))
+  return rows
+}
+
+function readVendorLock() {
+  const path = vendorLockPath()
+  if (!pathExists(path)) throw new Error(`Missing vendor.lock.json: ${path}`)
+  return readJson(path)
+}
+
+async function vendorOutdatedRow(entry) {
+  const repo = parseGitHubRepo(entry.source ?? "")
+  const installed = entry.version ?? "-"
+  if (!repo) return { name: entry.name, installed, latest: "-", status: "skipped" }
+  try {
+    const latest = await fetchLatestRelease(repo.owner, repo.repo)
+    const status = installed === "vendored-local" ? "local" : sameVersion(installed, latest) ? "current" : "outdated"
+    return { name: entry.name, installed, latest: latest ?? "-", status }
+  } catch (error) {
+    return { name: entry.name, installed, latest: "-", status: `error: ${error.message}` }
+  }
+}
+
+function parseGitHubRepo(source) {
+  const match = source.match(/^https?:\/\/github\.com\/([^/]+)\/([^/.#?]+)/)
+  if (!match) return null
+  return { owner: match[1], repo: match[2] }
+}
+
+async function fetchLatestRelease(owner, repo) {
+  const mocked = mockedRelease(owner, repo)
+  if (mocked !== undefined) return mocked
+  const base = (process.env.ALLOY_GITHUB_API_BASE || "https://api.github.com").replace(/\/$/, "")
+  const headers = { "User-Agent": "opencode-alloy", "Accept": "application/vnd.github+json" }
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
+  const release = await fetch(`${base}/repos/${owner}/${repo}/releases/latest`, { headers, signal: fetchTimeoutSignal() })
+  if (release.status === 404) return fetchLatestTag(base, owner, repo, headers)
+  if (!release.ok) throw new Error(`GitHub releases API returned ${release.status}`)
+  const json = await release.json()
+  return json.tag_name ?? json.name ?? null
+}
+
+function mockedRelease(owner, repo) {
+  if (!process.env.ALLOY_GITHUB_RELEASES_JSON) return undefined
+  const releases = JSON.parse(process.env.ALLOY_GITHUB_RELEASES_JSON)
+  return Object.hasOwn(releases, `${owner}/${repo}`) ? releases[`${owner}/${repo}`] : null
+}
+
+async function fetchLatestTag(base, owner, repo, headers) {
+  const tags = await fetch(`${base}/repos/${owner}/${repo}/tags`, { headers, signal: fetchTimeoutSignal() })
+  if (!tags.ok) throw new Error(`GitHub tags API returned ${tags.status}`)
+  const json = await tags.json()
+  return json[0]?.name ?? null
+}
+
+function fetchTimeoutSignal() {
+  return AbortSignal.timeout(Number(process.env.ALLOY_FETCH_TIMEOUT_MS ?? 8000))
+}
+
+function sameVersion(left, right) {
+  return normalizeVersion(left) === normalizeVersion(right)
+}
+
+function normalizeVersion(version) {
+  return String(version ?? "").replace(/^v/, "")
+}
+
+function printVendorTable(rows) {
+  const allRows = [{ name: "name", installed: "installed", latest: "latest", status: "status" }, ...rows]
+  const widths = ["name", "installed", "latest", "status"].map((key) => Math.max(...allRows.map((row) => String(row[key] ?? "").length)))
+  for (const [index, row] of allRows.entries()) {
+    const line = ["name", "installed", "latest", "status"].map((key, i) => String(row[key] ?? "").padEnd(widths[i])).join(" | ")
+    console.log(line)
+    if (index === 0) console.log(widths.map((width) => "-".repeat(width)).join("-|-"))
+  }
+}
+
+function resolveVendorName(query) {
+  const entries = readVendorLock()
+  const exact = entries.find((entry) => entry.name === query)
+  if (exact) return exact.name
+  const matches = entries.filter((entry) => entry.name?.startsWith(query))
+  if (matches.length === 1) return matches[0].name
+  if (matches.length > 1) throw new Error(`Vendor name "${query}" is ambiguous: ${matches.map((entry) => entry.name).join(", ")}`)
+  throw new Error(`No vendor.lock.json entry named: ${query}`)
+}
+
+function runRevendor(name) {
+  const script = process.env.ALLOY_REVENDOR_SCRIPT || join(REPO_ROOT, "scripts", "revendor.mjs")
+  console.log(`Revendor: ${name}`)
+  const result = spawnSync(process.execPath, [script, "--apply", name], { cwd: REPO_ROOT, stdio: "inherit", env: process.env })
+  return result.status ?? 1
+}
+
+function upgradeSelf() {
+  const url = process.env.ALLOY_SELF_UPGRADE_URL || "https://raw.githubusercontent.com/lifeodyssey/opencode-team-config/main/install.sh"
+  console.log(`Running Alloy self-upgrade from ${url}`)
+  const result = spawnSync("/bin/bash", ["-c", `curl -fsSL ${shellQuote(url)} | bash`], { stdio: "inherit", env: process.env })
+  return result.status ?? 1
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`
 }
 
 function versionCommand() {
@@ -1062,7 +1425,12 @@ async function main(argv) {
     if (options.command === "init") return initCommand(options)
     if (options.command === "resolve") return resolveCommand(options)
     if (options.command === "install") return installCommand(options)
+    if (options.command === "add") return addCommand(options)
+    if (options.command === "remove") return removeCommand(options)
     if (options.command === "list") return listCommand(options)
+    if (options.command === "search") return searchCommand(options)
+    if (options.command === "outdated") return await outdatedCommand(options)
+    if (options.command === "upgrade") return await upgradeCommand(options)
     if (options.command === "completion") return completionCommand(options)
     if (options.command === "doctor") return doctorCommand(options)
     if (options.command === "state") return stateCommand(options)
