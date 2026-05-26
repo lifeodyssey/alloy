@@ -1,44 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": false,
-  "plugin": [
-    "oh-my-opencode-slim",
-    "superpowers@git+https://github.com/obra/superpowers.git",
-    "@plannotator/opencode@0.19.3",
-    "opencode-ralph-loop",
-    "cc-safety-net@0.6.0",
-    "opencode-agent-skills@0.6.4",
-    "@tarquinen/opencode-dcp",
-    "opencode-working-memory",
-    "context-mode"
-  ],
+  "default_agent": "Orchestrator",
+  "plugin": ["cc-safety-net"],
   "mcp": {
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "enabled": true
-    },
-    "sequential-thinking": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
-      "enabled": true
-    },
-    "playwright": {
-      "type": "local",
-      "command": ["npx", "-y", "@playwright/mcp@latest"],
-      "enabled": true
-    },
-    "github": {
-      "type": "local",
-      "command": ["npx", "-y", "@github/mcp-server"],
-      "enabled": true,
-      "environment": {
-        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
-      }
-    },
-    "azure-devops": {
-      "type": "local",
-      "command": ["npx", "-y", "@azure-devops/mcp", "{env:AZURE_DEVOPS_ORG}"],
       "enabled": true
     },
     "grep_app": {
@@ -48,12 +16,32 @@
     },
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa",
+      "url": "https://mcp.exa.ai/mcp",
       "enabled": true
     },
-    "postgres": {
-      "type": "local",
-      "command": ["npx", "-y", "@anthropic/mcp-server-postgres", "{env:DATABASE_URL}"],
+    "chrome-devtools": {
+      "type": "remote",
+      "url": "https://mcp.chrome-devtools.dev/mcp",
+      "enabled": false
+    },
+    "sequential-thinking": {
+      "type": "remote",
+      "url": "https://mcp.sequential-thinking.dev/mcp",
+      "enabled": false
+    },
+    "figma-official": {
+      "type": "remote",
+      "url": "https://mcp.figma.com/mcp",
+      "enabled": false
+    },
+    "a11y-mcp": {
+      "type": "remote",
+      "url": "https://mcp.a11y.dev/mcp",
+      "enabled": false
+    },
+    "container-use": {
+      "type": "remote",
+      "url": "https://mcp.container-use.dev/mcp",
       "enabled": false
     }
   }

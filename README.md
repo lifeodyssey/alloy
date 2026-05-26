@@ -1,159 +1,280 @@
-# OpenCode Team Config v2
+# OpenCode Alloy
 
-One-command setup for the team's shared OpenCode configuration: plugins, MCPs, agents, skills, and workflow.
+OpenCode Alloy v0.1.0 — config distribution for multi-repo teams
 
-## Architecture
+OpenCode Alloy is an OpenCode-native distribution layer for teams that want the
+same agent workflow, skills, commands, MCP baseline, and verification discipline
+across many repositories.
 
-| Layer | Framework | Responsibility |
-|-------|-----------|----------------|
-| Decision | gstack (pure MD port) | Requirements validation, architecture review, security audit |
-| Context | GSD (pre-installed via setup.sh) | Spec persistence, atomic task splitting, fresh context per task |
-| Execution | Superpowers | TDD, worktrees, parallel agents, code review |
-| Orchestration | oh-my-opencode-slim | Agent routing, 30+ hooks, session management |
-
-## Agent Roles
-
-| Agent | Model | Role | Config |
-|-------|-------|------|--------|
-| Orchestrator | claude-sonnet-4.6 | Routes tasks, creates worktrees, coordinates pipeline | `agents/orchestrator_append.md` |
-| plan-reviewer | claude-sonnet-4.6 | Reviews PLANS (not code). Max 2 cycles. | custom agent in slim json |
-| executor | gpt-5.3-codex | TDD implementation (RED→GREEN→REFACTOR) | custom agent in slim json |
-| code-reviewer | gpt-5.4 | Reviews CODE (not plans). 8-dimension framework. | `agents/code-reviewer.md` |
-| Explorer | gpt-5.4-mini | Codebase discovery and pattern mapping | slim default |
-| Librarian | gpt-5.4-mini | Documentation research + requirement clarification | `agents/librarian_append.md` |
-| Designer | gpt-5.4-mini | UI/UX design | slim default |
-| Council | claude-sonnet-4.6 | Multi-model consensus for critical decisions | slim default |
-| oracle | claude-sonnet-4.6 | Plan review (slim built-in, aliased to plan-reviewer) | slim default |
-| fixer | gpt-5.3-codex | Implementation (slim built-in, aliased to executor) | slim default |
-
-## Workflow
-
-### Task Identification
-Every code-change task starts by asking for a card/work item number (AB#1234). The card number is used to name worktrees, branches, plan files, spec files, and commit messages.
-
-### Pipeline Routing (lite/full)
-
-**Global rules** (TDD, git safety, file boundaries) apply to ALL tasks regardless of pipeline.
-
-```
-Lite Pipeline (simple tasks: single-file bugfix, ≤2 files):
-  → @executor: TDD (RED→GREEN→REFACTOR→COMMIT)
-  → @code-reviewer: validates (max 2 cycles)
-
-Full Pipeline (complex tasks: multi-file feature, unclear requirements):
-  → Orchestrator classifies + creates worktree (feat/AB1234-<name>)
-  → @Librarian: requirements clarification (/grill-me)
-  → @Explorer: codebase scan
-  → GSD /gsd-plan-phase → task_plan.md (numbered cards)
-  → @plan-reviewer: reviews plan (max 2 cycles)
-  → plannotator: user visual annotation
-  → FOR EACH card:
-      @executor: team-tdd (RED→GREEN→REFACTOR→COMMIT)
-      @code-reviewer: validates (max 2 cycles)
-  → squash to 1 commit (trunk-based)
-```
-
-## Plugins (9)
-
-| Plugin | Purpose |
-|--------|---------|
-| `oh-my-opencode-slim` | Agent orchestration + 30+ hooks |
-| `superpowers` | TDD, worktrees, parallel agents, code review skills |
-| `@plannotator/opencode@0.19.3` | Interactive plan annotation UI |
-| `opencode-ralph-loop` | Autonomous iteration loop |
-| `cc-safety-net@0.6.0` | Destructive command interception |
-| `opencode-agent-skills@0.6.4` | Dynamic skill discovery + loading |
-| `@tarquinen/opencode-dcp` | Context pruning (compress/deduplicate/purge) |
-| `opencode-working-memory` | Cross-session memory (zero API calls, compaction-based) |
-| `context-mode` | MCP output compression (98% reduction) |
-
-Note: GSD is installed as skills/commands (not plugin) via `npx gsd-opencode --global` to avoid Bun crash.
-
-## Safety Net Rules
-
-Team-enforced rules via `cc-safety-net` (installed to `~/.cc-safety-net/config.json`):
-
-| Rule | Blocked Command | Reason |
-|------|----------------|--------|
-| no-skip-commit-hooks | `git commit --no-verify` | Bypasses pre-commit checks |
-| no-skip-commit-hooks-short | `git commit -n` | Short form of --no-verify |
-| no-skip-push-hooks | `git push --no-verify` | Bypasses pre-push checks |
-| no-skip-merge-hooks | `git merge --no-verify` | Bypasses pre-merge checks |
-| no-skip-rebase-hooks | `git rebase --no-verify` | Bypasses rebase hooks |
-
-These are additive to cc-safety-net's built-in protections (force push, reset --hard, rm -rf, etc.).
-
-## MCP Servers (8)
-
-| MCP | Type | Purpose |
-|-----|------|---------|
-| `context7` | remote | Up-to-date library documentation |
-| `sequential-thinking` | local | Structured reasoning chains |
-| `playwright` | local | Browser automation / E2E testing |
-| `github` | local | GitHub API |
-| `azure-devops` | local | Azure DevOps |
-| `grep_app` | remote | GitHub code search |
-| `exa` | remote | Web search |
-| `postgres` | local | Database schema/queries (disabled by default) |
-
-## Skills
-
-### Team Skills (in this repo)
-
-| Skill | Purpose |
-|-------|---------|
-| `team-tdd` | Comprehensive TDD (superpowers iron law + mattpocock vertical slicing + code constraints) |
-| `frontend-tdd` | React TDD constraints (component size, query priority) |
-| `git-master` | Advanced git workflows |
-| `frontend-ui-ux` | Tailwind/CSS/design patterns |
-| `playwright-cli` | E2E testing |
-| `humanizer` | AI writing cleanup |
-
-### Third-Party Skills (installed by setup.sh)
-
-| Skill | Source | Stack |
-|-------|--------|-------|
-| mattpocock/skills | MIT | /diagnose, /grill-me, /tdd, /to-issues, /caveman, etc. |
-| vercel-react-best-practices | Vercel official | React (70 rules) |
-| next-best-practices | Vercel official | Next.js App Router |
-| kotlin-agent-skills | JetBrains official | Kotlin backend |
-| terraform-skill | Community | Terraform/OpenTofu |
-| pg-aiguide | Timescale | PostgreSQL best practices |
-| openspec | Community | Spec-driven development |
+This release resets the old v2 numbering to `v0.1.0`. The reset marks the first
+OSS-ready architecture: a smaller public surface, clear license boundaries, and a
+documented Plan → Execute → Verify pipeline.
 
 ## Quick Start
 
-```bash
-# 1. Clone
-git clone <repo-url> ~/projects/opencode-team-config
-
-# 2. Run setup
-cd ~/projects/opencode-team-config
-bash setup.sh
-
-# 3. Add environment variables to ~/.zshrc
-export AZURE_DEVOPS_ORG=your-org-name
-export GITHUB_TOKEN=$(gh auth token)
-export EXA_API_KEY=your-key              # optional
-
-# 4. Login to provider
-opencode providers login
-```
-
-## Updating
+Clone this repo, then run the installer from each target repository:
 
 ```bash
-cd ~/projects/opencode-team-config
-bash update.sh   # git pull + setup.sh
+git clone https://github.com/lifeodyssey/opencode-team-config.git ~/src/opencode-team-config
+cd /path/to/target-repo
+bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
 ```
 
-## Project Setup
+Re-run the same command inside any repository that should receive Alloy:
 
-Copy `templates/AGENTS.md` to your project root and fill in project-specific details.
+```bash
+cd /path/to/target-repo
+bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+```
 
-## Prerequisites
+The installer is designed around two tiers:
 
-- **opencode** — `brew install opencode`
-- **Node.js / npx** — `brew install node`
-- **bun** — `brew install oven-sh/bun/bun` (for oh-my-opencode-slim)
-- **AZURE_DEVOPS_ORG** environment variable
+- a global tier under `~/.config/opencode/` for shared Alloy runtime content
+- a repo tier under `<target>/.opencode/` for project-scoped visibility
+- an Alloy state tier under `<target>/.alloy/` for specs, JSONL ledgers, and projections
+
+## What It Does
+
+- Installs a curated OpenCode team configuration into target repos without making
+  each repo hand-copy agents, skills, commands, plugins, and MCP settings.
+- Enforces a central Plan → Execute → Verify workflow with explicit artifacts,
+  evidence, and phase gates.
+- Separates Alloy first-party content from vendored upstream skills so teams can
+  update Alloy and vendor skills honestly.
+
+## Why Alloy Exists
+
+Multi-repo teams usually drift in three places:
+
+- every repo accumulates a slightly different agent prompt set
+- every person has a different idea of when planning or verification is required
+- vendored workflow ideas get copied without attribution, version tracking, or
+  a sane upgrade path
+
+Alloy makes those choices explicit. It is not a replacement for OpenCode.
+OpenCode remains the runtime, agent host, tool host, MCP host, and plugin host.
+Alloy resolves, installs, filters, and records the team workflow that OpenCode
+uses.
+
+## The 3-Phase Pipeline
+
+Alloy v0.1.0 standardizes work into three central phases:
+
+```text
+User request
+    |
+    v
++--------+       +----------+       +--------+
+| Plan   | ----> | Execute  | ----> | Verify |
++--------+       +----------+       +--------+
+    |                 |                 |
+    v                 v                 v
+Spec + plan      Code + tests      Review + gates
+```
+
+The phase model is intentionally small:
+
+- `Plan` routes to Explorer and Architect work.
+- `Execute` routes to Builder, Fixer, and Tester work.
+- `Verify` routes to Reviewer and Tester work.
+
+The expected artifact shape is based on the redesign docs:
+
+```text
+.alloy/specs/<id>/
+  task_plan.md       # required Spec + Plan sections
+  findings.md        # research and codebase notes
+  progress.md        # execution log
+  verification.md    # final evidence and gate result
+```
+
+This gives agents a durable place to resume after compaction and gives humans a
+plain Markdown trail for decisions.
+
+## Agent Model
+
+The redesign moves from 6 lifecycle agents to 7 agents total:
+
+- `Orchestrator`: router for task type, complexity, phase, specialist, and model
+- `Explorer`: reads existing code and maps dependencies
+- `Architect`: writes the plan and owns technical design
+- `Builder`: implements new code paths
+- `Fixer`: reproduces, minimizes, and fixes bugs
+- `Reviewer`: reviews code and plans with severity labels
+- `Tester`: writes and runs tests in Execute and Verify
+
+The key shift is from lifecycle handoffs to task-typed specialists. The phase
+orchestrator keeps the pipeline central; specialists stay focused.
+
+## Skill Catalog
+
+The full visual catalog is in
+[docs/redesign/config-overview.html](docs/redesign/config-overview.html).
+
+That catalog documents the first public target shape:
+
+- 15 first-party skills total
+- 11 first-party fusion skills
+- 4 kept first-party skills
+- 22+ vendored skills tracked independently
+- 8 MCP entries across universal, frontend opt-in, and sandbox opt-in tiers
+
+The 11 fusion skills named in the redesign summary are:
+
+- `alloy-using`
+- `alloy-brainstorm`
+- `alloy-plan`
+- `alloy-execute`
+- `alloy-tdd`
+- `alloy-debug`
+- `alloy-verify`
+- `alloy-discuss`
+- `alloy-map-codebase`
+- `alloy-autopilot`
+- `alloy-qa`
+
+The kept first-party skills are:
+
+- `humanizer`
+- `git-master`
+- `frontend-ui-ux`
+- `playwright-cli`
+
+Vendored skills keep their upstream license and independent vendor version.
+Alloy first-party content is MIT.
+
+## Architecture Overview
+
+The complete v0.1.0 architecture summary lives in
+[docs/redesign/SUMMARY.md](docs/redesign/SUMMARY.md).
+
+At a high level, Alloy has four layers:
+
+```text
+Repository sources
+  packs / defaults / models / skills / vendor / agents / commands / templates
+        |
+        v
+Alloy CLI
+  install / add / remove / list / search / state / gate / doctor / sync
+        |
+        v
+Installed files
+  ~/.config/opencode + target .opencode + target .alloy
+        |
+        v
+OpenCode runtime
+  plugin hooks + agents + MCPs + skills + Alloy JSONL ledgers
+```
+
+The most important design choice is manifest-driven visibility. Alloy can install
+more skill content on disk than an agent sees in a given repo, then expose skills
+through `alloy add` and the runtime visibility filter.
+
+## CLI Shape
+
+The v0.1.0 design centers on these commands:
+
+```bash
+alloy install
+alloy add <skill>
+alloy remove <skill>
+alloy list
+alloy search <query>
+alloy outdated
+alloy upgrade [name|--self|--all-vendors]
+alloy state add-task --title "..."
+alloy gate check --task-id <id>
+alloy doctor
+alloy sync --workspace alloy.workspace.json
+```
+
+The old pack-oriented `setup.sh` flow remains part of the repository history, but
+the OSS-ready direction is the `alloy` CLI plus a one-line install helper.
+
+## Runtime Boundaries
+
+Alloy is intentionally not a harness runtime.
+
+- The Alloy CLI resolves config, installs files, checks drift, and writes state.
+- The Alloy plugin adapts OpenCode hooks into evidence, claim, gate, and status
+  records.
+- Agents read skills, call tools, write code, and follow phase artifacts.
+- OpenCode remains responsible for the agent loop, tool execution, MCP hosting,
+  and plugin loading.
+
+This split keeps the project small enough to be maintained as a config
+distribution while still standardizing team behavior.
+
+## State And Artifacts
+
+Target repositories receive two kinds of local state:
+
+```text
+.opencode/
+  alloy.manifest.json
+  agents/
+  commands/
+  plugins/
+  skills/
+
+.alloy/
+  specs/
+  state/
+  projections/
+  codebase/
+  qa-reports/
+  local/
+```
+
+`.opencode/` is runtime configuration for OpenCode. `.alloy/` is workflow state
+for humans, agents, and lightweight CLI gates. JSONL files are the machine source
+of truth; Markdown files are the human-readable working surface.
+
+## Safety Model
+
+The redesign replaces the older inline dangerous-command regex with a planned
+`cc-safety-net` integration and project overlay rules. The safety direction is:
+
+- intercept dangerous shell patterns before execution
+- record fresh evidence before marking work done
+- keep target-repo state local and inspectable
+- avoid telemetry
+- avoid project-specific cloud MCP defaults
+
+For security reporting, see [SECURITY.md](SECURITY.md).
+
+## Documentation
+
+- [Architecture summary](docs/redesign/SUMMARY.md)
+- [Visual skill and architecture catalog](docs/redesign/config-overview.html)
+- [Roadmap](docs/ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
+- [Credits](CREDITS.md)
+
+## Contributing
+
+This repository does not require a separate contribution guide to get started.
+Use the following baseline for OSS contributions:
+
+- keep first-party Alloy changes under MIT-compatible terms
+- preserve upstream attribution for vendored skills
+- update `CHANGELOG.md` for user-visible changes
+- update `docs/redesign/SUMMARY.md` or roadmap docs when architecture changes
+- run `npm test` before opening a pull request
+- avoid adding telemetry, project-specific secrets, or team-private defaults
+
+For larger changes, open an issue or discussion first and reference the design
+question being revisited.
+
+## Credits
+
+Alloy combines first-party workflow design with ideas and vendored content from
+SuperPower, GSD, OMO Slim, Matt Pocock skills, gstack methodology, and framework
+skill authors. See [CREDITS.md](CREDITS.md) for attribution details.
+
+## License
+
+Alloy first-party content is released under the [MIT License](LICENSE). Vendored
+skills keep their upstream licenses and are tracked separately.

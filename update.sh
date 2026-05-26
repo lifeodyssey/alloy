@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 git pull
-bash setup.sh
+bash setup.sh "$@"

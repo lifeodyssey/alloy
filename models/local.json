@@ -1,0 +1,8 @@
+{
+  "orchestrator": {"model": "{env:OPENCODE_ALLOY_ORCHESTRATOR_MODEL}", "variant": "medium"},
+  "planner": {"model": "{env:OPENCODE_ALLOY_PLANNER_MODEL}", "variant": "medium"},
+  "executor": {"model": "{env:OPENCODE_ALLOY_EXECUTOR_MODEL}", "variant": "medium"},
+  "reviewer": {"model": "{env:OPENCODE_ALLOY_REVIEWER_MODEL}", "variant": "medium"},
+  "verifier": {"model": "{env:OPENCODE_ALLOY_VERIFIER_MODEL}", "variant": "medium"},
+  "explorer": {"model": "{env:OPENCODE_ALLOY_EXPLORER_MODEL}", "variant": "medium"}
+}

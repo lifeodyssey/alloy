@@ -1,0 +1,126 @@
+[
+  {
+    "name": "superpowers-brainstorming",
+    "kind": "skill",
+    "source": "https://github.com/obra/superpowers",
+    "version": "5.1.0",
+    "upstreamPath": "skills/brainstorming",
+    "license": "MIT",
+    "sha256": "ff35ca21e736d607180c427236972796326ba3ed9574d3d20333e9a5388f4838",
+    "paths": [
+      "vendor/skills/superpowers/5.1.0/brainstorming"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "superpowers-systematic-debugging",
+    "kind": "skill",
+    "source": "https://github.com/obra/superpowers",
+    "version": "5.1.0",
+    "upstreamPath": "skills/systematic-debugging",
+    "license": "MIT",
+    "sha256": "479bbf65114c398eb91bf48bab386736c2abf22c03f7171fbf05b507067b51e3",
+    "paths": [
+      "vendor/skills/superpowers/5.1.0/systematic-debugging"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "superpowers-test-driven-development",
+    "kind": "skill",
+    "source": "https://github.com/obra/superpowers",
+    "version": "5.1.0",
+    "upstreamPath": "skills/test-driven-development",
+    "license": "MIT",
+    "sha256": "6f3e82488337d6ca2defbb9a65fcd2a628b682eaa69f5e9362b71360aa337688",
+    "paths": [
+      "vendor/skills/superpowers/5.1.0/test-driven-development"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "vercel-react-best-practices",
+    "kind": "skill",
+    "source": "https://github.com/vercel-labs/agent-skills",
+    "version": "vendored-local",
+    "license": "MIT",
+    "sha256": "71d954ceb4567d80ad114b6999211440530446bd815cf13714fe1e849d1619f0",
+    "paths": [
+      "vendor/skills/scopes/frontend/vercel-react-best-practices"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "kotlin-backend-jpa-entity-mapping",
+    "kind": "skill",
+    "source": "https://github.com/Kotlin/kotlin-agent-skills",
+    "version": "vendored-local",
+    "license": "Apache-2.0",
+    "sha256": "599037e78611cefb1dd9b714e283986677908d2f70cb600ee970ba28002af917",
+    "paths": [
+      "vendor/skills/scopes/backend/kotlin-backend-jpa-entity-mapping"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "postgres",
+    "kind": "skill",
+    "source": "https://github.com/timescale/pg-aiguide",
+    "version": "vendored-local",
+    "license": "Apache-2.0",
+    "sha256": "cbaf0ef49a227310e48b98eb54108afe5515292d5a371c6b309c20d2f137a1cd",
+    "paths": [
+      "vendor/skills/scopes/backend/postgres"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "design-postgres-tables",
+    "kind": "skill",
+    "source": "https://github.com/timescale/pg-aiguide",
+    "version": "vendored-local",
+    "license": "Apache-2.0",
+    "sha256": "a190a20f186ff799e6bccb1d87b6da46267721f4ac06839b5bf0f70f32cb104f",
+    "paths": [
+      "vendor/skills/scopes/backend/design-postgres-tables"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "pgvector-semantic-search",
+    "kind": "skill",
+    "source": "https://github.com/timescale/pg-aiguide",
+    "version": "vendored-local",
+    "license": "Apache-2.0",
+    "sha256": "418e2af69fbb5fab79ed9a4a833bf6966c80758569da7289a4c75360e961b2be",
+    "paths": [
+      "vendor/skills/scopes/backend/pgvector-semantic-search"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "terraform-skill",
+    "kind": "skill",
+    "source": "https://github.com/antonbabenko/terraform-skill",
+    "version": "vendored-local",
+    "license": "Apache-2.0",
+    "sha256": "ff80374c54130b195748746d37b42c69cab34cbccc2e67a52146f62ef3b37a5d",
+    "paths": [
+      "vendor/skills/scopes/infra/terraform-skill"
+    ],
+    "vendoredAt": "2026-05-24"
+  },
+  {
+    "name": "ralph-loop",
+    "kind": "skill",
+    "source": "anthropics/claude-plugins-official",
+    "version": "0.1.0",
+    "license": "MIT",
+    "sha256": "<placeholder>",
+    "paths": [
+      "vendor/skills/external/ralph-loop"
+    ],
+    "vendoredAt": "2026-05-26",
+    "upstreamPath": "skills/ralph-loop"
+  }
+]

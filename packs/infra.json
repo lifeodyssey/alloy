@@ -1,0 +1,14 @@
+{
+  "id": "infra",
+  "description": "OpenCode Alloy infra pack: core plus Terraform/OpenTofu guidance.",
+  "target": "local",
+  "extends": [
+    "alloy-baseline-5",
+    "alloy-v3-agents",
+    "alloy-v3-modelRoles",
+    "alloy-sdd-commands",
+    "alloy-legacy-commands",
+    "mcp-baseline",
+    "infra-skills"
+  ]
+}

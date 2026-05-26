@@ -1,31 +1,27 @@
 ---
-description: (builtin) Start ultrawork loop - continues until Oracle verification of completion
+description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Continue Alloy review/fix/verify loops until completion or escalation
+agent: Orchestrator
 ---
 
-You are starting an ULTRAWORK Loop - a self-referential development loop that runs until verified completion.
+# /ulw-loop
 
-## How ULTRAWORK Loop Works
+Use this when a task is already in progress and should continue through review and verification.
 
-1. You will work on the task continuously
-2. When you believe the work is complete, output: `<promise>{{COMPLETION_PROMISE}}</promise>`
-3. That does NOT finish the loop yet. The system will require Oracle verification
-4. The loop only ends after the system confirms Oracle verified the result
-5. There is no iteration limit
+## Loop
 
-## Rules
+1. Read the current `.alloy` task, evidence, claims, and plan artifacts.
+2. If implementation is incomplete, execute the next bounded card with `alloy-tdd`.
+3. If implementation is complete but review is missing, ask `@Reviewer`.
+4. If BLOCK findings exist, fix them and record evidence.
+5. If review is clear, ask `@Tester` and run `alloy gate check`.
+6. Stop when verification is complete and gates pass.
 
-- Focus on finishing the task completely
-- After you emit the completion promise, run Oracle verification when instructed
-- Do not treat DONE as final completion until Oracle verifies it
+## Escalation
 
-## Exit Conditions
+Escalate to the user when:
 
-1. **Verified Completion**: Oracle verifies the result and the system confirms it
-2. **Cancel**: User runs `/cancel-ralph`
+- The same BLOCK finding survives two fix cycles.
+- Verification cannot run because credentials, services, or environments are missing.
+- The requested scope conflicts with the plan or work item.
 
-## Your Task
-
-Parse the arguments below and begin working on the task. The format is:
-`"task description" [--completion-promise=TEXT] [--strategy=reset|continue]`
-
-Default completion promise is "DONE".
+No autonomous continuation plugin is required for this command.

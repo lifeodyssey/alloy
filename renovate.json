@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 6am on Monday"],
+  "labels": ["dependencies"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track vendor.lock.json entries against their GitHub upstreams",
+      "managerFilePatterns": ["/^vendor\\.lock\\.json$/"],
+      "matchStrings": [
+        "\"source\":\\s*\"https://github.com/(?<depName>[^\"]+)\"[\\s\\S]*?\"version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Auto-merge minor + patch vendor updates after CI green",
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Major vendor updates need human review",
+      "matchManagers": ["custom.regex"],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "needs-manual-review"]
+    },
+    {
+      "description": "Plugin Bun deps in defaults.json (managed by alloy CLI but watch for upstream releases)",
+      "matchPackageNames": ["@opencode-ai/plugin", "zod"],
+      "automerge": false
+    }
+  ],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 10
+}

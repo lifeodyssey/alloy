@@ -1,0 +1,105 @@
+{
+  "atoms": {
+    "alloy-baseline-5": {
+      "skills": [
+        "alloy-tdd",
+        "alloy-brainstorm",
+        "alloy-debug",
+        "git-master",
+        "humanizer"
+      ]
+    },
+    "alloy-workflow-extras": {
+      "skills": [
+        "alloy-plan",
+        "alloy-discuss",
+        "alloy-execute",
+        "alloy-verify",
+        "alloy-using",
+        "alloy-autopilot",
+        "alloy-map-codebase",
+        "alloy-qa"
+      ]
+    },
+    "ralph-loop-skills": {
+      "skills": [
+        "ralph-loop"
+      ]
+    },
+    "alloy-v3-agents": {
+      "agents": [
+        "Orchestrator",
+        "Explorer",
+        "Architect",
+        "Builder",
+        "Fixer",
+        "Reviewer",
+        "Tester"
+      ]
+    },
+    "alloy-v3-modelRoles": {
+      "modelRoles": [
+        "orchestrator",
+        "planner",
+        "executor",
+        "reviewer",
+        "verifier",
+        "explorer"
+      ]
+    },
+    "alloy-sdd-commands": {
+      "commands": [
+        "autopilot",
+        "discuss",
+        "execute",
+        "plan",
+        "spec",
+        "verify"
+      ]
+    },
+    "alloy-legacy-commands": {
+      "commands": [
+        "handoff",
+        "init-deep",
+        "refactor",
+        "start-work",
+        "stop-continuation",
+        "ultrawork",
+        "ulw-loop"
+      ]
+    },
+    "ralph-loop-commands": {
+      "commands": [
+        "ralph-loop",
+        "cancel-ralph"
+      ]
+    },
+    "mcp-baseline": {
+      "mcp": [
+        "context7",
+        "grep_app",
+        "exa"
+      ]
+    },
+    "frontend-skills": {
+      "skills": [
+        "frontend-ui-ux",
+        "playwright-cli",
+        "vercel-react-best-practices"
+      ]
+    },
+    "backend-skills": {
+      "skills": [
+        "kotlin-backend-jpa-entity-mapping",
+        "postgres",
+        "design-postgres-tables",
+        "pgvector-semantic-search"
+      ]
+    },
+    "infra-skills": {
+      "skills": [
+        "terraform-skill"
+      ]
+    }
+  }
+}

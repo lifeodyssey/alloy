@@ -1,0 +1,14 @@
+{
+  "id": "backend",
+  "description": "OpenCode Alloy backend pack: core plus Kotlin/Spring and Postgres skills.",
+  "target": "local",
+  "extends": [
+    "alloy-baseline-5",
+    "alloy-v3-agents",
+    "alloy-v3-modelRoles",
+    "alloy-sdd-commands",
+    "alloy-legacy-commands",
+    "mcp-baseline",
+    "backend-skills"
+  ]
+}

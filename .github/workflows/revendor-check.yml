@@ -1,0 +1,41 @@
+name: Vendor freshness check
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'   # Monday midnight UTC
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      - name: Run revendor check-all
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/revendor.mjs --check-all | tee /tmp/check.out
+          if grep -q 'OUT OF DATE' /tmp/check.out; then
+            echo "outdated=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open issue if outdated
+        if: steps.check.outputs.outdated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs')
+            const body = '```\n' + fs.readFileSync('/tmp/check.out', 'utf8') + '\n```\n\nRun `node scripts/revendor.mjs --apply <name>` locally to refresh a specific vendor entry, or wait for Renovate to open per-entry PRs.'
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Vendor freshness: outdated entries detected',
+              labels: ['dependencies'],
+              body
+            })
