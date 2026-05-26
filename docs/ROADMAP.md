@@ -1,7 +1,7 @@
 # Roadmap
 
-This roadmap tracks quarterly themes for the OpenCode Alloy v0.1.x to v1.0
-path. It intentionally avoids per-commit or per-issue detail.
+This roadmap tracks quarterly themes for Alloy's runtime adapter path. It
+intentionally avoids per-commit or per-issue detail.
 
 The source architecture for the current plan is
 `docs/redesign/SUMMARY.md`.
@@ -24,6 +24,7 @@ the team before treating the OSS surface as stable.
 
 Planned phase themes:
 
+- `Runtime`: OpenCode runtime (foundational).
 - `P1`: implement the 2-tier source restructure, atom model, manifest design,
   repo visibility, new CLI commands, state writer, and update checks.
 - `P2`: rewrite the agent set from 6 lifecycle agents to 7 total agents with 1
@@ -60,6 +61,28 @@ Exit criteria:
 - known v2 migration hazards are documented
 - security and attribution docs are present for OSS review
 
+## Q3 2026: v0.2 Claude Code Runtime Adapter
+
+Theme: add the Claude Code adapter while keeping the resolver core and pack
+model runtime-neutral.
+
+Milestone:
+
+- materialize resolved packs into Claude Code's `.claude/` layout
+- document runtime-specific differences from the OpenCode adapter
+- preserve the same atoms+extends pack semantics across runtimes
+
+## Q4 2026: v0.3 Codex CLI Runtime Adapter
+
+Theme: add the Codex CLI adapter so the same Alloy packs can target Codex
+workspaces without OpenCode-specific assumptions.
+
+Milestone:
+
+- materialize resolved packs into the Codex CLI configuration layout
+- document Codex-specific runtime boundaries and unsupported OpenCode hooks
+- keep runtime adapter tests separate from resolver tests
+
 ## Q4 2026: First External Team Dogfood
 
 Theme: put Alloy in front of the first external team and prioritize real install,
@@ -82,7 +105,7 @@ Expected output:
 - bug-fix focused changelog entries
 - sharper docs for common install and doctor failures
 - clearer guidance for when to vendor, absorb, or skip a skill
-- a short external dogfood report that feeds v0.2.x planning
+- a short external dogfood report that feeds post-adapter planning
 
 Non-goals:
 
@@ -91,10 +114,10 @@ Non-goals:
 - no default cloud-provider MCP expansion
 - no large harness runtime expansion
 
-## Q1 2027: v0.2.x Improvements From Dogfood Feedback
+## Q1 2027: v0.4.x Improvements From Dogfood Feedback
 
-Theme: fold dogfood evidence into a narrower, better v0.2.x instead of expanding
-the project sideways.
+Theme: fold dogfood evidence from the OpenCode, Claude Code, and Codex adapter
+lines into a narrower, better v0.4.x instead of expanding the project sideways.
 
 Likely improvement themes:
 
@@ -129,7 +152,7 @@ v1.0 readiness themes:
 - stable generated file layout
 - stable plugin v1 API expectations
 - stable vendor lock format
-- stable upgrade path from v0.1.x and v0.2.x
+- stable upgrade path from v0.1.x, v0.2, and v0.3
 - documented compatibility policy
 - documented deprecation policy
 - tested install and upgrade path on clean machines

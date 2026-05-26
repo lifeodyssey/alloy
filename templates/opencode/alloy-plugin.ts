@@ -11,7 +11,8 @@ interface AlloyManifest {
   models: string
   managed: { skills: string[]; agents: string[]; commands: string[]; mcp: string[] }
   visible: { skills: string[]; agents: string[] }
-  explicit: { added: string[]; removed: string[] }
+  explicit: { added: string[] }
+  excluded: string[]
 }
 
 type TextPart = {
@@ -40,6 +41,7 @@ const COMMAND_SKILLS: Record<string, string> = {
   execute: "alloy-execute",
   verify: "alloy-verify",
   autopilot: "alloy-autopilot",
+  "ralph-loop": "ralph-loop",
 }
 
 const recordSchema = z.object({
@@ -62,6 +64,10 @@ function statePath(directory: string, name: string) {
 
 function manifestPath(directory: string) {
   return join(directory, ".opencode", "alloy.manifest.json")
+}
+
+function opencodeConfigPath(directory: string) {
+  return join(directory, ".opencode", "opencode.json")
 }
 
 function appendJsonl(directory: string, name: string, record: Record<string, unknown>) {
@@ -143,6 +149,10 @@ async function detectMagicWarnings(directory: string) {
   const warnings: string[] = []
   const manifest = await readManifest(directory)
   const vendorLock = vendorLockPath(directory)
+
+  if (!manifest && existsSync(opencodeConfigPath(directory))) {
+    warnings.push("Alloy warning: Run alloy install to create manifest.")
+  }
 
   if (manifest && vendorLock) {
     const installedAt = Date.parse(manifest.installedAt)
@@ -292,6 +302,32 @@ function readJsonl(directory: string, name: string, limit = 5) {
     .slice(-limit)
 }
 
+function readAllJsonl(directory: string, name: string) {
+  const path = statePath(directory, name)
+  if (!existsSync(path)) return []
+  return readFileSync(path, "utf8")
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(parseJsonlLine)
+    .filter(Boolean)
+}
+
+function getIterationCount(directory: string, taskId: string) {
+  return readAllJsonl(directory, "iteration").filter((row: any) => row.taskId === taskId).length
+}
+
+function recordIteration(directory: string, taskId?: string) {
+  if (!taskId) return undefined
+  const record = {
+    taskId,
+    iter: getIterationCount(directory, taskId) + 1,
+    ts: new Date().toISOString(),
+  }
+  appendJsonl(directory, "iteration", record)
+  return record
+}
+
 function summarizeRecord(record: any) {
   const id = record.id ? `[${record.id}] ` : ""
   const status = record.status ? ` (${record.status})` : ""
@@ -325,9 +361,44 @@ function shellQuote(value: string) {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
 
-function routeCommand(input: { command: string; arguments: string }, output: { parts: any[] }) {
+function taskIdFromText(text: string) {
+  const match = text.match(/(?:--task-id\s+|taskId\s*[:=]\s*)([A-Za-z0-9_.:-]+)/i)
+  return match?.[1]
+}
+
+function taskIdFromHookInput(input: any, directory: string) {
+  return (
+    input?.taskId ??
+    input?.args?.taskId ??
+    input?.properties?.taskId ??
+    taskIdFromText(String(input?.arguments ?? input?.args?.command ?? input?.args?.input ?? "")) ??
+    activeTaskId(directory)
+  )
+}
+
+function isIterationEvent(event: any) {
+  return String(event?.type ?? "").toLowerCase().includes("iteration")
+}
+
+function isRalphLoopToolExecution(input: any, output: any) {
+  const haystack = [
+    input?.tool,
+    input?.args?.skill,
+    input?.args?.name,
+    input?.args?.command,
+    input?.args?.input,
+    output?.title,
+    output?.output,
+  ]
+    .filter(Boolean)
+    .join("\n")
+    .toLowerCase()
+  return haystack.includes("ralph-loop")
+}
+
+function routeCommand(input: { command: string; arguments?: string }, output: { parts: any[] }, directory: string) {
   const command = normalizeCommand(input.command)
-  const args = input.arguments.trim()
+  const args = String(input.arguments ?? "").trim()
   if (command === "add") {
     const alloyCommand = ["alloy", "add", ...args.split(/\s+/).filter(Boolean).map(shellQuote)].join(" ")
     output.parts.push(
@@ -347,11 +418,13 @@ function routeCommand(input: { command: string; arguments: string }, output: { p
 
   const skill = COMMAND_SKILLS[command]
   if (!skill) return
+  if (command === "ralph-loop") recordIteration(directory, taskIdFromHookInput(input, directory))
   output.parts.push(
     textPart(
       [
         "## Alloy Command Intercept",
         `Route /${command} through the ${skill} skill and record phase evidence before closing the task.`,
+        command === "ralph-loop" ? "Ralph Loop iteration recorded in .alloy/state/iteration.jsonl." : "",
         args ? `Request: ${args}` : "",
       ]
         .filter(Boolean)
@@ -437,6 +510,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
 
   return {
     config: async (config) => {
+      if (!config) return
       injectConfigDefaults(config)
       bootWarnings = await detectMagicWarnings(projectDir)
       bootWarningsChecked = true
@@ -492,6 +566,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
         paths: [],
         createdAt: new Date().toISOString(),
       })
+      if (isRalphLoopToolExecution(input, output)) recordIteration(projectDir, taskIdFromHookInput(input, projectDir))
     },
 
     event: async ({ event }) => {
@@ -501,23 +576,28 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
         payload: safeEvent(event),
         createdAt: new Date().toISOString(),
       })
+      if (isIterationEvent(event)) recordIteration(projectDir, taskIdFromHookInput(event, projectDir))
     },
 
     "experimental.chat.messages.transform": async (input, output) => {
+      if (!output || !Array.isArray(output.messages)) return
       await filterAvailableSkills(projectDir, input, output)
     },
 
     "experimental.chat.system.transform": async (_input, output) => {
+      if (!output || !Array.isArray(output.system)) return
       output.system.push(`## Alloy Workflow Status\n${readStatus(projectDir)}`)
     },
 
     "experimental.session.compacting": async (_input, output) => {
+      if (!output || !Array.isArray(output.context)) return
       const summary = ledgerSummary(projectDir)
       if (summary) output.context.push(summary)
     },
 
     "command.execute.before": async (input, output) => {
-      routeCommand(input, output)
+      if (!input?.command || !output || !Array.isArray(output.parts)) return
+      routeCommand(input, output, projectDir)
     },
 
     "tool.definition": async (input, output) => {
@@ -576,9 +656,17 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
           taskId: tool.schema.string(),
         },
         async execute(args) {
-          return `Run: alloy gate check --task-id ${args.taskId} --json`
+          const iterations = getIterationCount(projectDir, args.taskId)
+          const capHint = iterations >= 5 ? "Ralph Loop iteration cap reached; escalate before retrying." : `Ralph Loop iterations: ${iterations}/5`
+          return `Run: alloy gate check --task-id ${args.taskId} --json\n${capHint}`
         },
       }),
+    },
+
+    alloy: {
+      getIterationCount(taskId: string) {
+        return getIterationCount(projectDir, taskId)
+      },
     },
   }
 }

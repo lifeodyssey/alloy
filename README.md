@@ -1,10 +1,23 @@
-# OpenCode Alloy
+# Alloy
 
-OpenCode Alloy v0.1.0 — config distribution for multi-repo teams
+Alloy v0.1.0 — multi-runtime config distribution for AI coding agents
 
-OpenCode Alloy is an OpenCode-native distribution layer for teams that want the
-same agent workflow, skills, commands, MCP baseline, and verification discipline
-across many repositories.
+## What is Alloy?
+
+**Alloy** is a multi-runtime adapter that resolves curated packs of skills, agents, commands, and MCPs, then materializes them into your AI coding agent of choice.
+
+**Supported runtimes** (v0.1.x):
+- ✅ **OpenCode** — full support (agent host, plugin host, MCP host)
+- 🚧 **Claude Code** — adapter planned for v0.2 (Q3 2026)
+- 🚧 **Codex CLI** — adapter planned for v0.3 (Q4 2026)
+
+The atoms+extends pack model is runtime-neutral by design — only the installer's materialization layer needs per-runtime adaptation.
+
+Alloy is a runtime-neutral distribution layer for teams that want the same agent
+workflow, skills, commands, MCP baseline, and verification discipline across
+many repositories and AI coding runtimes. v0.1.x materializes those packs into
+OpenCode's `.opencode/` layout while keeping the resolver core independent from
+any single runtime.
 
 This release resets the old v2 numbering to `v0.1.0`. The reset marks the first
 OSS-ready architecture: a smaller public surface, clear license boundaries, and a
@@ -15,16 +28,16 @@ documented Plan → Execute → Verify pipeline.
 Clone this repo, then run the installer from each target repository:
 
 ```bash
-git clone https://github.com/lifeodyssey/opencode-team-config.git ~/src/opencode-team-config
+git clone https://github.com/lifeodyssey/alloy.git ~/src/alloy
 cd /path/to/target-repo
-bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+bash ~/src/alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
 Re-run the same command inside any repository that should receive Alloy:
 
 ```bash
 cd /path/to/target-repo
-bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+bash ~/src/alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
 The installer is designed around two tiers:

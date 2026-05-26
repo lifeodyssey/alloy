@@ -83,12 +83,12 @@ function loadDefaults() {
 }
 
 function usage() {
-  return `OpenCode Alloy
+  return `Alloy
 
 Usage:
   alloy init [--pack core] [--models github-copilot] [--target local]
   alloy resolve [--pack core] [--json]
-  alloy install [--pack core] [--target local] [--models github-copilot] [--dry-run]
+  alloy install [pack] [--pack core] [--target local] [--models github-copilot] [--dry-run]
   alloy add <skill-or-agent>
   alloy remove <skill-or-agent>
   alloy list [--installed]
@@ -197,10 +197,21 @@ export function parseArgs(argv) {
   }
   options.positionals = positionals
   if (!["local", "global"].includes(options.target)) throw new Error("--target must be local or global")
+  applyPositionalPack(options)
   if (options.version) options.command = "version"
   if (options.doctor && options.command === "install") options.command = "doctor"
   if (options.help || options.command === "help") options.command = "help"
   return options
+}
+
+function applyPositionalPack(options) {
+  if (!["init", "resolve", "install", "doctor"].includes(options.command)) return
+  if (options.explicitPack || !options.positionals.length) return
+  const [pack] = options.positionals
+  if (!COMPLETION_PACKS.includes(pack)) return
+  options.pack = pack
+  options.explicitPack = true
+  options.positionals = options.positionals.slice(1)
 }
 
 function splitCsv(value = "") {
@@ -538,7 +549,7 @@ function installCommand(options, projectDir = process.cwd()) {
   const resolved = resolveConfig(options, projectDir)
   if (options.auditOnly) return auditTarget(resolved, projectDir)
   const installedAt = new Date().toISOString()
-  console.log("OpenCode Alloy Setup")
+  console.log("Alloy Setup")
   console.log(`Pack: ${resolved.pack.id}`)
   if (options.usedProfileAlias) console.log("Profile alias: deprecated; use --pack going forward")
   console.log(`Target: ${options.target} (${resolved.targetDir})`)
@@ -558,12 +569,12 @@ function installCommand(options, projectDir = process.cwd()) {
   if (options.target === "global") writeGlobalInstallState(resolved, installedAt, options.dryRun)
   cleanupDeprecated(resolved.targetDir, options.dryRun)
   if (options.dryRun) {
-    console.log(resolved.pack.id === "core" ? "Alloy core pack installed (dry-run plan only)" : "OpenCode Alloy pack installed (dry-run plan only)")
+    console.log(resolved.pack.id === "core" ? "Alloy core pack installed (dry-run plan only)" : "Alloy pack installed (dry-run plan only)")
     console.log("Dry run complete; no files were written.")
     return 0
   }
   updateProjections(projectDir)
-  console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "OpenCode Alloy pack installed")
+  console.log(resolved.pack.id === "core" ? "Alloy core pack installed" : "Alloy pack installed")
   return auditTarget(resolved, projectDir)
 }
 
@@ -700,7 +711,7 @@ function validateTargetFiles(resolved) {
 }
 
 function doctorCommand(options, projectDir = process.cwd()) {
-  console.log("OpenCode Alloy Doctor")
+  console.log("Alloy Doctor")
   const resolved = resolveConfig(options, projectDir)
   const failures = []
   const warnings = []
@@ -846,7 +857,7 @@ function listCommand(options, projectDir = process.cwd()) {
     `Managed commands: ${manifest.managed.commands.join(", ") || "(none)"}`,
     `Managed MCP: ${manifest.managed.mcp.join(", ") || "(none)"}`,
     `Explicit added: ${manifest.explicit.added.join(", ") || "(none)"}`,
-    `Explicit removed: ${manifest.explicit.removed.join(", ") || "(none)"}`,
+    `Excluded: ${manifest.excluded.join(", ") || "(none)"}`,
   ]
   console.log(lines.join("\n"))
   return 0
@@ -896,7 +907,7 @@ function addContainerUseCommand(projectDir) {
 function removeContainerUseCommand(projectDir, manifest) {
   removeVisibleItem(manifest, "skills", "using-sandboxes")
   manifest.managed.mcp = manifest.managed.mcp.filter((item) => item !== "container-use")
-  manifest.explicit.removed = unique([...manifest.explicit.removed, "container-use"])
+  manifest.excluded = unique([...manifest.excluded, "container-use"])
   manifest.explicit.added = manifest.explicit.added.filter((item) => item !== "container-use")
   writeProjectManifest(projectDir, manifest)
   const targetDir = join(projectDir, ".opencode")
@@ -1031,15 +1042,16 @@ async function upgradeCommand(options) {
       return 0
     }
     for (const row of outdated) {
-      const code = runRevendor(row.name)
+      const entry = resolveVendorEntry(row.name)
+      const code = upgradeVendorEntry(entry)
       if (code !== 0) return code
     }
     return 0
   }
   const [query] = options.positionals
   if (!query) throw new Error("Usage: alloy upgrade <vendor-name>|--self|--all-vendors")
-  const name = resolveVendorName(query)
-  return runRevendor(name)
+  const entry = resolveVendorEntry(query)
+  return upgradeVendorEntry(entry)
 }
 
 async function collectVendorOutdatedRows() {
@@ -1078,7 +1090,7 @@ async function fetchLatestRelease(owner, repo) {
   const mocked = mockedRelease(owner, repo)
   if (mocked !== undefined) return mocked
   const base = (process.env.ALLOY_GITHUB_API_BASE || "https://api.github.com").replace(/\/$/, "")
-  const headers = { "User-Agent": "opencode-alloy", "Accept": "application/vnd.github+json" }
+  const headers = { "User-Agent": "alloy", "Accept": "application/vnd.github+json" }
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
   const release = await fetch(`${base}/repos/${owner}/${repo}/releases/latest`, { headers, signal: fetchTimeoutSignal() })
   if (release.status === 404) return fetchLatestTag(base, owner, repo, headers)
@@ -1123,13 +1135,37 @@ function printVendorTable(rows) {
 }
 
 function resolveVendorName(query) {
+  return resolveVendorEntry(query).name
+}
+
+function resolveVendorEntry(query) {
   const entries = readVendorLock()
   const exact = entries.find((entry) => entry.name === query)
-  if (exact) return exact.name
+  if (exact) return exact
   const matches = entries.filter((entry) => entry.name?.startsWith(query))
-  if (matches.length === 1) return matches[0].name
+  if (matches.length === 1) return matches[0]
   if (matches.length > 1) throw new Error(`Vendor name "${query}" is ambiguous: ${matches.map((entry) => entry.name).join(", ")}`)
   throw new Error(`No vendor.lock.json entry named: ${query}`)
+}
+
+function upgradeVendorEntry(entry) {
+  if (isVendoredLocalEntry(entry)) return verifyVendoredLocalEntry(entry)
+  return runRevendor(entry.name)
+}
+
+function isVendoredLocalEntry(entry) {
+  return entry.version === "vendored-local" || entry.source === "vendored-local" || entry.vendorKind === "vendored-local"
+}
+
+function verifyVendoredLocalEntry(entry) {
+  const missing = (entry.paths ?? []).filter((rel) => !pathExists(join(REPO_ROOT, rel)))
+  if (missing.length) {
+    console.error(`vendored-local ${entry.name} is missing locked paths:`)
+    for (const rel of missing) console.error(`- ${rel}`)
+    return 2
+  }
+  console.log(`vendored-local ${entry.name}: verified ${entry.paths?.length ?? 0} path(s); skipping revendor --apply`)
+  return 0
 }
 
 function runRevendor(name) {
@@ -1140,7 +1176,7 @@ function runRevendor(name) {
 }
 
 function upgradeSelf() {
-  const url = process.env.ALLOY_SELF_UPGRADE_URL || "https://raw.githubusercontent.com/lifeodyssey/opencode-team-config/main/install.sh"
+  const url = process.env.ALLOY_SELF_UPGRADE_URL || "https://raw.githubusercontent.com/lifeodyssey/alloy/main/install.sh"
   console.log(`Running Alloy self-upgrade from ${url}`)
   const result = spawnSync("/bin/bash", ["-c", `curl -fsSL ${shellQuote(url)} | bash`], { stdio: "inherit", env: process.env })
   return result.status ?? 1
@@ -1198,7 +1234,8 @@ function bashCompletionScript() {
     "",
     '  case "${COMP_WORDS[1]}" in',
     '    completion) COMPREPLY=( $(compgen -W "${shells}" -- "${cur}") ) ;;',
-    '    install|doctor|list) COMPREPLY=( $(compgen -W "${opts} ${packs}" -- "${cur}") ) ;;',
+    '    install|doctor) COMPREPLY=( $(compgen -W "${opts} ${packs}" -- "${cur}") ) ;;',
+    '    list) COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") ) ;;',
     '    *) COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") ) ;;',
     "  esac",
     "}",
@@ -1399,7 +1436,7 @@ function syncCommand(options, projectDir = process.cwd()) {
   if (!pathExists(workspacePath)) throw new Error(`Missing workspace file: ${workspacePath}`)
   const workspace = readJson(workspacePath)
   if (!Array.isArray(workspace.projects)) throw new Error("alloy.workspace.json must contain projects[]")
-  console.log("OpenCode Alloy Sync")
+  console.log("Alloy Sync")
   for (const project of workspace.projects) {
     const target = resolve(dirname(workspacePath), project.path)
     console.log(`${options.dryRun ? "DRY-RUN: " : ""}sync project ${target}`)

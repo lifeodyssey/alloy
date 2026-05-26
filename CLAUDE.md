@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-This repo is **OpenCode Alloy v2** (npm name `opencode-alloy`, branded `opencode-team-config` for the legacy repo slug). It is **not an application** — it is a distribution/control layer that resolves "packs" of OpenCode agents, skills, commands, MCPs, and model-role maps, then materializes them into a target repo's `.opencode/` (runtime) and `.alloy/` (workflow state).
+This repo is **Alloy** (npm `@lifeodyssey/alloy`, GitHub `lifeodyssey/alloy`). It is **not an application** — it is a distribution/control layer that resolves "packs" of skills, agents, commands, MCPs, and model-role maps, then materializes them into a target repo's runtime-specific layout.
 
-OpenCode is the runtime (agent host, tool host, MCP host, plugin host). Alloy is the resolver, installer, state ledger, evidence collector, and gate checker.
+**v0.1.x** supports OpenCode runtime (`.opencode/` + `.alloy/`). Future versions add Claude Code (`.claude/` adapter) and Codex CLI adapters. The resolver core (atoms.json, packs/, extends mechanism) is runtime-neutral.
 
 ## Common Commands
 

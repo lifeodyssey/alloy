@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-OpenCode Alloy vendors a small, reviewable subset of upstream skill files so installation can run without interactive package-manager flows.
+Alloy vendors a small, reviewable subset of upstream skill files so installation can run without interactive package-manager flows.
 
 The authoritative source, version, license, hash, and vendored paths for each snapshot are recorded in `vendor.lock.json`.
 

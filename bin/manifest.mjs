@@ -31,8 +31,8 @@ export function createManifest(resolved, installedAt = new Date().toISOString())
     },
     explicit: {
       added: [],
-      removed: [],
     },
+    excluded: [],
   }
 }
 
@@ -74,8 +74,8 @@ export function normalizeManifest(manifest) {
     },
     explicit: {
       added: unique(manifest.explicit?.added ?? []),
-      removed: unique(manifest.explicit?.removed ?? manifest.explicit?.excluded ?? []),
     },
+    excluded: unique(manifest.excluded ?? manifest.explicit?.removed ?? manifest.explicit?.excluded ?? []),
   }
 }
 
@@ -84,7 +84,7 @@ export function addVisibleItem(manifest, kind, name, options = {}) {
   if (!["skills", "agents"].includes(kind)) throw new Error(`Unsupported visible kind: ${kind}`)
   normalized.managed[kind] = unique([...normalized.managed[kind], name])
   normalized.visible[kind] = unique([...normalized.visible[kind], name])
-  normalized.explicit.removed = normalized.explicit.removed.filter((item) => item !== name)
+  normalized.excluded = normalized.excluded.filter((item) => item !== name)
   if (options.explicit) normalized.explicit.added = unique([...normalized.explicit.added, name])
   Object.assign(manifest, normalized)
   return manifest
@@ -94,7 +94,7 @@ export function removeVisibleItem(manifest, kind, name) {
   const normalized = normalizeManifest(manifest)
   if (!["skills", "agents"].includes(kind)) throw new Error(`Unsupported visible kind: ${kind}`)
   normalized.visible[kind] = normalized.visible[kind].filter((item) => item !== name)
-  normalized.explicit.removed = unique([...normalized.explicit.removed, name])
+  normalized.excluded = unique([...normalized.excluded, name])
   normalized.explicit.added = normalized.explicit.added.filter((item) => item !== name)
   Object.assign(manifest, normalized)
   return manifest
@@ -103,7 +103,7 @@ export function removeVisibleItem(manifest, kind, name) {
 export function addManagedMcp(manifest, name, options = {}) {
   const normalized = normalizeManifest(manifest)
   normalized.managed.mcp = unique([...normalized.managed.mcp, name])
-  normalized.explicit.removed = normalized.explicit.removed.filter((item) => item !== name)
+  normalized.excluded = normalized.excluded.filter((item) => item !== name)
   if (options.explicit) normalized.explicit.added = unique([...normalized.explicit.added, name])
   Object.assign(manifest, normalized)
   return manifest

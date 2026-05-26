@@ -73,7 +73,7 @@ class AlloyInstallerTest(unittest.TestCase):
                 "github-copilot",
             )
 
-        self.assertIn("OpenCode Alloy Setup", result.stdout)
+        self.assertIn("Alloy Setup", result.stdout)
         self.assertIn(".alloy/alloy.project.json", result.stdout)
         self.assertIn(".opencode/agents", result.stdout)
         self.assertIn(".opencode/skills", result.stdout)
@@ -161,7 +161,26 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(manifest["managed"]["mcp"], ["context7", "grep_app", "exa"])
         self.assertEqual(manifest["visible"]["skills"], manifest["managed"]["skills"])
         self.assertEqual(manifest["visible"]["agents"], manifest["managed"]["agents"])
-        self.assertEqual(manifest["explicit"], {"added": [], "removed": []})
+        self.assertEqual(manifest["explicit"], {"added": []})
+        self.assertEqual(manifest["excluded"], [])
+
+    def test_positional_install_pack_selects_frontend_for_cli_and_setup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cli = root / "cli"
+            setup = root / "setup"
+            cli.mkdir()
+            setup.mkdir()
+
+            run_alloy(cli, "install", "frontend")
+            run_setup(setup, "frontend", "--target", "local")
+            cli_manifest = read_manifest(cli)
+            setup_manifest = read_manifest(setup)
+
+        self.assertEqual(cli_manifest["pack"], "frontend")
+        self.assertEqual(setup_manifest["pack"], "frontend")
+        self.assertIn("frontend-ui-ux", cli_manifest["managed"]["skills"])
+        self.assertIn("frontend-ui-ux", setup_manifest["managed"]["skills"])
 
     def test_global_install_writes_alloy_state_under_home(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -188,7 +207,7 @@ class AlloyInstallerTest(unittest.TestCase):
             self.assertIn("frontend-ui-ux", manifest["visible"]["skills"])
             self.assertIn("frontend-ui-ux", manifest["explicit"]["added"])
 
-    def test_remove_hides_skill_and_records_removed_choice(self):
+    def test_remove_hides_skill_and_records_excluded_choice(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             run_alloy(cwd, "install", "--pack", "core")
@@ -197,7 +216,26 @@ class AlloyInstallerTest(unittest.TestCase):
 
         self.assertIn("alloy-tdd", manifest["managed"]["skills"])
         self.assertNotIn("alloy-tdd", manifest["visible"]["skills"])
-        self.assertIn("alloy-tdd", manifest["explicit"]["removed"])
+        self.assertIn("alloy-tdd", manifest["excluded"])
+        self.assertNotIn("removed", manifest["explicit"])
+
+    def test_add_migrates_legacy_removed_manifest_to_excluded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_alloy(cwd, "install", "--pack", "core")
+            manifest_path = cwd / ".opencode" / "alloy.manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["visible"]["skills"] = [item for item in manifest["visible"]["skills"] if item != "alloy-tdd"]
+            manifest["explicit"]["removed"] = ["alloy-tdd"]
+            manifest.pop("excluded", None)
+            manifest_path.write_text(json.dumps(manifest))
+
+            run_alloy(cwd, "add", "alloy-tdd")
+            updated = read_manifest(cwd)
+
+        self.assertIn("alloy-tdd", updated["visible"]["skills"])
+        self.assertEqual(updated["excluded"], [])
+        self.assertNotIn("removed", updated["explicit"])
 
     def test_list_and_installed_alias_show_manifest_inventory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -247,16 +285,46 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertIn("v2.0.0", result.stdout)
         self.assertIn("outdated", result.stdout)
 
-    def test_upgrade_name_invokes_revendor_apply_with_resolved_vendor_name(self):
+    def test_upgrade_upstream_name_invokes_revendor_apply_with_resolved_vendor_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            lock = cwd / "vendor.lock.json"
+            log = cwd / "revendor.log"
+            fake = cwd / "fake-revendor.mjs"
+            lock.write_text(json.dumps([
+                {"name": "demo-skill", "kind": "skill", "source": "https://github.com/acme/demo", "version": "v1.0.0", "paths": []}
+            ]))
+            fake.write_text("import { appendFileSync } from 'node:fs'; appendFileSync(process.env.ALLOY_REVENDOR_LOG, process.argv.slice(2).join(' ') + '\\n');\n")
+            run_alloy(
+                cwd,
+                "upgrade",
+                "demo",
+                env={
+                    "ALLOY_VENDOR_LOCK_PATH": str(lock),
+                    "ALLOY_REVENDOR_SCRIPT": str(fake),
+                    "ALLOY_REVENDOR_LOG": str(log),
+                },
+            )
+            log_text = log.read_text()
+
+        self.assertIn("--apply demo-skill", log_text)
+
+    def test_upgrade_vendored_local_name_skips_revendor_and_verifies_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             log = cwd / "revendor.log"
             fake = cwd / "fake-revendor.mjs"
             fake.write_text("import { appendFileSync } from 'node:fs'; appendFileSync(process.env.ALLOY_REVENDOR_LOG, process.argv.slice(2).join(' ') + '\\n');\n")
-            run_alloy(cwd, "upgrade", "vercel-react", env={"ALLOY_REVENDOR_SCRIPT": str(fake), "ALLOY_REVENDOR_LOG": str(log)})
-            log_text = log.read_text()
+            result = run_alloy(
+                cwd,
+                "upgrade",
+                "vercel-react",
+                env={"ALLOY_REVENDOR_SCRIPT": str(fake), "ALLOY_REVENDOR_LOG": str(log)},
+            )
 
-        self.assertIn("--apply vercel-react-best-practices", log_text)
+        self.assertFalse(log.exists())
+        self.assertIn("vendored-local", result.stdout)
+        self.assertIn("verified", result.stdout)
 
     def test_upgrade_self_runs_curl_install_script(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -498,7 +566,7 @@ class AlloyInstallerTest(unittest.TestCase):
             )
             result = run_alloy(root, "sync", "--workspace", str(workspace), "--dry-run")
 
-        self.assertIn("OpenCode Alloy Sync", result.stdout)
+        self.assertIn("Alloy Sync", result.stdout)
         self.assertIn("sync project", result.stdout)
         self.assertIn(".opencode/opencode.json", result.stdout)
         self.assertNotIn(str(Path.home() / ".config" / "opencode"), result.stdout)
@@ -541,7 +609,7 @@ class AlloyInstallerTest(unittest.TestCase):
             cwd = Path(tmp)
             result = run_alloy(cwd, "doctor", "--pack", "core", "--target", "local")
 
-        self.assertIn("OpenCode Alloy Doctor", result.stdout)
+        self.assertIn("Alloy Doctor", result.stdout)
         self.assertIn("Run alloy install first for full doctor", result.stdout)
 
     def test_missing_defaults_json_fails_without_node_stack(self):

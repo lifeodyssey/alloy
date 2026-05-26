@@ -168,7 +168,8 @@ writeFileSync(join(projectDir, ".opencode", "alloy.manifest.json"), JSON.stringi
   models: "github-copilot",
   managed: { skills: ["alloy-tdd", "humanizer"], agents: [], commands: [], mcp: [] },
   visible: { skills: ["alloy-tdd"], agents: [] },
-  explicit: { added: [], removed: [] },
+  explicit: { added: [] },
+  excluded: ["humanizer"],
 }), "utf8")
 
 const output = {
@@ -182,6 +183,29 @@ const text = output.messages[0].parts[0].text
 assert.match(text, /alloy-tdd/)
 assert.doesNotMatch(text, /humanizer/)
 assert.match(text, /<available_skills>/)
+`)
+})
+
+test("new plugin hooks ignore missing host payload fields", async () => {
+  await runPluginScenario(`
+await assert.doesNotReject(async () => hooks.config(undefined))
+await assert.doesNotReject(async () => hooks["experimental.chat.messages.transform"]({ sessionID: "s1" }, {}))
+await assert.doesNotReject(async () => hooks["experimental.chat.system.transform"]({ sessionID: "s1" }, {}))
+await assert.doesNotReject(async () => hooks["experimental.session.compacting"]({ sessionID: "s1" }, {}))
+await assert.doesNotReject(async () => hooks["command.execute.before"]({}, {}))
+`)
+})
+
+test("magic detection warns when opencode config exists without manifest", async () => {
+  await runPluginScenario(`
+mkdirSync(join(projectDir, ".opencode"), { recursive: true })
+writeFileSync(join(projectDir, ".opencode", "opencode.json"), JSON.stringify({ plugin: ["alloy"] }), "utf8")
+
+await hooks.config({})
+const chatOut = { message: {}, parts: [] }
+await hooks["chat.message"]({ sessionID: "s1", agent: "Builder" }, chatOut)
+const chatText = chatOut.parts.map((part) => part.text).join("\\n")
+assert.match(chatText, /Run alloy install to create manifest/)
 `)
 })
 
@@ -199,7 +223,8 @@ writeFileSync(join(projectDir, ".opencode", "alloy.manifest.json"), JSON.stringi
   models: "github-copilot",
   managed: { skills: ["alloy-tdd"], agents: ["Builder"], commands: [], mcp: [] },
   visible: { skills: ["alloy-tdd"], agents: ["Builder"] },
-  explicit: { added: [], removed: [] },
+  explicit: { added: [] },
+  excluded: [],
 }), "utf8")
 writeFileSync(join(process.env.HOME, ".config", "alloy", "state.json"), JSON.stringify({ lastSyncedVendorLock: "wrong-sha" }), "utf8")
 writeFileSync(join(projectDir, ".alloy", "projections", "status.md"), "Status line", "utf8")
@@ -242,5 +267,29 @@ assert.match(planOut.parts.map((part) => part.text).join("\\n"), /alloy-plan/)
 const definition = { description: "Run shell commands", parameters: {} }
 await hooks["tool.definition"]({ toolID: "bash" }, definition)
 assert.match(definition.description, /Alloy gate/)
+`)
+})
+
+test("ralph-loop records iterations and exposes count for gate checks", async () => {
+  await runPluginScenario(`
+mkdirSync(join(projectDir, ".alloy", "state"), { recursive: true })
+writeFileSync(join(projectDir, ".alloy", "state", "tasks.jsonl"), JSON.stringify({ id: "T1", title: "Follow-up", status: "open" }) + "\\n", "utf8")
+
+const first = { parts: [] }
+await hooks["command.execute.before"]({ command: "ralph-loop", sessionID: "s1", arguments: "--task-id T1" }, first)
+assert.match(first.parts.map((part) => part.text).join("\\n"), /ralph-loop/)
+
+await hooks.event({ event: { type: "iteration", properties: { taskId: "T1" } } })
+
+const rows = readFileSync(join(projectDir, ".alloy", "state", "iteration.jsonl"), "utf8")
+  .trim()
+  .split(/\\r?\\n/)
+  .map((line) => JSON.parse(line))
+assert.equal(rows.length, 2)
+assert.deepEqual(rows.map((row) => row.taskId), ["T1", "T1"])
+assert.deepEqual(rows.map((row) => row.iter), [1, 2])
+assert.match(rows[0].ts, /^\\d{4}-\\d{2}-\\d{2}T/)
+assert.equal(hooks.alloy.getIterationCount("T1"), 2)
+assert.match(await hooks.tool.alloy_gate.execute({ taskId: "T1" }), /Ralph Loop iterations: 2\\/5/)
 `)
 })

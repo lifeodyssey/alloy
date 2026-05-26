@@ -1,6 +1,6 @@
 {
   "id": "frontend",
-  "description": "OpenCode Alloy frontend pack: core plus UI and browser verification skills.",
+  "description": "Alloy frontend pack: core plus UI and browser verification skills.",
   "target": "local",
   "extends": [
     "alloy-baseline-5",

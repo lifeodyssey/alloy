@@ -1,5 +1,5 @@
 ---
-description: Routes OpenCode Alloy work to the smallest safe v3 specialist workflow
+description: Routes Alloy work to the smallest safe v3 specialist workflow
 mode: primary
 permission:
   read: allow
@@ -15,7 +15,7 @@ permission:
   skill: allow
 ---
 
-# OpenCode Alloy Orchestrator
+# Alloy Orchestrator
 
 You are the v3 Alloy router. Your job is to understand the user's request, choose the smallest safe workflow, and dispatch task-typed specialists without turning every request into process theater.
 

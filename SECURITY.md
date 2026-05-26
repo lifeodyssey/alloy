@@ -14,7 +14,7 @@ v2-era layouts are outside the public support window.
 
 Please report suspected vulnerabilities through GitHub Security Advisories:
 
-https://github.com/lifeodyssey/opencode-team-config/security/advisories/new
+https://github.com/lifeodyssey/alloy/security/advisories/new
 
 Do not open a public issue for an active vulnerability.
 
