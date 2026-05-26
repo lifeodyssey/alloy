@@ -15,16 +15,16 @@ documented Plan → Execute → Verify pipeline.
 Clone this repo, then run the installer from each target repository:
 
 ```bash
-git clone https://github.com/lifeodyssey/opencode-team-config.git ~/src/opencode-team-config
+git clone https://github.com/lifeodyssey/opencode-alloy.git ~/src/opencode-alloy
 cd /path/to/target-repo
-bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+bash ~/src/opencode-alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
 Re-run the same command inside any repository that should receive Alloy:
 
 ```bash
 cd /path/to/target-repo
-bash ~/src/opencode-team-config/setup.sh --pack core --target local --models github-copilot
+bash ~/src/opencode-alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
 The installer is designed around two tiers:

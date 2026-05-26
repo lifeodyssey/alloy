@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-This repo is **OpenCode Alloy v2** (npm name `opencode-alloy`, branded `opencode-team-config` for the legacy repo slug). It is **not an application** — it is a distribution/control layer that resolves "packs" of OpenCode agents, skills, commands, MCPs, and model-role maps, then materializes them into a target repo's `.opencode/` (runtime) and `.alloy/` (workflow state).
+This repo is **OpenCode Alloy v2** (npm name `opencode-alloy`, repo slug `opencode-alloy`). It is **not an application** — it is a distribution/control layer that resolves "packs" of OpenCode agents, skills, commands, MCPs, and model-role maps, then materializes them into a target repo's `.opencode/` (runtime) and `.alloy/` (workflow state).
 
 OpenCode is the runtime (agent host, tool host, MCP host, plugin host). Alloy is the resolver, installer, state ledger, evidence collector, and gate checker.
 

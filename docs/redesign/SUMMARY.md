@@ -339,6 +339,6 @@ For questions:
 - **OSS governance** → `task_plan.md` Q11 section
 
 For changes:
-- Open an issue at `lifeodyssey/opencode-team-config` describing the Q being revisited
+- Open an issue at `lifeodyssey/opencode-alloy` describing the Q being revisited
 - Run `grill-me` skill to stress-test the proposed change
 - Reference this SUMMARY.md section to confirm the proposed change doesn't silently violate a prior decision

@@ -18,6 +18,7 @@ import {
   addVisibleItem,
   createManifest,
   manifestPathFor,
+  normalizeManifest,
   removeVisibleItem,
 } from "../bin/manifest.mjs"
 import {
@@ -56,6 +57,18 @@ test("parseArgs recognizes CLI v3 subcommands and flags", () => {
   assert.equal(parseArgs(["upgrade", "vercel-react"]).positionals[0], "vercel-react")
   assert.equal(parseArgs(["upgrade", "--self"]).self, true)
   assert.equal(parseArgs(["upgrade", "--all-vendors"]).allVendors, true)
+})
+
+test("parseArgs accepts positional pack names for install", () => {
+  const explicit = parseArgs(["install", "frontend"])
+  assert.equal(explicit.command, "install")
+  assert.equal(explicit.pack, "frontend")
+  assert.equal(explicit.explicitPack, true)
+
+  const defaultCommand = parseArgs(["backend"])
+  assert.equal(defaultCommand.command, "install")
+  assert.equal(defaultCommand.pack, "backend")
+  assert.equal(defaultCommand.explicitPack, true)
 })
 
 test("parseArgs accepts --profile as a deprecated alias for --pack", () => {
@@ -221,7 +234,8 @@ test("createManifest records managed inventory, visible inventory, and explicit 
   assert.deepEqual(manifest.managed.mcp, ["context7", "grep_app", "exa"])
   assert.deepEqual(manifest.visible.skills, resolved.skills)
   assert.deepEqual(manifest.visible.agents, resolved.agents)
-  assert.deepEqual(manifest.explicit, { added: [], removed: [] })
+  assert.deepEqual(manifest.explicit, { added: [] })
+  assert.deepEqual(manifest.excluded, [])
 })
 
 test("manifestPathFor points to the target .opencode manifest", () => {
@@ -243,10 +257,28 @@ test("addVisibleItem and removeVisibleItem preserve explicit intent", () => {
   assert.deepEqual(manifest.managed.skills, ["alloy-tdd", "frontend-ui-ux"])
   assert.deepEqual(manifest.visible.skills, ["alloy-tdd", "frontend-ui-ux"])
   assert.deepEqual(manifest.explicit.added, ["frontend-ui-ux"])
+  assert.deepEqual(manifest.excluded, [])
+  assert.equal("removed" in manifest.explicit, false)
 
   removeVisibleItem(manifest, "skills", "alloy-tdd")
   assert.deepEqual(manifest.visible.skills, ["frontend-ui-ux"])
-  assert.deepEqual(manifest.explicit.removed, ["alloy-tdd"])
+  assert.deepEqual(manifest.excluded, ["alloy-tdd"])
+  assert.equal("removed" in manifest.explicit, false)
+})
+
+test("normalizeManifest migrates legacy explicit.removed into top-level excluded", () => {
+  const manifest = normalizeManifest({
+    version: "0.1.0",
+    installedAt: "2026-05-26T00:00:00.000Z",
+    pack: "core",
+    models: "github-copilot",
+    managed: { skills: ["alloy-tdd"], agents: ["Orchestrator"], commands: [], mcp: [] },
+    visible: { skills: [], agents: ["Orchestrator"] },
+    explicit: { added: ["humanizer"], removed: ["alloy-tdd"] },
+  })
+
+  assert.deepEqual(manifest.explicit, { added: ["humanizer"] })
+  assert.deepEqual(manifest.excluded, ["alloy-tdd"])
 })
 
 test("createGlobalState records global install state and vendor lock hash", () => {

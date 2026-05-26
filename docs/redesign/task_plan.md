@@ -4,7 +4,7 @@
 
 ## Goal (Q1 — decided)
 
-Redesign opencode-team-config / OpenCode Alloy as a fusion of GSD + OMO Slim + SuperPower **best ideas** (not as a wrapper for them).
+Redesign opencode-alloy / OpenCode Alloy as a fusion of GSD + OMO Slim + SuperPower **best ideas** (not as a wrapper for them).
 
 **Three co-equal goals:**
 
@@ -148,7 +148,8 @@ NO third "team-private overlay" tier (YAGNI):
   "scope": "frontend",
   "managed": ["alloy-tdd","alloy-plan","vercel-react",...],  ← Alloy installs/updates these
   "visible": ["alloy-tdd","alloy-plan"],                      ← agent sees these (subset of managed)
-  "explicit": ["kotlin-jpa"]                                  ← user-added cross-scope, never auto-removed
+  "explicit": { "added": ["kotlin-jpa"] },                     ← user-added cross-scope, never auto-removed
+  "excluded": ["vercel-react"]                                ← user-hidden, sticky across sync
 }
 ```
 
@@ -161,7 +162,7 @@ Plugin's `experimental.chat.messages.transform` hook (ported from OMO `filter-av
 | Command | Purpose |
 |---|---|
 | `alloy install` | Idempotent. Sync global (if needed) + sync repo (if in Alloy-aware repo). Smart about state. |
-| `alloy add <skill>` | Add to manifest.visible. If not in manifest.managed, also add to .explicit and physically install. |
+| `alloy add <skill>` | Add to manifest.visible. If not in manifest.managed, also add to manifest.explicit.added and physically install. |
 | `alloy remove <skill>` | Remove from manifest.visible. Adds to manifest.excluded (sticky). |
 | `alloy list` | Show available + visible per current location |
 | `alloy search <term>` | Find skills by name/description/scope |

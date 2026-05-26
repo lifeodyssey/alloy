@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ALLOY_REPO_URL="https://github.com/lifeodyssey/opencode-team-config"
+ALLOY_REPO_URL="https://github.com/lifeodyssey/opencode-alloy"
 ALLOY_REF="${ALLOY_INSTALL_REF:-main}"
 ALLOY_PACK="${ALLOY_PACK:-core}"
 DOWNLOAD_DIR=""
 BIN_DIR="${HOME}/.local/bin"
-INSTALL_ROOT="${HOME}/.local/share/alloy/opencode-team-config"
+INSTALL_ROOT="${HOME}/.local/share/alloy/opencode-alloy"
 ALLOY_BIN="${BIN_DIR}/alloy"
 ALLOY_CONFIG_DIR="${HOME}/.config/alloy"
 STATE_PATH="${ALLOY_CONFIG_DIR}/state.json"

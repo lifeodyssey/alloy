@@ -11,7 +11,7 @@ Skills under `skills/` that we author and own:
 - `alloy-using`, `alloy-brainstorm`, `alloy-plan`, `alloy-execute`, `alloy-tdd`, `alloy-debug`, `alloy-verify`, `alloy-discuss`, `alloy-map-codebase`, `alloy-autopilot`, `alloy-qa`
 - `frontend-ui-ux`, `playwright-cli`, `git-master`, `humanizer`, `using-sandboxes`
 
-Authors:  contributors of the `opencode-team-config` (Alloy) project.
+Authors:  contributors of the `opencode-alloy` (Alloy) project.
 
 These skills absorb design ideas from the projects listed below; see each SKILL.md's "Attribution" section for specifics.
 
@@ -168,4 +168,4 @@ Vendored content retains upstream licenses. No copyleft (no GPL/AGPL) content is
 
 Where upstream content is incorporated into first-party Alloy skills (absorbed concepts rather than verbatim copies), the Attribution section of each SKILL.md identifies the source.
 
-If you believe content has been misattributed or used outside its license terms, please open an issue at [opencode-team-config issues](https://github.com/lifeodyssey/opencode-team-config/issues).
+If you believe content has been misattributed or used outside its license terms, please open an issue at [opencode-alloy issues](https://github.com/lifeodyssey/opencode-alloy/issues).
