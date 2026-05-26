@@ -1,10 +1,16 @@
 {
   "atoms": {
-    "alloy-core-skills": {
+    "alloy-baseline-5": {
       "skills": [
         "alloy-tdd",
         "alloy-brainstorm",
         "alloy-debug",
+        "git-master",
+        "humanizer"
+      ]
+    },
+    "alloy-workflow-extras": {
+      "skills": [
         "alloy-plan",
         "alloy-discuss",
         "alloy-execute",
@@ -13,12 +19,6 @@
         "alloy-autopilot",
         "alloy-map-codebase",
         "alloy-qa"
-      ]
-    },
-    "alloy-baseline-skills": {
-      "skills": [
-        "git-master",
-        "humanizer"
       ]
     },
     "ralph-loop-skills": {

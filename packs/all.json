@@ -3,8 +3,8 @@
   "description": "OpenCode Alloy all pack: every first-party and licensed third-party skill.",
   "target": "local",
   "extends": [
-    "alloy-core-skills",
-    "alloy-baseline-skills",
+    "alloy-baseline-5",
+    "alloy-workflow-extras",
     "ralph-loop-skills",
     "alloy-v3-agents",
     "alloy-v3-modelRoles",
