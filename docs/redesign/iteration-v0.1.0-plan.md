@@ -99,17 +99,17 @@ pinned_at: 2026-05-25
 
 - **Scope:** Add SDD-style phase slash commands that delegate to corresponding alloy-* skills
 - **Files changed:**
-  - `commands/plan.md` (NEW — invoke alloy-plan, write to `.alloy/specs/<id>/task_plan.md`)
+  - `commands/plan.md` (NEW — invoke alloy-plan, write to `.alloy/plans/<id>/plan.md`)
   - `commands/execute.md` (NEW — invoke alloy-execute, dispatch per-task subagents, 4 status codes)
   - `commands/verify.md` (NEW — invoke alloy-verify, write verification.md)
-  - `commands/spec.md` (NEW — invoke alloy-brainstorm to write `## Spec` section)
+  - `commands/plan.md` (NEW — invoke alloy-plan to write design context and implementation tasks)
   - `commands/discuss.md` (NEW — invoke alloy-discuss for context.md, optional pre-spec)
   - `commands/autopilot.md` (NEW — invoke alloy-autopilot, chain phases unattended)
   - Old commands: `commands/ultrawork.md`, `start-work.md`, `refactor.md`, `handoff.md`, `init-deep.md`, `stop-continuation.md`, `ulw-loop.md` — keep for backward compat but mark deprecated in header
 - **AC:**
   - [ ] 6 new commands exist with frontmatter (description, agent)
   - [ ] Each command's body invokes the right alloy-* skill
-  - [ ] Each command writes outputs to `.alloy/specs/<id>/` (per Q5 Manus pattern)
+  - [ ] Each command writes outputs to `.alloy/plans/<id>/` (per Q5 Manus pattern)
   - [ ] `bash setup.sh --pack core --target local` then `ls .opencode/commands/` shows new commands
 - **Dependencies:** None
 - **Wave:** 1
@@ -225,7 +225,7 @@ pinned_at: 2026-05-25
   - [ ] NEW: `experimental.chat.messages.transform` — `filter-available-skills` port from OMO. Reads `alloy.manifest.json` and filters `<available_skills>` block per agent + manifest.visible
   - [ ] NEW: `experimental.chat.system.transform` — inject `.alloy/projections/status.md` cleaner than chat.message text part
   - [ ] NEW: `experimental.session.compacting` — inject ledger summary so memory survives compaction
-  - [ ] NEW: `command.execute.before` — intercept `/add`, `/spec`, `/plan`, `/execute`, `/verify`, `/autopilot` slash commands; for `/add` invoke alloy via Bash tool
+  - [ ] NEW: `command.execute.before` — intercept `/add`, `/plan`, `/plan`, `/execute`, `/verify`, `/autopilot` slash commands; for `/add` invoke alloy via Bash tool
   - [ ] NEW: `tool.definition` (optional) — rewrite bash/write descriptions to remind about gates
   - [ ] Magic detection: on `config` hook, check state.json + manifest staleness, surface warnings via chat.message
   - [ ] Port OMO `json-error-recovery` (~40 lines, pure string ops)

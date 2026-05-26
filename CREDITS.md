@@ -8,7 +8,7 @@ Our own first-party Alloy content is **MIT** unless otherwise noted in the indiv
 
 Skills under `skills/` that we author and own:
 
-- `alloy-using`, `alloy-brainstorm`, `alloy-plan`, `alloy-execute`, `alloy-tdd`, `alloy-debug`, `alloy-verify`, `alloy-discuss`, `alloy-map-codebase`, `alloy-autopilot`, `alloy-qa`
+- `alloy-using`, `alloy-plan`, `alloy-execute`, `alloy-tdd`, `alloy-debug`, `alloy-verify`, `alloy-discuss`, `alloy-map-codebase`, `alloy-autopilot`, `alloy-qa`
 - `frontend-ui-ux`, `playwright-cli`, `git-master`, `humanizer`, `using-sandboxes`
 
 Authors:  contributors of the `alloy` (Alloy) project.
@@ -20,7 +20,7 @@ These skills absorb design ideas from the projects listed below; see each SKILL.
 ### obra/superpowers (MIT)
 
 - **Iron Law pattern** (no production code without failing test, no fixes without root cause investigation, no completion claims without fresh evidence) — adopted in `alloy-tdd`, `alloy-debug`, `alloy-verify`
-- **HARD-GATE blocks** for required user approval — adopted in `alloy-brainstorm`
+- **HARD-GATE blocks** for required user approval — adopted in `alloy-plan`
 - **Red-Green-Refactor cycle structure** + Good/Bad examples — adopted in `alloy-tdd`
 - **Multi-component debug instrumentation pattern** — adopted in `alloy-debug`
 - **3+ failed-fixes = question architecture** — adopted in `alloy-debug`

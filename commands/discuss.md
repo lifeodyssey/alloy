@@ -1,19 +1,19 @@
 ---
-description: Clarify ambiguous work before writing an Alloy spec
+description: Clarify ambiguous work before writing an Alloy plan
 agent: alloy-orchestrator
 ---
 
 # /discuss
 
-Extract decision-locked context for a future Alloy spec.
+Extract decision-locked context for a future Alloy plan.
 
 ## Workflow
 
 1. Invoke the `alloy-discuss` skill.
-2. Identify or create a stable spec id for `.alloy/specs/<id>/`.
+2. Identify or create a stable plan id for `.alloy/plans/<id>/`.
 3. Read prior Alloy state, project guidance, and relevant codebase context.
 4. Identify specific gray areas, discuss selected decisions with the user, and record outcomes.
-5. Write output to `.alloy/specs/<id>/context.md`.
+5. Write output to `.alloy/plans/<id>/context.md`.
 
 ## User Task
 

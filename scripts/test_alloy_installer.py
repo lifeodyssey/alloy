@@ -100,9 +100,8 @@ class AlloyInstallerTest(unittest.TestCase):
             backend = skill_names(root / "backend")
             infra = skill_names(root / "infra")
 
-        baseline = {"alloy-tdd", "alloy-brainstorm", "alloy-debug", "git-master", "humanizer"}
+        baseline = {"alloy-tdd", "alloy-plan", "alloy-debug", "git-master", "humanizer"}
         workflow_extras = {
-            "alloy-plan",
             "alloy-discuss",
             "alloy-execute",
             "alloy-verify",
@@ -145,6 +144,18 @@ class AlloyInstallerTest(unittest.TestCase):
         safety_net_rules = {(rule["subcommand"], tuple(rule["block_args"])) for rule in safety_net["rules"]}
         self.assertIn(("am", ("--no-verify",)), safety_net_rules)
         self.assertIn(("am", ("-n",)), safety_net_rules)
+
+    def test_install_migrates_legacy_specs_dir_to_plans_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            legacy_dir = cwd / ".alloy" / "specs" / "demo"
+            legacy_dir.mkdir(parents=True)
+            (legacy_dir / "plan.md").write_text("# Demo\n", encoding="utf-8")
+
+            run_setup(cwd, "--pack", "core", "--target", "local")
+
+            self.assertFalse((cwd / ".alloy" / "specs").exists())
+            self.assertTrue((cwd / ".alloy" / "plans" / "demo" / "plan.md").exists())
 
     def test_install_writes_manifest_with_managed_visible_and_explicit_sections(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -418,7 +429,7 @@ class AlloyInstallerTest(unittest.TestCase):
 
         inline_equivalent_skills = [
             "alloy-tdd",
-            "alloy-brainstorm",
+            "alloy-plan",
             "alloy-debug",
             "git-master",
             "humanizer",
@@ -432,7 +443,6 @@ class AlloyInstallerTest(unittest.TestCase):
             "discuss",
             "execute",
             "plan",
-            "spec",
             "verify",
             "handoff",
             "init-deep",

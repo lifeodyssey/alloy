@@ -437,7 +437,7 @@
     <div class="arch-item"><b>~/.config/alloy/state.json</b><br>机器级"全局装过没"标记</div>
     <div class="arch-item"><b>&lt;target&gt;/.opencode/</b> （repo tier）<br>scope-specific 内容</div>
     <div class="arch-item"><b>&lt;target&gt;/.opencode/alloy.manifest.json</b><br>repo 级 visible 列表 + 版本</div>
-    <div class="arch-item"><b>&lt;target&gt;/.alloy/specs/&lt;id&gt;/</b><br>task_plan.md + findings.md + progress.md + verification.md</div>
+    <div class="arch-item"><b>&lt;target&gt;/.alloy/plans/&lt;id&gt;/</b><br>plan.md + findings.md + progress.md + verification.md</div>
     <div class="arch-item"><b>&lt;target&gt;/.alloy/state/</b><br>tasks/evidence/claims/runs JSONL</div>
     <div class="arch-item"><b>&lt;target&gt;/.alloy/projections/</b><br>status.md / current-plan.md（生成）</div>
     <div class="arch-item"><b>&lt;target&gt;/.alloy/local/</b><br>gitignored，个人 dev override</div>
@@ -491,7 +491,7 @@
       <li><b>tool.execute.after</b>：每次工具调用写 evidence</li>
       <li><b>experimental.chat.messages.transform</b>：按 manifest filter skill（核心）</li>
       <li><b>experimental.session.compacting</b>：注入 ledger 摘要防 context 漂移</li>
-      <li><b>command.execute.before</b>：拦 /add /spec /plan slash command</li>
+      <li><b>command.execute.before</b>：拦 /add /plan slash command</li>
       <li><b>event hook</b>：所有 event 写 runs.jsonl</li>
       <li><b>4 个 tool</b>：alloy_evidence/claim/state/gate（agent 主动调）</li>
     </ul>
@@ -507,7 +507,7 @@
       <li>调 OpenCode built-in tool（read/write/edit/bash）</li>
       <li>调 MCP tool（context7/postgres/figma 等）</li>
       <li>调 plugin tool（alloy_evidence 记录证据）</li>
-      <li>遵守 phase artifact 约定（写 task_plan.md 等）</li>
+      <li>遵守 phase artifact 约定（写 plan.md 等）</li>
       <li>遇到 gate fail 回头修，不强推</li>
       <li>跨 specialist 通过 git commit / branch handoff</li>
     </ul>
@@ -529,7 +529,7 @@
       派 <b>Explorer</b> 读现状<br>
       派 <b>Architect</b> 写 plan.md
     </div>
-    <div class="phase-output">输出: .alloy/specs/&lt;id&gt;/task_plan.md（强制 ## Spec + ## Plan 双章节）+ findings.md + progress.md</div>
+    <div class="phase-output">输出: .alloy/plans/&lt;id&gt;/plan.md（含设计、验收标准、任务计划）+ findings.md + progress.md</div>
   </div>
   <div class="phase-box">
     <div class="phase-name">Execute 阶段</div>
@@ -576,7 +576,7 @@
   <div class="agent-card">
     <div class="name">Architect</div>
     <div class="role">写 plan.md</div>
-    <div class="desc">设计决策、技术选型、写 ## Spec + ## Plan 双章节。源覆盖审计。原 alloy-planner 改名。</div>
+    <div class="desc">设计决策、技术选型、写 approved plan.md。源覆盖审计。原 alloy-planner 改名。</div>
     <div class="phase-tag">主要在 Plan 阶段</div>
   </div>
   <div class="agent-card">
@@ -630,13 +630,13 @@
       <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
     </div>
     <div class="card universal">
-      <div class="name">alloy-brainstorm</div>
+      <div class="name">alloy-plan</div>
       <div class="desc">探索阶段 HARD-GATE + 2-3 方案对比</div>
       <div class="meta"><span class="badge alloy">Alloy</span><span class="badge">增强</span></div>
     </div>
     <div class="card universal">
       <div class="name">alloy-plan</div>
-      <div class="desc">写 plan.md（含 Spec + Plan 双章节强制）</div>
+      <div class="desc">写 plan.md（含设计、验收标准、任务计划）</div>
       <div class="meta"><span class="badge new">NEW</span><span class="badge alloy">Alloy</span></div>
     </div>
     <div class="card universal">
@@ -1067,7 +1067,7 @@ $ alloy install
   ├─→ 检测 .alloy/alloy.project.json 或自动推断 scope=frontend
   ├─→ 从公共 repo 复制 scopes/frontend/ 到 .opencode/
   ├─→ 写 .opencode/alloy.manifest.json (visible + managed 列表)
-  └─→ 写 .alloy/specs/ 空骨架</pre>
+  └─→ 写 .alloy/plans/ 空骨架</pre>
 </div>
 
 <div class="data-flow">
@@ -1091,8 +1091,8 @@ command.execute.before hook 拦截
   ↓
 Explorer 读现有 auth 模块 (subagent task)
   ↓
-Architect 写 .alloy/specs/&lt;uuid&gt;/task_plan.md
-  - 强制 ## Spec 章节
+Architect 写 .alloy/plans/&lt;uuid&gt;/plan.md
+  - 强制设计和验收标准章节
   - 强制 ## Plan 章节
   - alloy-plan skill 提供 SOP
   ↓
@@ -1155,7 +1155,7 @@ Agent 这条消息开始能用 vercel-react skill
       <li>Q2 受众 = D（dogfood + OSS 双线）</li>
       <li>Q3 OMO 式分级路由</li>
       <li>Q4 B：中央 3 阶段 + 阶段内派 specialist</li>
-      <li>Q5 X：3 阶段 plan/execute/verify + Manus plan.md（含 ## Spec + ## Plan）</li>
+      <li>Q5 X：3 阶段 plan/execute/verify + Manus plan.md（含设计、验收标准、任务计划）</li>
       <li>Q6 6 specialist + 1 router</li>
       <li>Q7 文件 + JSONL 混合存储</li>
       <li>Q8 2-tier 物理装 + manifest 可见性 filter</li>
@@ -1186,7 +1186,7 @@ Agent 这条消息开始能用 vercel-react skill
 </div>
 
 <footer>
-  <p><b>文件位置</b>：所有决策细节在 <code>docs/redesign/task_plan.md</code>；研究依据在 <code>docs/redesign/findings.md</code>；进度跟踪在 <code>docs/redesign/progress.md</code>。</p>
+  <p><b>文件位置</b>：所有决策细节在 <code>docs/redesign/plan.md</code>；研究依据在 <code>docs/redesign/findings.md</code>；进度跟踪在 <code>docs/redesign/progress.md</code>。</p>
   <p>这个 overview 覆盖到 Q10 候选清单全部。Q11 OSS 治理（license / versioning / contribution）待 Q10 收口后开始。</p>
 </footer>
 

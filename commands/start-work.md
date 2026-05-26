@@ -1,5 +1,5 @@
 ---
-description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Resume or start an Alloy workflow session
+description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Resume or start an Alloy workflow session
 agent: Orchestrator
 ---
 
@@ -18,7 +18,7 @@ Use this command to resume planned work from Alloy state.
 3. If a plan exists, find the first incomplete card or missing gate.
 4. If a worktree is needed and not already active, use the Alloy branch/worktree naming convention from the orchestrator prompt.
 5. Resume at the first missing step:
-   - fuzzy scope: use `alloy-brainstorm` and update the current plan
+   - fuzzy scope: use `alloy-plan` and update the current plan
    - missing plan: write or update `.alloy/projections/current-plan.md`
    - work incomplete: execute the next bounded card with `alloy-tdd`
    - implementation done but not reviewed: ask `@Reviewer`

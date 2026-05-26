@@ -58,14 +58,14 @@ Plan phase  →  Execute phase  →  Verify phase
 Plan-phase artifact follows **Manus pattern** (not single plan.md):
 
 ```
-.alloy/specs/<id>/
-  task_plan.md     ← MUST contain ## Spec + ## Plan sections (gate-enforced)
+.alloy/plans/<id>/
+  plan.md     ← MUST contain design, acceptance criteria, and ## Plan sections (gate-enforced)
   findings.md      ← discoveries made during planning/execution
   progress.md      ← checkbox tracking, survives /clear
   verification.md  ← Verify-phase artifact
 ```
 
-**Small tasks**: `## Spec` section can be 1 line. Gate enforces presence not length.
+**Small tasks**: design context can be 1 line. Gate enforces presence not length.
 
 ### Q6: Specialists — 6 task-typed + 1 router
 
@@ -98,7 +98,7 @@ Migration from current 6 agents:
 ```
 .alloy/
   specs/<id>/                  ← Markdown files (human + agent friendly)
-    task_plan.md
+    plan.md
     findings.md
     progress.md
     verification.md

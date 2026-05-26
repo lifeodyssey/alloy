@@ -63,7 +63,7 @@
 
 ### OMO Slim 和 SuperPower 在哪（Q2 的答案）
 
-- **SuperPower** (`obra/superpowers` v5.1.0)：仅 vendor 3 个 SKILL.md 原文到 `vendor/skills/superpowers/5.1.0/{brainstorming,systematic-debugging,test-driven-development}/` 作 reference，不被任何 pack include。概念被 `alloy-tdd/alloy-brainstorm/alloy-debug` 吸收重写。
+- **SuperPower** (`obra/superpowers` v5.1.0)：仅 vendor 3 个 SKILL.md 原文到 `vendor/skills/superpowers/5.1.0/{brainstorming,systematic-debugging,test-driven-development}/` 作 reference，不被任何 pack include。概念被 `alloy-tdd/alloy-plan/alloy-debug` 吸收重写。
 - **OMO Slim** (`alvinunreal/oh-my-opencode-slim`)：**完全没 vendor 代码**，只 port 3 个 hook 概念到 `alloy-plugin.ts`：`maybeRecoverToolJson` (json-error-recovery) / `maybeDelegateTaskRetry` (delegate-task-retry) / `maybePhaseReminder` (phase-reminder)。
 
 ## 三种 paradigm 对比（已研究）

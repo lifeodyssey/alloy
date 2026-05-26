@@ -1,5 +1,5 @@
 ---
-description: DEPRECATED v0.1.0 — use /spec /plan /execute /verify instead. Continue Alloy review/fix/verify loops until completion or escalation
+description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Continue Alloy review/fix/verify loops until completion or escalation
 agent: Orchestrator
 ---
 

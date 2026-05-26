@@ -92,11 +92,11 @@ digraph alloy_skill_flow {
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** — alloy-brainstorm, alloy-debug, alloy-discuss decide HOW to approach.
-2. **Implementation skills second** — alloy-tdd, alloy-plan, alloy-execute carry out the work.
+1. **Process skills first** — alloy-plan, alloy-debug, alloy-discuss decide HOW to approach.
+2. **Implementation skills second** — alloy-tdd and alloy-execute carry out the work.
 3. **Quality skills last** — alloy-verify, alloy-review gate the completion.
 
-"Let's build X" → `alloy-brainstorm` first, then `alloy-plan`, then `alloy-execute`.
+"Let's build X" → `alloy-plan` first, then `alloy-execute`.
 "Fix this bug" → `alloy-debug` first, then `alloy-tdd` for regression test.
 "Stress-test my plan" → `grill-me` or `grill-with-docs` (Matt Pocock skills, vendored).
 
@@ -104,7 +104,7 @@ When multiple skills could apply, use this order:
 
 **Rigid** (alloy-tdd, alloy-debug, alloy-verify): Follow exactly. Don't adapt away discipline.
 
-**Flexible** (alloy-discuss, alloy-brainstorm): Adapt principles to context.
+**Flexible** (alloy-discuss, alloy-plan): Adapt principles to context.
 
 The skill itself tells you which via its frontmatter and HARD-GATE blocks.
 
@@ -118,7 +118,7 @@ Plan phase  →  Execute phase  →  Verify phase
 
   alloy-plan      alloy-execute     alloy-verify
   alloy-discuss   alloy-tdd         alloy-review
-  alloy-brainstorm alloy-debug      alloy-respond-review
+  alloy-debug                      alloy-respond-review
 ```
 
 For ad-hoc work (typo fix, single-file edit), you can skip the phase ceremony. For anything multi-step, run the phases.

@@ -35,14 +35,14 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             opencode = root / "opencode"
             (root / "agents").mkdir()
             (root / "agents" / "Orchestrator.md").write_text(
-                "Invoke alloy-tdd, alloy-brainstorm, alloy-debug, @Architect, "
+                "Invoke alloy-tdd, alloy-plan, alloy-debug, @Architect, "
                 "use context7, and use exa.",
                 encoding="utf-8",
             )
             (opencode / "skills" / "alloy-tdd").mkdir(parents=True)
             (opencode / "skills" / "alloy-tdd" / "SKILL.md").write_text("# Alloy TDD")
-            (opencode / "skills" / "alloy-brainstorm").mkdir(parents=True)
-            (opencode / "skills" / "alloy-brainstorm" / "SKILL.md").write_text("# Alloy Brainstorm")
+            (opencode / "skills" / "alloy-plan").mkdir(parents=True)
+            (opencode / "skills" / "alloy-plan" / "SKILL.md").write_text("# Alloy Plan")
             (opencode / "skills" / "alloy-debug").mkdir(parents=True)
             (opencode / "skills" / "alloy-debug" / "SKILL.md").write_text("# Alloy Debug")
             (opencode / "agents").mkdir(parents=True)
@@ -57,7 +57,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
 
         self.assertEqual(by_ref["alloy-tdd"].actual_name, "alloy-tdd")
         self.assertTrue(by_ref["alloy-tdd"].opencode_visible)
-        self.assertTrue(by_ref["alloy-brainstorm"].opencode_visible)
+        self.assertTrue(by_ref["alloy-plan"].opencode_visible)
         self.assertTrue(by_ref["alloy-debug"].opencode_visible)
         self.assertTrue(by_ref["@Architect"].opencode_visible)
         self.assertTrue(by_ref["context7"].opencode_visible)

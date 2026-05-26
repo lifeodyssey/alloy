@@ -172,11 +172,11 @@ For multi-step work (a full plan execution), apply at TWO levels:
 - Status code DONE requires verification evidence
 
 **Per-spec verify** (here, at end of plan execution):
-- Re-read `## Spec` acceptance criteria
+- Re-read the plan acceptance criteria
 - For each criterion → identify proof command → run → record evidence
 - Run full test suite
 - Run lint + typecheck + build (whatever the project has)
-- Emit `verification.md` to `.alloy/specs/<id>/verification.md` with the matrix
+- Emit `verification.md` to `.alloy/plans/<id>/verification.md` with the matrix
 
 ```markdown
 # Verification for <feature>
@@ -213,4 +213,4 @@ This is non-negotiable.
 
 Fuses:
 - **obra/superpowers** verification-before-completion — Iron Law, Gate Function, Common Failures table, Red Flags, Rationalization Prevention, Key Patterns (MIT)
-- **Alloy** — gate-check binding to `.alloy/state/{evidence,claims}.jsonl`, two-level verify (per-task + per-spec), `.alloy/specs/<id>/verification.md` artifact convention
+- **Alloy** — gate-check binding to `.alloy/state/{evidence,claims}.jsonl`, two-level verify (per-task + per-plan), `.alloy/plans/<id>/verification.md` artifact convention

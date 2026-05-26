@@ -8,9 +8,9 @@
 - [x] **Q2**: Audience — **D** (dogfood + OSS double-track)
 - [x] **Q3**: Workflow stance — **OMO-style tiered routing** (router is mandated; what gets routed is opinion)
 - [x] **Q4**: Phases × specialists combo — **B** (central pipeline, each phase dispatches specialists)
-- [x] **Q5**: Phase count + artifact shape — **X** (3 phases: plan/execute/verify; plan artifact follows Manus pattern with ## Spec + ## Plan sections enforced)
+- [x] **Q5**: Phase count + artifact shape — **X** (3 phases: plan/execute/verify; plan artifact follows Manus pattern with design, acceptance criteria, and Plan tasks enforced)
 - [x] **Q6**: Specialist catalog — **6 task-typed + 1 router** (Explorer / Architect / Builder / Fixer / Reviewer / Tester + Orchestrator)
-- [x] **Q7**: Artifact storage — **Option 3** (Markdown for human-readable docs in `.alloy/specs/<id>/`; JSONL for machine state in `.alloy/state/`; generated projections in `.alloy/projections/`)
+- [x] **Q7**: Artifact storage — **Option 3** (Markdown for human-readable docs in `.alloy/plans/<id>/`; JSONL for machine state in `.alloy/state/`; generated projections in `.alloy/projections/`)
 - [x] **Q8**: Distribution model — **2-tier physical install + manifest-driven visibility filter** (pre-install all, filter at runtime via OMO hook; `alloy install`/`add`/`remove`/`list`; state.json + manifest as truth; M3 magic warns not auto-installs; `/add` slash command zero-restart)
 - [x] **Q9**: Sandbox — **Container Use opt-in atom + `using-sandboxes` educational skill**, prereq-checked (Docker/OrbStack/colima/Podman + container-use binary). microsandbox/Firecracker moved to future roadmap.
 - [ ] **Q10**: First-party vs vendor split — which skills we author, which we vendor + update sync
@@ -30,8 +30,8 @@
 1. alloy-using (bootstrap)
 2. alloy-tdd (3-way: SuperPower + Matt Pocock + team-tdd legacy)
 3. alloy-debug (SuperPower + GSD framing + 3-fix gate)
-4. alloy-brainstorm (SuperPower + alloy spec output)
-5. alloy-plan (SuperPower writing-plans + alloy task_plan.md format)
+4. alloy-plan (SuperPower + alloy spec output)
+5. alloy-plan (SuperPower writing-plans + alloy plan.md format)
 6. alloy-execute (SuperPower executing-plans + alloy evidence)
 7. alloy-verify (SuperPower verification + alloy gate)
 8. alloy-discuss (GSD + alloy artifact)
@@ -105,14 +105,14 @@
 
 When resuming:
 1. **First read `HANDOFF.md`** — full resume state from 2026-05-26 handoff
-2. Read `task_plan.md` for current state of decisions
+2. Read `plan.md` for current state of decisions
 3. Read `findings.md` for research basis
 4. Read `iteration-v0.1.0-plan.md` for Wave 1-5 implementation plan
 5. Continue per HANDOFF.md "Resume plan" section
 
 ## Files created/modified this session
 
-- `docs/redesign/task_plan.md` — Goal + Q1-Q7 decisions + Q8-Q11 open + planned implementation phases
+- `docs/redesign/plan.md` — Goal + Q1-Q7 decisions + Q8-Q11 open + planned implementation phases
 - `docs/redesign/findings.md` — 16 consolidated findings from 14+ sub-agent dispatches
 - `docs/redesign/progress.md` — this file
 

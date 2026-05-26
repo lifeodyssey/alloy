@@ -72,8 +72,7 @@ Net change: +1 agent (+Explorer, +Builder/Fixer split, -Debugger merged). Each a
 | Skill | v2 | v3 | Note |
 |---|---|---|---|
 | alloy-using | — | **140 lines** | NEW bootstrap |
-| alloy-brainstorm | 29 lines | **194 lines** | Absorbed SuperPower brainstorming + HARD-GATE + spec self-review |
-| alloy-plan | — | **181 lines** | NEW (absorbed SuperPower writing-plans + GSD source coverage audit) |
+| alloy-plan | 29 lines + NEW planning content | **323 lines** | Merged SuperPower brainstorming, writing-plans, HARD-GATE, and GSD source coverage audit |
 | alloy-execute | — | **167 lines + 199 ref lines** | NEW (absorbed SuperPower executing-plans + subagent-driven + 3 reviewer/implementer prompt templates as references) |
 | alloy-tdd | 60 lines | **333 lines + 194 ref lines** | Absorbed SuperPower TDD (full) + Matt Pocock vertical slicing + team-tdd legacy + 5 Matt Pocock deep-reference files |
 | alloy-debug | 23 lines | **304 lines + 627 ref lines** | Absorbed SuperPower systematic-debugging + GSD framing + 3 SuperPower deep-reference files + 2 helper scripts |
@@ -125,7 +124,7 @@ Net change: +1 agent (+Explorer, +Builder/Fixer split, -Debugger merged). Each a
 
 | Skill | v2 | v3 | Note |
 |---|---|---|---|
-| superpowers/brainstorming | vendored | **DELETED** | Absorbed into alloy-brainstorm |
+| superpowers/brainstorming | vendored | **DELETED** | Absorbed into alloy-plan |
 | superpowers/systematic-debugging | vendored | **DELETED** | Absorbed into alloy-debug |
 | superpowers/test-driven-development | vendored | **DELETED** | Absorbed into alloy-tdd |
 | superpowers/using-git-worktrees | — | **NEW vendored** | Independent skill, no overlap |
@@ -179,7 +178,7 @@ User explicitly decided **no AWS/Terraform/Postgres MCP** — skills over MCPs f
 | | v2 | v3 |
 |---|---|---|
 | Hooks used | 6 | 11+ |
-| New hooks | — | `config` (boot mutation), `experimental.chat.messages.transform` (per-agent skill filter — the killer feature), `experimental.chat.system.transform` (cleaner status injection), `experimental.session.compacting` (ledger summary survives compaction), `command.execute.before` (`/add /spec /plan` slash command interception) |
+| New hooks | — | `config` (boot mutation), `experimental.chat.messages.transform` (per-agent skill filter — the killer feature), `experimental.chat.system.transform` (cleaner status injection), `experimental.session.compacting` (ledger summary survives compaction), `command.execute.before` (`/add /plan` slash command interception) |
 | Dangerous command guard | inline `isDangerousCommand` regex (hardcoded) | **cc-safety-net** plugin (semantic AST, bash wrapper detection, 13 built-in rules + our 7 no-verify rules as `.safety-net.json` project overlay) |
 | OMO Slim ports | none | `filter-available-skills` (manifest-driven visibility), `json-error-recovery`, `delegate-task-retry`, `phase-reminder` (TBW) |
 | Memory | none | `opencode-working-memory` plugin (zero-config, no API key) |
@@ -211,7 +210,7 @@ User explicitly decided **no AWS/Terraform/Postgres MCP** — skills over MCPs f
 |---|---|---|
 | `.alloy/state/` | tasks.jsonl, evidence.jsonl, runs.jsonl | Same (machine state) |
 | `.alloy/projections/` | status.md, current-plan.md | Same (generated views) |
-| `.alloy/specs/<id>/` | not used | task_plan.md (with `## Spec` + `## Plan` sections — Manus pattern), findings.md, progress.md, verification.md, optional context.md |
+| `.alloy/plans/<id>/` | not used | plan.md (with design, acceptance criteria, and `## Plan` tasks), findings.md, progress.md, verification.md, optional context.md |
 | `.alloy/codebase/` | not used | architecture.md, modules.md, boundaries.md (from alloy-map-codebase) |
 | `.alloy/policies/` | claims.md, tdd.md, review.md, debug.md | Possibly consolidated into one `CONSTITUTION.md` (TBD) |
 | `.alloy/local/` | not used | gitignored per-dev overlay (Cursor model) |
@@ -303,7 +302,7 @@ To re-run the grill or extend the design:
 
 ## The 3 hardest decisions in this redesign (post-mortem)
 
-1. **"Fuse vs vendor" policy crystalized late.** Early conversations conflated absorbing concepts (e.g., alloy-tdd from SuperPower TDD) with vendoring intact skills (e.g., grill-me from Matt Pocock). The crystallization rule — "vendor when we don't need to modify, absorb when we add Alloy-specific hooks" — only emerged in Q10. Going forward, this rule prevents the "ship two slightly-different brainstorm skills" bug we accidentally had in v2 (alloy-brainstorm + vendored superpowers/brainstorming both fired).
+1. **"Fuse vs vendor" policy crystalized late.** Early conversations conflated absorbing concepts (e.g., alloy-tdd from SuperPower TDD) with vendoring intact skills (e.g., grill-me from Matt Pocock). The crystallization rule — "vendor when we don't need to modify, absorb when we add Alloy-specific hooks" — only emerged in Q10. Going forward, this rule prevents the "ship two slightly-different brainstorm skills" bug we accidentally had in v2 (alloy-plan + vendored superpowers/brainstorming both fired).
 
 2. **"Manifest-driven visibility" was the unlock for distribution UX.** Original plan was install-time `--without` flag (hack). Real solution was pre-install everything + runtime filter via OMO's `filter-available-skills` hook. This single decision (Q8) made `alloy add` zero-restart, kept `.opencode/skills/` self-contained, and let one install serve a polyrepo with different scopes per directory.
 
