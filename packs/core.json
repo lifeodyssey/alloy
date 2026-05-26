@@ -9,6 +9,8 @@
     "alloy-v3-modelRoles",
     "alloy-sdd-commands",
     "alloy-legacy-commands",
-    "mcp-baseline"
+    "mcp-baseline",
+    "mattpocock-handoff",
+    "core-infrastructure"
   ]
 }

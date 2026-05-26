@@ -192,3 +192,26 @@ Vendored content retains upstream licenses. No copyleft (no GPL/AGPL) content is
 Where upstream content is incorporated into first-party Alloy skills (absorbed concepts rather than verbatim copies), the Attribution section of each SKILL.md identifies the source.
 
 If you believe content has been misattributed or used outside its license terms, please open an issue at [alloy issues](https://github.com/lifeodyssey/alloy/issues).
+
+## v0.1.2 Additions
+
+### Matt Pocock handoff skill (MIT)
+
+- **`handoff` productivity skill** — vendored verbatim to `vendor/skills/external/mattpocock/main/handoff/`
+
+Repo: https://github.com/mattpocock/skills
+Upstream path: `skills/productivity/handoff`
+
+### OpenCode Dynamic Context Pruning (AGPL-3.0-or-later)
+
+- **`@tarquinen/opencode-dcp` optional OpenCode plugin** — referenced by the opt-in `dcp` pack, not vendored
+- **Dynamic context pruning** for token reduction, with the cache trade-off documented in `packs/dcp.json`
+
+Package: https://www.npmjs.com/package/@tarquinen/opencode-dcp
+
+### CodeGraph + RTK core infrastructure (TBD - vendoring strategy)
+
+- **CodeGraph** — intended AST/code graph infrastructure, but `codegraph` and `@anthropic-ai/codegraph` did not resolve as npm plugin packages during this pass
+- **RTK / Rust Token Killer** — intended CLI output/token compression infrastructure, but `rtk` did not resolve as an npm plugin package during this pass
+
+Strategy: keep `core-infrastructure` as an empty plugin atom until the install source is confirmed, then add the exact package/source with its license and lock metadata.

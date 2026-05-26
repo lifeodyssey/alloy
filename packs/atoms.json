@@ -100,6 +100,15 @@
       "skills": [
         "terraform-skill"
       ]
+    },
+    "mattpocock-handoff": {
+      "skills": [
+        "handoff"
+      ]
+    },
+    "core-infrastructure": {
+      "skills": [],
+      "plugins": []
     }
   }
 }
