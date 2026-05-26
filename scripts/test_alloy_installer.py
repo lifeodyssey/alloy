@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_VERSION = json.loads((ROOT / "package.json").read_text())["version"]
 SETUP = ROOT / "setup.sh"
 ALLOY = ROOT / "bin" / "alloy.mjs"
 BASH = shutil.which("bash") or "bash"
@@ -152,7 +153,7 @@ class AlloyInstallerTest(unittest.TestCase):
             run_alloy(cwd, "install", "--pack", "core", "--target", "local")
             manifest = read_manifest(cwd)
 
-        self.assertEqual(manifest["version"], "0.1.0")
+        self.assertEqual(manifest["version"], PACKAGE_VERSION)
         self.assertEqual(manifest["pack"], "core")
         self.assertEqual(manifest["models"], "github-copilot")
         self.assertIn("alloy-tdd", manifest["managed"]["skills"])
@@ -190,7 +191,7 @@ class AlloyInstallerTest(unittest.TestCase):
             run_alloy(cwd, "install", "--pack", "core", "--target", "global", env={"HOME": str(home)})
             state = json.loads((home / ".config" / "alloy" / "state.json").read_text())
 
-        self.assertEqual(state["version"], "0.1.0")
+        self.assertEqual(state["version"], PACKAGE_VERSION)
         self.assertEqual(state["pack"], "core")
         self.assertIn("alloy-tdd", state["managed"]["skills"])
         self.assertRegex(state["lastSyncedVendorLock"], r"^[a-f0-9]{64}$")
