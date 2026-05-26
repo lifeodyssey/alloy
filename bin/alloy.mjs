@@ -7,7 +7,8 @@ import { spawnSync } from "node:child_process"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
-export const DEFAULTS = JSON.parse(readFileSync(join(REPO_ROOT, "defaults.json"), "utf8"))
+const DEFAULTS_PATH = join(REPO_ROOT, "defaults.json")
+export const DEFAULTS = loadDefaults()
 const OPENCODE_PLUGIN_VERSION = DEFAULTS.plugin["@opencode-ai/plugin"]
 const ZOD_VERSION = DEFAULTS.plugin.zod
 const MCP_CONFIGS = DEFAULTS.mcp
@@ -44,6 +45,18 @@ const PACK_ALIASES = {
   profile: "core",
 }
 const DEFAULT_PROJECT_CONFIG = ".alloy/alloy.project.json"
+
+function loadDefaults() {
+  try {
+    return JSON.parse(readFileSync(DEFAULTS_PATH, "utf8"))
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      console.error(`ERROR: Missing defaults.json at ${DEFAULTS_PATH}. Ensure you are running alloy from the repo root.`)
+      process.exit(1)
+    }
+    throw error
+  }
+}
 
 function usage() {
   return `OpenCode Alloy
@@ -549,7 +562,8 @@ function cleanupDeprecated(targetDir, dryRun = false) {
 }
 
 function writeOpenCodeConfig(resolved, dryRun = false) {
-  const config = {
+  const configPath = join(resolved.targetDir, "opencode.json")
+  const generated = {
     "$schema": "https://opencode.ai/config.json",
     autoupdate: false,
     default_agent: "Orchestrator",
@@ -557,7 +571,33 @@ function writeOpenCodeConfig(resolved, dryRun = false) {
     agent: agentModelConfig(resolved.models),
     mcp: resolved.mcp,
   }
-  writeJson(join(resolved.targetDir, "opencode.json"), config, dryRun)
+  const config = resolved.target === "global" && pathExists(configPath)
+    ? mergeOpenCodeConfig(readJson(configPath), generated)
+    : generated
+  writeJson(configPath, config, dryRun)
+}
+
+function mergeOpenCodeConfig(existing, generated) {
+  const merged = mergeConfigValue(generated, existing)
+  merged.plugin = unique([...(Array.isArray(existing.plugin) ? existing.plugin : []), ...(Array.isArray(generated.plugin) ? generated.plugin : [])])
+  merged.mcp = { ...(generated.mcp ?? {}), ...(existing.mcp ?? {}) }
+  return merged
+}
+
+function mergeConfigValue(generated, existing) {
+  if (isPlainObject(generated) && isPlainObject(existing)) {
+    const merged = {}
+    for (const key of unique([...Object.keys(generated), ...Object.keys(existing)])) {
+      merged[key] = mergeConfigValue(generated[key], existing[key])
+    }
+    return merged
+  }
+  if (existing !== undefined) return existing
+  return generated
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
 }
 
 function agentModelConfig(models) {
@@ -613,6 +653,17 @@ function doctorCommand(options, projectDir = process.cwd()) {
   const failures = []
   const warnings = []
   failures.push(...validatePackRefs(resolved.pack, resolved.project.repoKind))
+  failures.push(...validateVendorLock())
+  failures.push(...validateRootOpencodeConfig())
+  if (!pathExists(resolved.targetDir)) {
+    if (failures.length) {
+      for (const failure of failures) console.error(`FAIL: ${failure}`)
+      return 1
+    }
+    console.log("OK: packs, defaults, and vendor lock passed")
+    console.log("Run alloy install first for full doctor")
+    return 0
+  }
   if (resolved.runtimes.node && !which("node")) failures.push("Node.js is required for Alloy SDK")
   if (resolved.runtimes.bun && !which("bun")) failures.push("Bun is required for Alloy OpenCode plugin dependencies")
   if (!which("opencode")) warnings.push("opencode is not on PATH; install OpenCode before using generated configs")
@@ -626,10 +677,7 @@ function doctorCommand(options, projectDir = process.cwd()) {
   if (zodVersion && zodVersion !== ZOD_VERSION) {
     failures.push(`Installed zod version ${zodVersion} does not match pinned ${ZOD_VERSION}`)
   }
-  if (pathExists(resolved.targetDir)) failures.push(...validateTargetFiles(resolved))
-  else failures.push(`Target directory does not exist: ${resolved.targetDir}`)
-  failures.push(...validateVendorLock())
-  failures.push(...validateRootOpencodeConfig())
+  failures.push(...validateTargetFiles(resolved))
   if (failures.length) {
     for (const failure of failures) console.error(`FAIL: ${failure}`)
     for (const warning of warnings) console.error(`WARN: ${warning}`)
