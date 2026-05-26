@@ -1,5 +1,25 @@
 # CLAUDE.md
 
+## Design Beliefs (6 信条)
+
+These guide every architectural decision in alloy. Encode them when adding new features.
+
+1. **最强约束**: 关键流程靠 code 强制 (transition table / capability isolation / hook block)，**不**靠 prompt 建议
+2. **Plugin-first, CLI-minimal**: 用户日常在 chat 里完成所有操作。CLI 只用于 `install` / `doctor` / `completion`
+3. **不替用户做选择**: install 时 prompt 让用户选 (像 npx skills)。User overlay (用户手动装的 skill) 默认全 visible
+4. **Vendor over rewrite**: 上游 skills 走 inline copy + alloy append，**不重写不删除**
+5. **状态外置但极简**: JSONL append-only ledger + state machine guard table。**不上数据库** (永远)
+6. **零依赖运行时**: `.mjs` + zod + jsdoc。**没 build step**。Install 即可用
+
+## What Alloy is NOT
+
+- ❌ Not a chat UI (用户在 OpenCode/Claude Code 现有 UI 里工作)
+- ❌ Not an LLM agent (alloy 是给 agent 套规则的外壳，不是 agent 本身)
+- ❌ Not a SaaS (本地跑，状态在 repo 里)
+- ❌ Not a framework (不强迫你重写代码，是配置+集成)
+
+---
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What This Repo Is
