@@ -119,6 +119,8 @@
     "sha256": "<placeholder>",
     "paths": [
       "vendor/skills/external/ralph-loop"
-    ]
+    ],
+    "vendoredAt": "2026-05-26",
+    "upstreamPath": "skills/ralph-loop"
   }
 ]
