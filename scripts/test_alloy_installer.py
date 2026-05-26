@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -9,26 +10,29 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SETUP = ROOT / "setup.sh"
 ALLOY = ROOT / "bin" / "alloy.mjs"
+BASH = shutil.which("bash") or "bash"
+NODE = shutil.which("node") or "node"
 
 
-def run_setup(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+def run_setup(cwd: Path, *args: str, check: bool = True, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["bash", str(SETUP), *args],
+        [BASH, str(SETUP), *args],
         cwd=cwd,
         text=True,
         capture_output=True,
         check=check,
+        env={**os.environ, **(env or {})},
     )
 
 
 def run_alloy(cwd: Path, *args: str, check: bool = True, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["node", str(ALLOY), *args],
+        [NODE, str(ALLOY), *args],
         cwd=cwd,
         text=True,
         capture_output=True,
         check=check,
-        env=env,
+        env={**os.environ, **(env or {})},
     )
 
 
@@ -44,6 +48,15 @@ def agent_names(cwd: Path) -> set[str]:
 
 def parse_json(stdout: str) -> dict:
     return json.loads(stdout)
+
+
+def read_manifest(cwd: Path) -> dict:
+    return json.loads((cwd / ".opencode" / "alloy.manifest.json").read_text())
+
+
+def make_executable(path: Path, text: str) -> None:
+    path.write_text(text)
+    path.chmod(0o755)
 
 
 class AlloyInstallerTest(unittest.TestCase):
@@ -132,6 +145,181 @@ class AlloyInstallerTest(unittest.TestCase):
         safety_net_rules = {(rule["subcommand"], tuple(rule["block_args"])) for rule in safety_net["rules"]}
         self.assertIn(("am", ("--no-verify",)), safety_net_rules)
         self.assertIn(("am", ("-n",)), safety_net_rules)
+
+    def test_install_writes_manifest_with_managed_visible_and_explicit_sections(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_alloy(cwd, "install", "--pack", "core", "--target", "local")
+            manifest = read_manifest(cwd)
+
+        self.assertEqual(manifest["version"], "0.1.0")
+        self.assertEqual(manifest["pack"], "core")
+        self.assertEqual(manifest["models"], "github-copilot")
+        self.assertIn("alloy-tdd", manifest["managed"]["skills"])
+        self.assertIn("Orchestrator", manifest["managed"]["agents"])
+        self.assertIn("plan", manifest["managed"]["commands"])
+        self.assertEqual(manifest["managed"]["mcp"], ["context7", "grep_app", "exa"])
+        self.assertEqual(manifest["visible"]["skills"], manifest["managed"]["skills"])
+        self.assertEqual(manifest["visible"]["agents"], manifest["managed"]["agents"])
+        self.assertEqual(manifest["explicit"], {"added": [], "removed": []})
+
+    def test_global_install_writes_alloy_state_under_home(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp) / "repo"
+            home = Path(tmp) / "home"
+            cwd.mkdir()
+            run_alloy(cwd, "install", "--pack", "core", "--target", "global", env={"HOME": str(home)})
+            state = json.loads((home / ".config" / "alloy" / "state.json").read_text())
+
+        self.assertEqual(state["version"], "0.1.0")
+        self.assertEqual(state["pack"], "core")
+        self.assertIn("alloy-tdd", state["managed"]["skills"])
+        self.assertRegex(state["lastSyncedVendorLock"], r"^[a-f0-9]{64}$")
+
+    def test_add_installs_cross_scope_skill_and_updates_manifest_visibility(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_alloy(cwd, "install", "--pack", "core")
+            run_alloy(cwd, "add", "frontend-ui-ux")
+            manifest = read_manifest(cwd)
+
+            self.assertTrue((cwd / ".opencode" / "skills" / "frontend-ui-ux" / "SKILL.md").is_file())
+            self.assertIn("frontend-ui-ux", manifest["managed"]["skills"])
+            self.assertIn("frontend-ui-ux", manifest["visible"]["skills"])
+            self.assertIn("frontend-ui-ux", manifest["explicit"]["added"])
+
+    def test_remove_hides_skill_and_records_removed_choice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_alloy(cwd, "install", "--pack", "core")
+            run_alloy(cwd, "remove", "alloy-tdd")
+            manifest = read_manifest(cwd)
+
+        self.assertIn("alloy-tdd", manifest["managed"]["skills"])
+        self.assertNotIn("alloy-tdd", manifest["visible"]["skills"])
+        self.assertIn("alloy-tdd", manifest["explicit"]["removed"])
+
+    def test_list_and_installed_alias_show_manifest_inventory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_alloy(cwd, "install", "--pack", "core")
+            plain = run_alloy(cwd, "list")
+            alias = run_alloy(cwd, "list", "--installed")
+
+        self.assertIn("Managed skills", plain.stdout)
+        self.assertIn("Visible skills", plain.stdout)
+        self.assertIn("alloy-tdd", plain.stdout)
+        self.assertEqual(plain.stdout, alias.stdout)
+
+    def test_search_prints_internal_results_and_npx_passthrough(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            fake_bin = cwd / "bin"
+            fake_bin.mkdir()
+            make_executable(fake_bin / "npx", "#!/bin/sh\necho external:$*\n")
+            result = run_alloy(cwd, "search", "react", env={"PATH": f"{fake_bin}:{os.environ['PATH']}"})
+
+        self.assertIn("Internal inventory", result.stdout)
+        self.assertIn("vercel-react-best-practices", result.stdout)
+        self.assertIn("external:skills find react", result.stdout)
+
+    def test_outdated_queries_release_api_and_prints_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            lock = cwd / "vendor.lock.json"
+            lock.write_text(json.dumps([
+                {"name": "demo-skill", "kind": "skill", "source": "https://github.com/acme/demo", "version": "v1.0.0"}
+            ]))
+            result = run_alloy(
+                cwd,
+                "outdated",
+                env={
+                    "ALLOY_VENDOR_LOCK_PATH": str(lock),
+                    "ALLOY_GITHUB_RELEASES_JSON": json.dumps({"acme/demo": "v2.0.0"}),
+                },
+            )
+
+        self.assertIn("name", result.stdout)
+        self.assertIn("installed", result.stdout)
+        self.assertIn("latest", result.stdout)
+        self.assertIn("demo-skill", result.stdout)
+        self.assertIn("v1.0.0", result.stdout)
+        self.assertIn("v2.0.0", result.stdout)
+        self.assertIn("outdated", result.stdout)
+
+    def test_upgrade_name_invokes_revendor_apply_with_resolved_vendor_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            log = cwd / "revendor.log"
+            fake = cwd / "fake-revendor.mjs"
+            fake.write_text("import { appendFileSync } from 'node:fs'; appendFileSync(process.env.ALLOY_REVENDOR_LOG, process.argv.slice(2).join(' ') + '\\n');\n")
+            run_alloy(cwd, "upgrade", "vercel-react", env={"ALLOY_REVENDOR_SCRIPT": str(fake), "ALLOY_REVENDOR_LOG": str(log)})
+            log_text = log.read_text()
+
+        self.assertIn("--apply vercel-react-best-practices", log_text)
+
+    def test_upgrade_self_runs_curl_install_script(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            fake_bin = cwd / "bin"
+            fake_bin.mkdir()
+            make_executable(fake_bin / "curl", "#!/bin/sh\necho 'echo self-upgrade-script-ran'\n")
+            result = run_alloy(cwd, "upgrade", "--self", env={"PATH": f"{fake_bin}:{os.environ['PATH']}"})
+
+        self.assertIn("self-upgrade-script-ran", result.stdout)
+
+    def test_upgrade_all_vendors_revendors_outdated_entries(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            lock = cwd / "vendor.lock.json"
+            log = cwd / "revendor.log"
+            fake = cwd / "fake-revendor.mjs"
+            lock.write_text(json.dumps([
+                {"name": "demo-skill", "kind": "skill", "source": "https://github.com/acme/demo", "version": "v1.0.0"}
+            ]))
+            fake.write_text("import { appendFileSync } from 'node:fs'; appendFileSync(process.env.ALLOY_REVENDOR_LOG, process.argv.slice(2).join(' ') + '\\n');\n")
+            run_alloy(
+                cwd,
+                "upgrade",
+                "--all-vendors",
+                env={
+                    "ALLOY_VENDOR_LOCK_PATH": str(lock),
+                    "ALLOY_GITHUB_RELEASES_JSON": json.dumps({"acme/demo": "v2.0.0"}),
+                    "ALLOY_REVENDOR_SCRIPT": str(fake),
+                    "ALLOY_REVENDOR_LOG": str(log),
+                },
+            )
+            log_text = log.read_text()
+
+        self.assertIn("--apply demo-skill", log_text)
+
+    def test_add_container_use_reports_missing_prereqs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            fake_bin = cwd / "empty-bin"
+            fake_bin.mkdir()
+            run_alloy(cwd, "install", "--pack", "core")
+            result = run_alloy(cwd, "add", "container-use", check=False, env={"PATH": str(fake_bin)})
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Missing container-use prerequisites", result.stderr)
+        self.assertIn("brew install container-use", result.stderr)
+
+    def test_add_container_use_enables_mcp_when_prereqs_exist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            fake_bin = cwd / "bin"
+            fake_bin.mkdir()
+            make_executable(fake_bin / "docker", "#!/bin/sh\nexit 0\n")
+            make_executable(fake_bin / "container-use", "#!/bin/sh\nexit 0\n")
+            run_alloy(cwd, "install", "--pack", "core")
+            run_alloy(cwd, "add", "container-use", env={"PATH": str(fake_bin)})
+            manifest = read_manifest(cwd)
+            config = json.loads((cwd / ".opencode" / "opencode.json").read_text())
+
+        self.assertIn("container-use", manifest["managed"]["mcp"])
+        self.assertIn("using-sandboxes", manifest["visible"]["skills"])
+        self.assertTrue(config["mcp"]["container-use"]["enabled"])
 
     def test_resolve_uses_project_config_when_pack_and_models_are_omitted(self):
         with tempfile.TemporaryDirectory() as tmp:
