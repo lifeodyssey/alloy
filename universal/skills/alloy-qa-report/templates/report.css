@@ -1,0 +1,95 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  color: #1a1a2e;
+  background: #f4f6f9;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+h2 { font-size: 1.2rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+
+.report-header {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.report-meta { color: #666; font-size: 0.85rem; margin: 0.25rem 0 0.75rem; }
+.report-meta span { margin-right: 1rem; }
+.task-id { font-weight: 600; color: #333; }
+
+.health-summary { display: flex; align-items: center; gap: 0.75rem; font-size: 1.5rem; font-weight: 700; }
+.health-score { padding: 0.25rem 0.75rem; border-radius: 6px; background: #e8ecf0; }
+.health-score.final { color: #fff; }
+.arrow { color: #aaa; }
+.delta { font-size: 1rem; }
+
+.health-positive { background: #16a34a; }
+.delta-positive { color: #16a34a; }
+.health-neutral  { background: #ca8a04; }
+.delta-neutral   { color: #ca8a04; }
+.health-negative { background: #dc2626; }
+.delta-negative  { color: #dc2626; }
+
+section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+table { width: 100%; border-collapse: collapse; }
+th { background: #f8fafc; text-align: left; padding: 0.5rem 0.75rem; font-size: 0.8rem; text-transform: uppercase; color: #666; border-bottom: 2px solid #e2e8f0; }
+td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+.total-row td { background: #f8fafc; font-weight: 600; }
+
+.kind-badge, .status-badge, .severity-critical, .severity-high, .severity-medium, .severity-low {
+  display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+}
+.kind-happy    { background: #dcfce7; color: #166534; }
+.kind-edge     { background: #fef9c3; color: #854d0e; }
+.kind-error    { background: #fee2e2; color: #991b1b; }
+.status-passed  { background: #dcfce7; color: #166534; }
+.status-failed  { background: #fee2e2; color: #991b1b; }
+.status-skipped { background: #f1f5f9; color: #64748b; }
+.severity-critical { background: #7f1d1d; color: #fff; }
+.severity-high     { background: #fee2e2; color: #991b1b; }
+.severity-medium   { background: #fef9c3; color: #854d0e; }
+.severity-low      { background: #f1f5f9; color: #475569; }
+
+.evidence-links a { margin-right: 0.25rem; text-decoration: none; font-size: 1.1rem; }
+.case-id { font-family: monospace; font-size: 0.8rem; color: #475569; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+figure { background: #f8fafc; border-radius: 6px; overflow: hidden; }
+figure img { width: 100%; height: 140px; object-fit: cover; display: block; }
+figcaption { padding: 0.35rem 0.5rem; font-size: 0.75rem; color: #555; text-align: center; }
+
+.video-wrapper { margin-bottom: 1rem; }
+.video-wrapper p { margin-bottom: 0.5rem; font-weight: 500; color: #333; }
+video { border-radius: 6px; }
+
+.ship-readiness {
+  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center;
+}
+.ship-ready    { background: #dcfce7; color: #166534; }
+.ship-review   { background: #fef9c3; color: #854d0e; }
+.ship-blocked  { background: #fee2e2; color: #991b1b; }

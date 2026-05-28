@@ -1,8 +1,9 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import { z } from "zod"
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { createHash, randomUUID } from "node:crypto"
+import { execSync } from "node:child_process"
 
 interface AlloyManifest {
   version: string
@@ -568,6 +569,142 @@ function rewriteToolDefinition(input: { toolID: string }, output: { description:
   if (!output.description.includes("Alloy gate")) output.description = `${output.description}${hint}`
 }
 
+// === QA Profile helpers ===
+
+interface ProfileCredentials {
+  username?: string
+  password?: string
+  totp?: string
+  [key: string]: string | undefined
+}
+
+interface Profile {
+  label: string
+  tenant?: string
+  loginUrl: string
+  credentials: ProfileCredentials
+  storageStatePath: string
+  preFlight?: string[]
+}
+
+interface ProfilesConfig {
+  version: number
+  profiles: Record<string, Profile>
+}
+
+function loadProfiles(directory: string): ProfilesConfig {
+  const path = join(directory, ".alloy", "profiles.json")
+  if (!existsSync(path)) return { version: 1, profiles: {} }
+  return JSON.parse(readFileSync(path, "utf8")) as ProfilesConfig
+}
+
+function alloyHome(directory: string): string {
+  // Returns the alloy source repo root (where skill templates live).
+  // When running from the installed plugin, look for the alloy package in node_modules.
+  // Fall back to the .opencode dir's parent (the project root), then try __dirname navigation.
+  const opencodeDir = join(directory, ".opencode")
+  const pluginPath = join(opencodeDir, "plugins", "alloy.ts")
+  if (existsSync(pluginPath)) {
+    // The skill templates are copied alongside the plugin by the installer:
+    // .opencode/skills/alloy-qa-report/templates/index.html.tpl
+    return opencodeDir
+  }
+  return directory
+}
+
+function renderTemplate(tpl: string, manifest: JsonRecord, opts: { inline: boolean; baseDir: string }): string {
+  // Resolve simple {{var}} substitutions
+  const health = (manifest.health ?? {}) as Record<string, number>
+  const baseline = health.baseline ?? 0
+  const final = health.final ?? 0
+  const delta = final - baseline
+  const deltaStr = delta >= 0 ? `+${delta}` : `${delta}`
+  const healthClass = delta > 0 ? "health-positive" : delta < 0 ? "health-negative" : "health-neutral"
+  const deltaClass = delta > 0 ? "delta-positive" : delta < 0 ? "delta-negative" : "delta-neutral"
+  const shipScore = final >= 90 ? "ship-ready" : final >= 70 ? "ship-review" : "ship-blocked"
+  const shipText = final >= 90 ? "✅ Ready" : final >= 70 ? "⚠️ Needs review" : "❌ Not ready"
+
+  const cases = (manifest.cases ?? []) as JsonRecord[]
+  const issues = (manifest.issues ?? []) as JsonRecord[]
+
+  // Collect all screenshots across all cases
+  const allScreenshots: Array<{ src: string; alt: string }> = []
+  for (const c of cases) {
+    for (const s of (c.screenshots ?? []) as string[]) {
+      allScreenshots.push({ src: s, alt: String(c.id ?? "") })
+    }
+  }
+
+  const videos = cases
+    .filter((c) => c.video)
+    .map((c) => ({ src: String(c.video), label: String(c.id ?? "") }))
+
+  // Simple {{var}} replacement
+  let html = tpl
+    .replace(/{{taskId}}/g, String(manifest.taskId ?? ""))
+    .replace(/{{ts}}/g, String(manifest.ts ?? ""))
+    .replace(/{{profile}}/g, String(manifest.profile ?? ""))
+    .replace(/{{healthBaseline}}/g, String(baseline))
+    .replace(/{{healthFinal}}/g, String(final))
+    .replace(/{{healthDelta}}/g, deltaStr)
+    .replace(/{{healthClass}}/g, healthClass)
+    .replace(/{{deltaClass}}/g, deltaClass)
+    .replace(/{{caseCount}}/g, String(cases.length))
+    .replace(/{{issueCount}}/g, String(issues.length))
+    .replace(/{{shipReadiness}}/g, shipText)
+    .replace(/{{shipClass}}/g, shipScore)
+    .replace(/{{#if hasVideos}}[\s\S]*?{{\/if}}/g, videos.length > 0 ? tpl.match(/{{#if hasVideos}}([\s\S]*?){{\/if}}/)?.[1] ?? "" : "")
+
+  // {{#each cases}} block
+  html = html.replace(/{{#each cases}}([\s\S]*?){{\/each}}/g, (_match, block: string) => {
+    return cases.map((c) => {
+      const screenshots = (c.screenshots ?? []) as string[]
+      const screenshotLinks = screenshots.map((s) => block.replace(/{{#each screenshots}}([\s\S]*?){{\/each}}/g, `<a href="${s}" target="_blank">📸</a>`))
+      return block
+        .replace(/{{id}}/g, String(c.id ?? ""))
+        .replace(/{{title}}/g, String(c.title ?? ""))
+        .replace(/{{kind}}/g, String(c.kind ?? ""))
+        .replace(/{{status}}/g, String(c.status ?? ""))
+        .replace(/{{duration}}/g, String(c.duration ?? ""))
+        .replace(/{{video}}/g, String(c.video ?? ""))
+        .replace(/{{trace}}/g, String(c.trace ?? ""))
+        .replace(/{{#if video}}([\s\S]*?){{\/if}}/g, c.video ? (_m: string, b: string) => b : "")
+        .replace(/{{#if trace}}([\s\S]*?){{\/if}}/g, c.trace ? (_m: string, b: string) => b : "")
+        .replace(/{{#each screenshots}}[\s\S]*?{{\/each}}/g, screenshotLinks.join(""))
+    }).join("\n")
+  })
+
+  // {{#each issues}} block
+  html = html.replace(/{{#each issues}}([\s\S]*?){{\/each}}/g, (_match, block: string) => {
+    return issues.map((iss) =>
+      block
+        .replace(/{{id}}/g, String(iss.id ?? ""))
+        .replace(/{{severity}}/g, String(iss.severity ?? ""))
+        .replace(/{{status}}/g, String(iss.status ?? ""))
+        .replace(/{{commit}}/g, String(iss.commit ?? ""))
+    ).join("\n")
+  })
+
+  // {{#each allScreenshots}} block
+  html = html.replace(/{{#each allScreenshots}}([\s\S]*?){{\/each}}/g, (_match, block: string) => {
+    return allScreenshots.map((s) =>
+      block.replace(/{{src}}/g, s.src).replace(/{{alt}}/g, s.alt)
+    ).join("\n")
+  })
+
+  // {{#each videos}} block
+  html = html.replace(/{{#each videos}}([\s\S]*?){{\/each}}/g, (_match, block: string) => {
+    return videos.map((v) =>
+      block.replace(/{{src}}/g, v.src).replace(/{{label}}/g, v.label)
+    ).join("\n")
+  })
+
+  // {{#each categories}} block — categories not in manifest, emit empty
+  html = html.replace(/{{#each categories}}[\s\S]*?{{\/each}}/g, "")
+
+  return html
+}
+
 export const AlloyPlugin: Plugin = async ({ directory }) => {
   const projectDir = resolve(directory)
   let bootWarnings: string[] = []
@@ -749,6 +886,171 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
           return `Run: alloy gate check --task-id ${args.taskId} --json\n${capHint}`
         },
       }),
+
+      alloy_load_profile: tool({
+        description:
+          "Resolve a QA profile from .alloy/profiles.json: shell `op read` for each op:// credential ref, write env file (chmod 600) to .alloy/run/<runId>/env, return env path + storageState path + runId. Requires OP_SERVICE_ACCOUNT_TOKEN in environment.",
+        args: {
+          profile: tool.schema.string(),
+          purpose: tool.schema.string().optional(),
+        },
+        async execute(args) {
+          const cfg = loadProfiles(projectDir)
+          const p = cfg.profiles[args.profile]
+          if (!p) {
+            const available = Object.keys(cfg.profiles).join(", ") || "(none — create .alloy/profiles.json)"
+            throw new Error(`Unknown profile: ${args.profile}. Available: ${available}`)
+          }
+          const resolved: Record<string, string> = {}
+          const opEnv = {
+            ...process.env,
+            OP_SERVICE_ACCOUNT_TOKEN: process.env.OP_SERVICE_ACCOUNT_TOKEN ?? "",
+          }
+          for (const [key, val] of Object.entries(p.credentials)) {
+            if (typeof val === "string" && val.startsWith("op://")) {
+              try {
+                resolved[key] = execSync(`op read "${val}"`, { env: opEnv }).toString().trim()
+              } catch (err: any) {
+                throw new Error(`op read failed for ${key}: ${err.message ?? String(err)}`)
+              }
+            } else if (typeof val === "string") {
+              resolved[key] = val
+            }
+          }
+          const runId = randomUUID().slice(0, 8)
+          const envDir = join(projectDir, ".alloy", "run", runId)
+          mkdirSync(envDir, { recursive: true })
+          const envPath = join(envDir, "env")
+          writeFileSync(envPath, JSON.stringify(resolved), { mode: 0o600 })
+          appendJsonl(projectDir, "evidence", {
+            id: randomUUID(),
+            kind: "qa_profile_loaded",
+            profile: args.profile,
+            purpose: args.purpose ?? "qa",
+            runId,
+            ts: new Date().toISOString(),
+          })
+          return JSON.stringify({
+            envPath,
+            storageStatePath: p.storageStatePath,
+            runId,
+            ttl: 900,
+          })
+        },
+      }),
+
+      alloy_resolve_otp: tool({
+        description:
+          "Pull a fresh TOTP code for a 1Password op:// reference. Returns the code to the caller but masks it in evidence. Requires OP_SERVICE_ACCOUNT_TOKEN.",
+        args: {
+          opRef: tool.schema.string(),
+        },
+        async execute(args) {
+          const opEnv = {
+            ...process.env,
+            OP_SERVICE_ACCOUNT_TOKEN: process.env.OP_SERVICE_ACCOUNT_TOKEN ?? "",
+          }
+          let code: string
+          try {
+            code = execSync(`op read "${args.opRef}"`, { env: opEnv }).toString().trim()
+          } catch (err: any) {
+            throw new Error(`op read failed: ${err.message ?? String(err)}`)
+          }
+          // Mask: replace everything after the last "/" with "***"
+          const refMasked = args.opRef.replace(/[^/]+$/, "***")
+          appendJsonl(projectDir, "evidence", {
+            id: randomUUID(),
+            kind: "qa_otp_resolved",
+            refMasked,
+            ts: new Date().toISOString(),
+          })
+          return JSON.stringify({
+            code,
+            codeMaskedForChat: "******",
+            validUntil: new Date(Date.now() + 30000).toISOString(),
+          })
+        },
+      }),
+
+      alloy_generate_qa_report: tool({
+        description:
+          "Render .alloy/qa-reports/<ts>/index.html from manifest.json + alloy-qa-report skill template. Auto-invoked by alloy-qa Phase 10. CLI parallel: `alloy qa-report <ts>`. Pass inline=true to base64-embed artifacts (single-file, limit 10MB).",
+        args: {
+          ts: tool.schema.string(),
+          inline: tool.schema.string().optional(),
+        },
+        async execute(args) {
+          const shouldInline = args.inline === "true" || args.inline === "1"
+          const dir = join(projectDir, ".alloy", "qa-reports", args.ts)
+          const manifestFile = join(dir, "manifest.json")
+          if (!existsSync(manifestFile)) {
+            throw new Error(`manifest.json not found at ${manifestFile}`)
+          }
+          const manifest = JSON.parse(readFileSync(manifestFile, "utf8")) as JsonRecord
+
+          // Find the template: try installed skills dir first, then fall back
+          const skillsDir = join(alloyHome(projectDir), "skills")
+          const tplPath = join(skillsDir, "alloy-qa-report", "templates", "index.html.tpl")
+          if (!existsSync(tplPath)) {
+            throw new Error(`Template not found: ${tplPath}. Ensure alloy-qa-report skill is installed.`)
+          }
+          const tpl = readFileSync(tplPath, "utf8")
+
+          // Check total artifact size for inline mode
+          if (shouldInline) {
+            let totalBytes = 0
+            const artifactDirs = ["screenshots", "videos"]
+            for (const sub of artifactDirs) {
+              const subDir = join(dir, sub)
+              if (existsSync(subDir)) {
+                for (const f of readdirSync(subDir)) {
+                  try { totalBytes += statSync(join(subDir, f)).size } catch { /* skip */ }
+                }
+              }
+            }
+            if (totalBytes > 10 * 1024 * 1024) {
+              appendJsonl(projectDir, "evidence", {
+                id: randomUUID(),
+                kind: "qa_report_inline_skipped",
+                reason: `artifacts ${Math.round(totalBytes / 1024 / 1024)}MB > 10MB limit`,
+                ts: new Date().toISOString(),
+              })
+            }
+          }
+
+          const html = renderTemplate(tpl, manifest, { inline: shouldInline, baseDir: dir })
+          const outPath = join(dir, "index.html")
+          writeFileSync(outPath, html, "utf8")
+
+          const cases = (manifest.cases ?? []) as JsonRecord[]
+          appendJsonl(projectDir, "evidence", {
+            id: randomUUID(),
+            kind: "qa_report_generated",
+            path: outPath,
+            caseCount: cases.length,
+            ts: new Date().toISOString(),
+          })
+          return `Report: ${outPath}`
+        },
+      }),
+    },
+
+    "session.end": async () => {
+      // Clean up run-scoped env files that hold resolved 1Password secrets.
+      // This runs even if alloy_load_profile was never explicitly unloaded,
+      // ensuring secrets never survive a session boundary.
+      const runBase = join(projectDir, ".alloy", "run")
+      if (!existsSync(runBase)) return
+      try {
+        for (const runId of readdirSync(runBase)) {
+          const envFile = join(runBase, runId, "env")
+          if (existsSync(envFile)) {
+            rmSync(envFile, { force: true })
+          }
+        }
+      } catch {
+        // Best-effort cleanup — do not throw from session.end
+      }
     },
 
     alloy: {

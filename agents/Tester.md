@@ -45,6 +45,9 @@ Invoke relevant skills before acting:
 - Use `alloy-verify` before accepting completion claims.
 - Use `alloy-debug` when a verification failure needs root-cause investigation.
 - Use `playwright-cli` or `alloy-qa` for browser-facing work when available.
+- Use `alloy-qa-ingest` BEFORE `alloy-qa` when QA work derives from an ADO card. This loads the work item, resolves credentials via 1Password, and pulls Figma design assets into `source.json`.
+- Use `alloy-qa-derive` when an AC list needs systematic test case generation. Produces `cases.json` (Gherkin + assertions) that `alloy-qa` Phase 4 will execute directly instead of exploratory clicking.
+- Use `alloy-qa-report` to bundle evidence from a completed QA run into a navigable `index.html` with screenshots grid, video embeds, and case pass/fail matrix. Also auto-invoked by `alloy-qa` Phase 10 via `alloy_generate_qa_report` plugin tool.
 
 If verification cannot run, report exactly why and identify the next command that would prove the claim.
 

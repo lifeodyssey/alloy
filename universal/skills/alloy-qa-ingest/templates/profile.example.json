@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "profiles": {
+    "example-tenant-external": {
+      "_comment": "Rename this key to match your tenant/role (e.g. acme-external). Run `alloy doctor qa` after editing.",
+      "label": "Example Tenant (external user)",
+      "tenant": "REPLACE_WITH_TENANT_DOMAIN",
+      "loginUrl": "https://REPLACE_WITH_APP_URL/login",
+      "credentials": {
+        "_comment": "Replace op:// refs with your 1Password vault paths. Format: op://VaultName/ItemName/field",
+        "username": "op://VAULT_NAME/ITEM_NAME/username",
+        "password": "op://VAULT_NAME/ITEM_NAME/password",
+        "totp":     "op://VAULT_NAME/ITEM_NAME/one-time-password"
+      },
+      "storageStatePath": ".alloy/profiles/storage/example-tenant-external.json",
+      "preFlight": []
+    },
+    "example-tenant-admin": {
+      "_comment": "Internal/admin role profile. Add as many profiles as you have test roles.",
+      "label": "Example Tenant (internal admin)",
+      "loginUrl": "https://REPLACE_WITH_ADMIN_URL/sso",
+      "credentials": {
+        "username": "op://VAULT_NAME/ADMIN_ITEM/username",
+        "password": "op://VAULT_NAME/ADMIN_ITEM/password",
+        "totp":     "op://VAULT_NAME/ADMIN_ITEM/one-time-password"
+      },
+      "storageStatePath": ".alloy/profiles/storage/example-tenant-admin.json"
+    }
+  }
+}
