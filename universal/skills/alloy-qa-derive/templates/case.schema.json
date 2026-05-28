@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://alloy.lifeodyssey.dev/schemas/cases.json",
+  "title": "Alloy QA Cases",
+  "description": "Executable test cases derived from a source.json by alloy-qa-derive.",
+  "type": "object",
+  "required": ["taskId", "generatedAt", "model", "cases"],
+  "properties": {
+    "taskId": { "type": "string", "description": "Work item ID matching source.json id" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "model": { "type": "string", "description": "Model used for derivation" },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "ac", "kind", "title", "profile", "gherkin", "assertions"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^.+-TC-[0-9]{3,}$" },
+          "ac": { "type": "string", "description": "AC id this case derives from, e.g. AC-1" },
+          "kind": { "type": "string", "enum": ["happy", "edge", "error"] },
+          "title": { "type": "string", "minLength": 5 },
+          "profile": { "type": "string", "description": "Profile name from profiles.json" },
+          "gherkin": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 3
+          },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "expected"],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["text-visible", "url-match", "element-exists", "element-absent", "console-clean"]
+                },
+                "selector": { "type": "string" },
+                "expected": { "type": "string" }
+              }
+            },
+            "minItems": 1
+          },
+          "figmaAnchor": { "type": ["string", "null"] },
+          "estimatedDuration": { "type": "integer", "minimum": 10 }
+        }
+      }
+    }
+  }
+}

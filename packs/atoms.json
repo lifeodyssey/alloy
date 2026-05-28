@@ -16,8 +16,15 @@
         "alloy-verify",
         "alloy-using",
         "alloy-autopilot",
-        "alloy-map-codebase",
-        "alloy-qa"
+        "alloy-map-codebase"
+      ]
+    },
+    "alloy-qa-team-chain": {
+      "skills": [
+        "alloy-qa",
+        "alloy-qa-ingest",
+        "alloy-qa-derive",
+        "alloy-qa-report"
       ]
     },
     "ralph-loop-skills": {

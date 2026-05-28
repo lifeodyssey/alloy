@@ -109,7 +109,7 @@ class AlloyInstallerTest(unittest.TestCase):
             "alloy-using",
             "alloy-autopilot",
             "alloy-map-codebase",
-            "alloy-qa",
+            # alloy-qa moved to alloy-qa-team-chain atom in v0.1.3
         }
         self.assertEqual(frontend, baseline | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"})
         self.assertEqual(
@@ -656,6 +656,158 @@ class AlloyInstallerTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--target must be local or global", result.stderr)
+
+    # === v0.1.3 QA skill chain tests ===
+
+    def test_qa_team_pack_resolves_all_four_qa_skills(self):
+        """qa-team pack must include alloy-qa, alloy-qa-ingest, alloy-qa-derive, alloy-qa-report."""
+        with tempfile.TemporaryDirectory() as tmp:
+            resolved = parse_json(run_alloy(Path(tmp), "resolve", "--pack", "qa-team", "--json").stdout)
+
+        skills = resolved["pack"]["skills"]
+        for skill in ("alloy-qa", "alloy-qa-ingest", "alloy-qa-derive", "alloy-qa-report"):
+            self.assertIn(skill, skills, f"qa-team pack missing skill: {skill}")
+        # Also includes frontend browser skills
+        self.assertIn("playwright-cli", skills)
+
+    def test_qa_team_pack_installs_qa_skill_files(self):
+        """Installing qa-team pack copies all 4 QA skills into .opencode/skills/."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            run_setup(cwd, "--pack", "qa-team", "--target", "local")
+            installed = skill_names(cwd)
+            for skill in ("alloy-qa", "alloy-qa-ingest", "alloy-qa-derive", "alloy-qa-report"):
+                self.assertIn(skill, installed, f"qa-team install missing skill dir: {skill}")
+                skill_md = cwd / ".opencode" / "skills" / skill / "SKILL.md"
+                self.assertTrue(skill_md.is_file(), f"SKILL.md missing for {skill}")
+
+    def test_source_json_schema_shape(self):
+        """source.json written by alloy-qa-ingest must have required top-level fields."""
+        required_fields = {"id", "title", "url", "state", "iterationPath", "fetchedAt",
+                           "description", "acceptanceCriteria", "assets", "linkedItems", "profilesRequired"}
+        example = {
+            "id": "AB-1234",
+            "title": "User can reset password",
+            "url": "https://dev.azure.com/acme/Project/_workitems/edit/1234",
+            "state": "Active",
+            "iterationPath": "Project\\Sprint 42",
+            "fetchedAt": "2026-05-29T01:30:00Z",
+            "description": "## Acceptance Criteria\n- User clicks Forgot password",
+            "acceptanceCriteria": [{"id": "AC-1", "text": "User clicks Forgot password", "kind": "given"}],
+            "assets": {"figma": [], "attachments": []},
+            "linkedItems": [],
+            "profilesRequired": ["acme-external"],
+        }
+        missing = required_fields - set(example.keys())
+        self.assertEqual(missing, set(), f"source.json schema example missing fields: {missing}")
+        # All required string/array fields are non-empty
+        self.assertTrue(example["id"])
+        self.assertTrue(example["title"])
+        self.assertTrue(example["fetchedAt"])
+        self.assertTrue(len(example["profilesRequired"]) > 0)
+
+    def test_cases_json_schema_shape(self):
+        """cases.json written by alloy-qa-derive must have required fields per case."""
+        example_case = {
+            "id": "AB-1234-TC-001",
+            "ac": "AC-1",
+            "kind": "happy",
+            "title": "External user resets password via email link",
+            "profile": "acme-external",
+            "gherkin": [
+                "Given I am on the login page",
+                "When I click 'Forgot password'",
+                "Then I should see 'Reset link sent'",
+            ],
+            "assertions": [
+                {"kind": "text-visible", "selector": "[data-testid=reset-confirmation]", "expected": "Reset link sent"},
+            ],
+            "figmaAnchor": "node-12-34",
+            "estimatedDuration": 30,
+        }
+        required_case_fields = {"id", "ac", "kind", "title", "profile", "gherkin", "assertions"}
+        missing = required_case_fields - set(example_case.keys())
+        self.assertEqual(missing, set(), f"cases.json case missing fields: {missing}")
+        self.assertIn(example_case["kind"], ("happy", "edge", "error"))
+        self.assertGreaterEqual(len(example_case["gherkin"]), 3)
+        self.assertGreaterEqual(len(example_case["assertions"]), 1)
+        self.assertRegex(example_case["id"], r"^.+-TC-\d{3,}$")
+
+        full_doc = {
+            "taskId": "AB-1234",
+            "generatedAt": "2026-05-29T01:32:00Z",
+            "model": "claude-opus-4-7",
+            "cases": [example_case],
+        }
+        for field in ("taskId", "generatedAt", "model", "cases"):
+            self.assertIn(field, full_doc)
+
+    def test_qa_report_cli_renders_index_html(self):
+        """alloy qa-report <ts> renders index.html from manifest.json + template."""
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            # Install qa-team so the template is present
+            run_setup(cwd, "--pack", "qa-team", "--target", "local")
+
+            # Create a minimal manifest
+            ts = "2026-05-29T01-30-00Z"
+            report_dir = cwd / ".alloy" / "qa-reports" / ts
+            report_dir.mkdir(parents=True)
+            manifest = {
+                "version": 1,
+                "ts": ts,
+                "taskId": "AB-1234",
+                "tier": "standard",
+                "profile": "acme-external",
+                "health": {"baseline": 76, "final": 94, "delta": 18},
+                "cases": [
+                    {
+                        "id": "AB-1234-TC-001",
+                        "title": "Happy path reset",
+                        "kind": "happy",
+                        "status": "passed",
+                        "duration": 28,
+                        "screenshots": ["screenshots/tc-001.png"],
+                        "video": None,
+                        "trace": None,
+                    }
+                ],
+                "issues": [
+                    {"id": "ISSUE-007", "severity": "high", "status": "verified", "commit": "abc123"}
+                ],
+            }
+            (report_dir / "manifest.json").write_text(json.dumps(manifest))
+
+            result = run_alloy(cwd, "qa-report", ts)
+            index_html = report_dir / "index.html"
+
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("QA report written", result.stdout)
+            self.assertTrue(index_html.is_file(), "index.html was not created")
+            content = index_html.read_text()
+            self.assertIn("AB-1234", content)
+            self.assertIn("94", content)   # final health score
+            self.assertIn("ISSUE-007", content)
+
+    def test_doctor_qa_subcommand_runs_and_outputs_checklist(self):
+        """alloy doctor qa outputs the QA checklist items (even if some fail in test env)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_alloy(
+                Path(tmp),
+                "doctor",
+                "qa",
+                check=False,
+                # Strip OP token so we can test the fallback path
+                env={"OP_SERVICE_ACCOUNT_TOKEN": ""},
+            )
+
+        self.assertIn("Alloy Doctor QA", result.stdout)
+        # Should print WARN about OP_SERVICE_ACCOUNT_TOKEN since we blanked it
+        combined = result.stdout + result.stderr
+        self.assertTrue(
+            "OP_SERVICE_ACCOUNT_TOKEN" in combined or "op CLI" in combined,
+            "doctor qa did not check 1Password prerequisites",
+        )
 
 if __name__ == "__main__":
     unittest.main()

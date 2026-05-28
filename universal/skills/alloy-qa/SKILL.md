@@ -123,6 +123,34 @@ Diff current state against `baseline.json` (produced by an earlier QA run). Repo
 
 ## Workflow Phases
 
+### Phase 0: Task Ingestion (delegated)
+
+If QA work derives from an ADO card, invoke `alloy-qa-ingest` first.
+
+```
+/alloy-qa-ingest <ado-url-or-id> --profile <profileName>
+```
+
+`alloy-qa-ingest` resolves credentials, fetches the work item, pulls Figma assets, and writes `.alloy/test-cases/<taskId>/source.json`. Phase 1 of this skill will load that file if present.
+
+Skip Phase 0 if:
+- User passes raw URL only (legacy mode, no ADO card)
+- `source.json` already exists for the task
+
+### Phase 0.5: Case Derivation (delegated)
+
+If `source.json` exists, invoke `alloy-qa-derive` to produce `cases.json`:
+
+```
+/alloy-qa-derive .alloy/test-cases/<taskId>/source.json
+```
+
+`alloy-qa-derive` produces one test case per AC coverage kind (happy + edge + error). Phase 4 of this skill executes those assertions when `cases.json` is present instead of exploratory clicking.
+
+Skip Phase 0.5 if:
+- User passes `--cases <path>` explicitly (cases already prepared)
+- `cases.json` already exists for the task
+
 ### Phase 1: Initialize
 
 - Parse params
@@ -132,7 +160,10 @@ Diff current state against `baseline.json` (produced by an earlier QA run). Repo
 - Detect framework, test runner, package manager, and common route roots
 - Save run metadata to `.alloy/qa-reports/<timestamp>/run.json`
 - Record the starting worktree state and whether fixes are allowed
-- Emit `alloy_evidence { kind: "qa_start", taskId, summary: "tier=<tier>, reportOnly=<bool>, url=<url>" }`
+- **If `cases.json` exists** for the task (at `.alloy/test-cases/<taskId>/cases.json`): load it, record `caseCount` in `run.json`, set `mode: "assertion-driven"`.
+- **If `ALLOY_PROFILE_ENV` env var is set** (written by Phase 0a): read the env file path, bind resolved credentials to session env for use by Phase 3 browser steps.
+- **If source.json exists**: read `assets.figma` and record figma node count in `run.json` as `figmaNodeCount`.
+- Emit `alloy_evidence { kind: "qa_start", taskId, summary: "tier=<tier>, reportOnly=<bool>, url=<url>, caseCount=<N>" }`
 
 Exit criteria:
 
@@ -167,6 +198,8 @@ playwright screenshot --full-page  # save to .alloy/qa-reports/<ts>/<route>.png
 - Build a route inventory with title, status code, main landmarks, visible nav, and key CTAs.
 - Classify each route as marketing, auth, dashboard, form, content, or error/state page.
 - Save desktop and mobile screenshots before interacting.
+- **If `storageStatePath` is available** (from `ALLOY_PROFILE_ENV` or `alloy_load_profile` return): load it as Playwright storage state (`--load-storage <storageStatePath>`) to skip interactive login for the profile's tenant.
+- **If `source.json` exists with Figma assets**: for each route, check which Figma node IDs correspond to that route's path (by matching `source.assets.figma[].label` against route segments). Record mapping in `run.json` as `routeFigmaMap`.
 - Emit `alloy_evidence { kind: "qa_orient", taskId, summary: "N routes inventoried, M console/network failures" }`
 
 Exit criteria:
@@ -175,6 +208,24 @@ Exit criteria:
 - Console and network collection are active before interactions begin.
 
 ### Phase 4: Explore (per-page checklist)
+
+**If `cases.json` is present** (assertion-driven mode): execute the derived test cases instead of exploratory clicking.
+
+For each case in `cases.json`:
+1. Load the profile storage state if `case.profile` is set (same mechanism as Phase 3)
+2. Execute the Gherkin steps as browser actions (Given = navigate/precondition, When = interaction, Then = wait for assertion)
+3. For each assertion in `case.assertions`:
+   - `text-visible`: check that `selector` contains `expected` text
+   - `url-match`: check that current URL includes `expected`
+   - `element-exists`: check that `selector` is present in DOM
+   - `element-absent`: check that `selector` is NOT present
+   - `console-clean`: verify no console errors during the step
+4. Screenshot before and after each When step → save to `screenshots/<caseId>-before.png` and `screenshots/<caseId>-after.png`
+5. Record result: `passed` | `failed` | `skipped`
+6. On failure: capture the exact assertion that failed + console errors + page URL
+7. Emit `alloy_evidence { kind: "qa_case_result", taskId, summary: "<caseId> <passed|failed>" }` per case
+
+**If `cases.json` is NOT present** (exploratory mode — unchanged behavior):
 
 For each page visited, check:
 
@@ -222,7 +273,17 @@ For each bug, write to `.alloy/qa-reports/<ts>/issues.md`:
 - Console error: <copy/paste>
 
 **Source location guess:** <file:line> (filled by Phase 8a)
+
+**Derived from case:** <caseId> (e.g. AB-1234-TC-001) — omit if not from a derived case
 ```
+
+When a bug is discovered during assertion-driven Phase 4 execution (case in `cases.json` failed), add:
+
+```markdown
+**Derived from case:** <caseId>
+```
+
+This links the issue back to the specific test case, AC, and Figma anchor for traceability. Omit the field for bugs found during exploratory mode.
 
 Issue quality bar:
 
@@ -370,7 +431,22 @@ Emit `alloy_evidence { kind: "qa_final", taskId, summary: "Health <after>/100 (<
 
 ## Phase 10: Report
 
-Write `.alloy/qa-reports/<ts>/report.md`:
+**First, write the manifest.** Assemble `.alloy/qa-reports/<ts>/manifest.json` from run data:
+- `version: 1`, `ts`, `taskId` (from source.json if available, else "unknown")
+- `tier`, `profile` (from params)
+- `health`: `{ baseline, final, delta }` from Phase 6 and Phase 9 scores
+- `cases`: for each case in cases.json (if used), record `{ id, status, duration, screenshots, video, trace }`
+- `issues`: for each issue in issues.md, record `{ id, severity, status, commit }`
+
+**Then call `alloy_generate_qa_report`:**
+
+```
+alloy_generate_qa_report({ ts: "<ts>", inline: false })
+```
+
+This renders `.alloy/qa-reports/<ts>/index.html` from `manifest.json` + the `alloy-qa-report` skill template. If the plugin tool is unavailable, invoke `alloy-qa-report` skill directly instead.
+
+**Then write the text summary** `.alloy/qa-reports/<ts>/report.md`:
 
 ```markdown
 # QA Report — <date> — <tier> tier

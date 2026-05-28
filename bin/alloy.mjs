@@ -100,6 +100,8 @@ Usage:
   alloy upgrade --all-vendors
   alloy version
   alloy doctor [--pack core] [--target local]
+  alloy doctor qa
+  alloy qa-report <ts> [--inline]
   alloy completion bash|zsh|fish
   alloy state add-task --title TITLE [--kind code]
   alloy state add-evidence --task-id ID --kind test --summary TEXT
@@ -114,7 +116,7 @@ Aliases:
 }
 
 export function parseArgs(argv) {
-  const commands = new Set(["init", "resolve", "install", "add", "remove", "list", "search", "outdated", "upgrade", "version", "doctor", "completion", "state", "gate", "sync", "help"])
+  const commands = new Set(["init", "resolve", "install", "add", "remove", "list", "search", "outdated", "upgrade", "version", "doctor", "completion", "state", "gate", "sync", "qa-report", "help"])
   let command = commands.has(argv[0]) ? argv.shift() : "install"
   const positionals = []
   const options = {
@@ -190,6 +192,7 @@ export function parseArgs(argv) {
       case "installed":
       case "self":
       case "allVendors":
+      case "inline":
         options[key] = true
         break
       default:
@@ -813,6 +816,241 @@ function validateVendorLock() {
     for (const rel of entry.paths ?? []) if (!pathExists(join(REPO_ROOT, rel))) failures.push(`vendor.lock.json ${label} missing path: ${rel}`)
   }
   return failures
+}
+
+/**
+ * Load .alloy/profiles.json from a project directory.
+ * Exported so the plugin can reuse the same parsing logic.
+ * @param {string} directory
+ * @returns {{ version: number, profiles: Record<string, object> }}
+ */
+export function loadProfiles(directory) {
+  const path = join(directory, ".alloy", "profiles.json")
+  if (!pathExists(path)) return { version: 1, profiles: {} }
+  try {
+    return readJson(path)
+  } catch {
+    return { version: 1, profiles: {} }
+  }
+}
+
+function doctorQaCommand(projectDir = process.cwd()) {
+  console.log("Alloy Doctor QA")
+  const failures = []
+  const warnings = []
+
+  // [REQ] op CLI >= 2.0
+  const opCheck = spawnSync("op", ["--version"], { encoding: "utf8" })
+  if (opCheck.error || opCheck.status !== 0) {
+    failures.push("[REQ] op CLI not found. Install 1Password CLI: https://developer.1password.com/docs/cli/get-started/")
+  } else {
+    const ver = (opCheck.stdout ?? "").trim()
+    const major = parseInt(ver.split(".")[0] ?? "0", 10)
+    if (major < 2) {
+      failures.push(`[REQ] op CLI version ${ver} < 2.0. Upgrade: https://developer.1password.com/docs/cli/`)
+    } else {
+      console.log(`OK: op CLI ${ver}`)
+    }
+  }
+
+  // [REQ] OP_SERVICE_ACCOUNT_TOKEN
+  if (!process.env.OP_SERVICE_ACCOUNT_TOKEN) {
+    warnings.push("[WARN] OP_SERVICE_ACCOUNT_TOKEN not set. alloy_load_profile will fail. Set via: export OP_SERVICE_ACCOUNT_TOKEN=<token>")
+  } else {
+    console.log("OK: OP_SERVICE_ACCOUNT_TOKEN set")
+  }
+
+  // [REQ] .alloy/profiles.json exists and has at least one profile
+  const profilesPath = join(projectDir, ".alloy", "profiles.json")
+  if (!pathExists(profilesPath)) {
+    failures.push("[REQ] .alloy/profiles.json not found. Run: cp <alloy-install>/universal/skills/alloy-qa-ingest/templates/profile.example.json .alloy/profiles.json and edit.")
+  } else {
+    try {
+      const cfg = readJson(profilesPath)
+      const profileCount = Object.keys(cfg.profiles ?? {}).length
+      if (!cfg.version || !cfg.profiles || profileCount === 0) {
+        failures.push("[REQ] .alloy/profiles.json exists but has no profiles. Add at least one profile entry.")
+      } else {
+        console.log(`OK: .alloy/profiles.json (${profileCount} profile(s))`)
+      }
+    } catch (err) {
+      failures.push(`[REQ] .alloy/profiles.json parse error: ${err.message}`)
+    }
+  }
+
+  // [REQ] az CLI present
+  const azCheck = spawnSync("az", ["--version"], { encoding: "utf8" })
+  if (azCheck.error || azCheck.status !== 0) {
+    failures.push("[REQ] az CLI not found. Install Azure CLI: https://learn.microsoft.com/cli/azure/install-azure-cli")
+  } else {
+    const azLine = (azCheck.stdout ?? "").split("\n")[0] ?? ""
+    console.log(`OK: az CLI (${azLine.trim()})`)
+  }
+
+  // [WARN] az account show (login check)
+  const azAccountCheck = spawnSync("az", ["account", "show", "--output", "none"], { encoding: "utf8" })
+  if (azAccountCheck.status !== 0) {
+    warnings.push("[WARN] az account show failed — run `az login` before using alloy-qa-ingest")
+  } else {
+    console.log("OK: az account logged in")
+  }
+
+  // [REQ] FIGMA_PERSONAL_ACCESS_TOKEN
+  if (!process.env.FIGMA_PERSONAL_ACCESS_TOKEN) {
+    failures.push("[REQ] FIGMA_PERSONAL_ACCESS_TOKEN not set. Set via: export FIGMA_PERSONAL_ACCESS_TOKEN=<token>")
+  } else {
+    console.log("OK: FIGMA_PERSONAL_ACCESS_TOKEN set")
+  }
+
+  // [WARN] Figma MCP reachability (best-effort HTTP check via curl/node)
+  const figmaPing = spawnSync("curl", ["-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "5", "https://mcp.figma.com/mcp"], { encoding: "utf8" })
+  if (figmaPing.error) {
+    warnings.push("[WARN] curl not available — cannot verify Figma MCP reachability")
+  } else {
+    const code = (figmaPing.stdout ?? "").trim()
+    if (code === "200" || code === "405" || code === "401" || code === "404") {
+      console.log(`OK: Figma MCP reachable (HTTP ${code})`)
+    } else {
+      warnings.push(`[WARN] Figma MCP https://mcp.figma.com/mcp returned HTTP ${code} — may be unreachable`)
+    }
+  }
+
+  // [REQ] playwright-cli skill installed in .opencode/skills/
+  const playwrightSkill = join(projectDir, ".opencode", "skills", "playwright-cli", "SKILL.md")
+  if (!pathExists(playwrightSkill)) {
+    failures.push("[REQ] playwright-cli skill not installed. Run: alloy add playwright-cli")
+  } else {
+    console.log("OK: playwright-cli skill installed")
+  }
+
+  // [WARN] Node 20+ / Bun 1.1+
+  const nodeVer = process.version
+  const nodeMajor = parseInt(nodeVer.slice(1).split(".")[0] ?? "0", 10)
+  if (nodeMajor < 20) {
+    warnings.push(`[WARN] Node ${nodeVer} < 20 — upgrade recommended`)
+  } else {
+    console.log(`OK: Node ${nodeVer}`)
+  }
+
+  const bunCheck = spawnSync("bun", ["--version"], { encoding: "utf8" })
+  if (bunCheck.error || bunCheck.status !== 0) {
+    warnings.push("[WARN] bun not found — OpenCode plugin dependencies need Bun 1.1+")
+  } else {
+    const bunVer = (bunCheck.stdout ?? "").trim()
+    console.log(`OK: bun ${bunVer}`)
+  }
+
+  // Summary
+  if (failures.length) {
+    for (const f of failures) console.error(`FAIL: ${f}`)
+    for (const w of warnings) console.log(`WARN: ${w}`)
+    return 1
+  }
+  for (const w of warnings) console.log(`WARN: ${w}`)
+  console.log("OK: alloy doctor qa — all required checks passed")
+  return 0
+}
+
+function qaReportCommand(options, projectDir = process.cwd()) {
+  const ts = options.positionals?.[0]
+  if (!ts) {
+    console.error("ERROR: alloy qa-report <ts> — timestamp argument required")
+    console.error("Example: alloy qa-report 2026-05-29T01-30-00Z")
+    return 2
+  }
+  const dir = join(projectDir, ".alloy", "qa-reports", ts)
+  const manifestPath = join(dir, "manifest.json")
+  if (!pathExists(manifestPath)) {
+    console.error(`ERROR: manifest.json not found at ${manifestPath}`)
+    return 2
+  }
+  let manifest
+  try {
+    manifest = readJson(manifestPath)
+  } catch (err) {
+    console.error(`ERROR: Could not parse manifest.json: ${err.message}`)
+    return 2
+  }
+
+  // Find the template from installed skills
+  const tplPath = join(projectDir, ".opencode", "skills", "alloy-qa-report", "templates", "index.html.tpl")
+  if (!pathExists(tplPath)) {
+    console.error(`ERROR: Template not found at ${tplPath}. Install alloy-qa-report skill first.`)
+    return 2
+  }
+  const tpl = readFileSync(tplPath, "utf8")
+
+  // Simple template renderer (mirrors plugin renderTemplate logic)
+  const health = manifest.health ?? {}
+  const baseline = health.baseline ?? 0
+  const final = health.final ?? 0
+  const delta = final - baseline
+  const deltaStr = delta >= 0 ? `+${delta}` : `${delta}`
+  const healthClass = delta > 0 ? "health-positive" : delta < 0 ? "health-negative" : "health-neutral"
+  const deltaClass = delta > 0 ? "delta-positive" : delta < 0 ? "delta-negative" : "delta-neutral"
+  const shipScore = final >= 90 ? "ship-ready" : final >= 70 ? "ship-review" : "ship-blocked"
+  const shipText = final >= 90 ? "✅ Ready" : final >= 70 ? "⚠️ Needs review" : "❌ Not ready"
+  const cases = manifest.cases ?? []
+  const issues = manifest.issues ?? []
+
+  let html = tpl
+    .replace(/{{taskId}}/g, String(manifest.taskId ?? ""))
+    .replace(/{{ts}}/g, String(manifest.ts ?? ts))
+    .replace(/{{profile}}/g, String(manifest.profile ?? ""))
+    .replace(/{{healthBaseline}}/g, String(baseline))
+    .replace(/{{healthFinal}}/g, String(final))
+    .replace(/{{healthDelta}}/g, deltaStr)
+    .replace(/{{healthClass}}/g, healthClass)
+    .replace(/{{deltaClass}}/g, deltaClass)
+    .replace(/{{caseCount}}/g, String(cases.length))
+    .replace(/{{issueCount}}/g, String(issues.length))
+    .replace(/{{shipReadiness}}/g, shipText)
+    .replace(/{{shipClass}}/g, shipScore)
+
+  html = html.replace(/{{#each cases}}([\s\S]*?){{\/each}}/g, (_match, block) => {
+    return cases.map((c) => {
+      const screenshots = c.screenshots ?? []
+      return block
+        .replace(/{{id}}/g, String(c.id ?? ""))
+        .replace(/{{title}}/g, String(c.title ?? ""))
+        .replace(/{{kind}}/g, String(c.kind ?? ""))
+        .replace(/{{status}}/g, String(c.status ?? ""))
+        .replace(/{{duration}}/g, String(c.duration ?? ""))
+        .replace(/{{video}}/g, String(c.video ?? ""))
+        .replace(/{{trace}}/g, String(c.trace ?? ""))
+        .replace(/{{#if video}}([\s\S]*?){{\/if}}/g, c.video ? "$1" : "")
+        .replace(/{{#if trace}}([\s\S]*?){{\/if}}/g, c.trace ? "$1" : "")
+        .replace(/{{#each screenshots}}[\s\S]*?{{\/each}}/g,
+          screenshots.map((s) => `<a href="${s}" target="_blank">📸</a>`).join(""))
+    }).join("\n")
+  })
+
+  html = html.replace(/{{#each issues}}([\s\S]*?){{\/each}}/g, (_match, block) => {
+    return issues.map((iss) =>
+      block
+        .replace(/{{id}}/g, String(iss.id ?? ""))
+        .replace(/{{severity}}/g, String(iss.severity ?? ""))
+        .replace(/{{status}}/g, String(iss.status ?? ""))
+        .replace(/{{commit}}/g, String(iss.commit ?? ""))
+    ).join("\n")
+  })
+
+  const allScreenshots = cases.flatMap((c) => (c.screenshots ?? []).map((s) => ({ src: s, alt: String(c.id ?? "") })))
+  html = html.replace(/{{#each allScreenshots}}([\s\S]*?){{\/each}}/g, (_match, block) =>
+    allScreenshots.map((s) => block.replace(/{{src}}/g, s.src).replace(/{{alt}}/g, s.alt)).join("\n"))
+
+  const videos = cases.filter((c) => c.video).map((c) => ({ src: String(c.video), label: String(c.id ?? "") }))
+  html = html
+    .replace(/{{#if hasVideos}}([\s\S]*?){{\/if}}/g, videos.length > 0 ? "$1" : "")
+    .replace(/{{#each videos}}([\s\S]*?){{\/each}}/g, (_match, block) =>
+      videos.map((v) => block.replace(/{{src}}/g, v.src).replace(/{{label}}/g, v.label)).join("\n"))
+
+  html = html.replace(/{{#each categories}}[\s\S]*?{{\/each}}/g, "")
+
+  const outPath = join(dir, "index.html")
+  writeFileSync(outPath, html, "utf8")
+  console.log(`QA report written: ${outPath}`)
+  return 0
 }
 
 function initCommand(options, projectDir = process.cwd()) {
@@ -1491,7 +1729,12 @@ async function main(argv) {
     if (options.command === "outdated") return await outdatedCommand(options)
     if (options.command === "upgrade") return await upgradeCommand(options)
     if (options.command === "completion") return completionCommand(options)
-    if (options.command === "doctor") return doctorCommand(options)
+    if (options.command === "doctor") {
+      // `alloy doctor qa` routes to the QA-specific checklist
+      if (options.positionals?.[0] === "qa") return doctorQaCommand()
+      return doctorCommand(options)
+    }
+    if (options.command === "qa-report") return qaReportCommand(options)
     if (options.command === "state") return stateCommand(options)
     if (options.command === "gate") return gateCommand(options)
     if (options.command === "sync") return syncCommand(options)

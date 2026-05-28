@@ -135,5 +135,26 @@
       "vendor/skills/external/mattpocock/main/handoff"
     ],
     "vendoredAt": "2026-05-26"
+  },
+  {
+    "name": "figma-mcp-official",
+    "kind": "mcp",
+    "source": "https://mcp.figma.com/mcp",
+    "version": "url-based",
+    "license": "Proprietary (Figma Dev seat required)",
+    "sha256": "<url-based-no-checksum>",
+    "paths": [],
+    "vendoredAt": "2026-05-29"
+  },
+  {
+    "name": "1password-op-js",
+    "kind": "npm-ref",
+    "source": "https://www.npmjs.com/package/@1password/op-js",
+    "version": "0.1.x",
+    "license": "MIT",
+    "sha256": "<ref-only-no-checksum>",
+    "paths": [],
+    "vendoredAt": "2026-05-29",
+    "note": "Referenced for documentation; alloy plugin shells op CLI directly, not via npm."
   }
 ]
