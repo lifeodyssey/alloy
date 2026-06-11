@@ -1,22 +1,38 @@
-name: Vendor sync
+name: Vendor Sync
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 9 * * 1"
+    - cron: "0 9 * * *"
+  workflow_dispatch:
 
 jobs:
-  check:
+  sync:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       issues: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Check vendor freshness
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/revendor.mjs --check-all
+      - name: Build vendor sync plan
+        run: node scripts/revendor.mjs --sync-plan --json > vendor-sync-plan.json
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Read vendor.lock.json and vendor-sync-plan.json.
+
+            For each entry with autoUpdate: true, check whether the upstream SHA has changed.
+            If changed, route by fusionType:
+            - verbatim: copy the new upstream version, update sha256 and vendor.lock.json, auto-commit on a branch, then open an automatic PR.
+            - inline-append: update only the upstream-derived section, preserve Alloy appended sections, and open a draft PR.
+            - rewrite: open a GitHub issue for human review.
+            - concept-only: skip.
+
+            Entries with internal: true must be skipped. Do not modify first-party internal Alloy skills.

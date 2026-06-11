@@ -4,6 +4,7 @@
 // Subcommands:
 //   --check <name>        Show current pinned version vs latest GitHub release
 //   --check-all           Same for every entry in vendor.lock.json
+//   --sync-plan [--json]  Print fusionType routing for vendor-sync automation
 //   --apply <name>        Re-clone source repo at latest tag, copy upstreamPath to paths[0],
 //                         apply vendor/patches/<name>/*.patch if present, recompute sha256,
 //                         update vendor.lock.json
@@ -120,6 +121,44 @@ async function checkAll() {
   console.log("-".repeat(96))
   for (const entry of entries) {
     await check(entry.name)
+  }
+}
+
+function syncActionForEntry(entry) {
+  if (entry.internal) return "skip-internal"
+  if (entry.autoUpdate === false) return "skip-disabled"
+  switch (entry.fusionType) {
+    case "verbatim":
+      return "auto-pr"
+    case "inline-append":
+      return "draft-pr"
+    case "rewrite":
+      return "issue"
+    case "concept-only":
+      return "skip-concept-only"
+    default:
+      return "manual-review"
+  }
+}
+
+function syncPlan(options = {}) {
+  const entries = readLock()
+  const rows = entries.map((entry) => ({
+    name: entry.name,
+    version: entry.version,
+    fusionType: entry.fusionType ?? "unknown",
+    autoUpdate: entry.autoUpdate !== false,
+    internal: entry.internal === true,
+    action: syncActionForEntry(entry),
+  }))
+  if (options.json) {
+    console.log(JSON.stringify(rows, null, 2))
+    return
+  }
+  console.log("name".padEnd(40) + "fusionType".padEnd(18) + "autoUpdate".padEnd(14) + "action")
+  console.log("-".repeat(92))
+  for (const row of rows) {
+    console.log(`${row.name.padEnd(40)}${row.fusionType.padEnd(18)}${String(row.autoUpdate).padEnd(14)}${row.action}`)
   }
 }
 
@@ -328,6 +367,8 @@ async function main() {
     await check(args[1])
   } else if (cmd === "--check-all") {
     await checkAll()
+  } else if (cmd === "--sync-plan") {
+    syncPlan({ json: args.includes("--json") })
   } else if (cmd === "--apply") {
     if (!args[1]) { console.error("--apply requires a name"); process.exit(1) }
     await apply(args[1])

@@ -712,5 +712,20 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--target must be local or global", result.stderr)
 
+    def test_revendor_sync_plan_routes_fusion_types(self):
+        result = subprocess.run(
+            [NODE, str(ROOT / "scripts" / "revendor.mjs"), "--sync-plan", "--json"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        rows = {row["name"]: row for row in json.loads(result.stdout)}
+
+        self.assertEqual(rows["superpowers-brainstorming"]["fusionType"], "verbatim")
+        self.assertEqual(rows["superpowers-brainstorming"]["action"], "auto-pr")
+        self.assertTrue(rows["alloy-tdd"]["internal"])
+        self.assertEqual(rows["alloy-tdd"]["action"], "skip-internal")
+
 if __name__ == "__main__":
     unittest.main()
