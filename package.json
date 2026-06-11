@@ -7,10 +7,11 @@
     "alloy": "./bin/alloy.mjs"
   },
   "scripts": {
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:audit && npm run test:e2e",
     "test:unit": "node --test scripts/test_resolver.mjs scripts/test_alloy_plugin.mjs",
+    "test:audit": "python3 -m unittest scripts.test_audit_prompt_dependencies && python3 scripts/audit_prompt_dependencies.py --no-write --quiet",
     "test:e2e": "python3 -m unittest scripts.test_alloy_installer",
-    "check": "node --check bin/alloy.mjs"
+    "check": "node --check bin/alloy.mjs && node --check bin/pack-resolution.mjs && node --check lib/task-state.mjs"
   },
   "engines": {
     "node": ">=20.0.0",

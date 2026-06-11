@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import shutil
@@ -133,6 +135,8 @@ class AlloyInstallerTest(unittest.TestCase):
             agents = agent_names(cwd)
             safety_net = json.loads((cwd / ".safety-net.json").read_text())
             plugin_exists = (cwd / ".opencode" / "plugins" / "alloy.ts").exists()
+            plugin_files = sorted(path.name for path in (cwd / ".opencode" / "plugins").iterdir())
+            plugin_helper_exists = (cwd / ".opencode" / "lib" / "alloy-task-state.mjs").exists()
             safety_net_exists = (cwd / ".safety-net.json").exists()
 
             self.assertTrue(project["runtimes"]["bun"])
@@ -143,14 +147,16 @@ class AlloyInstallerTest(unittest.TestCase):
             self.assertEqual(agents, {"Planner", "Builder"})
             self.assertEqual(config["default_agent"], "Planner")
             self.assertEqual(set(config["agent"].keys()), {"Planner", "Builder"})
-        self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
-        self.assertEqual(plugin_pkg["dependencies"]["zod"], "4.4.3")
-        self.assertTrue(plugin_exists)
-        self.assertTrue(safety_net_exists)
-        self.assertIn("cc-safety-net", config["plugin"])
-        safety_net_rules = {(rule["subcommand"], tuple(rule["block_args"])) for rule in safety_net["rules"]}
-        self.assertIn(("am", ("--no-verify",)), safety_net_rules)
-        self.assertIn(("am", ("-n",)), safety_net_rules)
+            self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
+            self.assertEqual(plugin_pkg["dependencies"]["zod"], "4.4.3")
+            self.assertTrue(plugin_exists)
+            self.assertTrue(plugin_helper_exists)
+            self.assertEqual(plugin_files, ["alloy.ts"])
+            self.assertTrue(safety_net_exists)
+            self.assertIn("cc-safety-net", config["plugin"])
+            safety_net_rules = {(rule["subcommand"], tuple(rule["block_args"])) for rule in safety_net["rules"]}
+            self.assertIn(("am", ("--no-verify",)), safety_net_rules)
+            self.assertIn(("am", ("-n",)), safety_net_rules)
 
     def test_install_migrates_legacy_specs_dir_to_tasks_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -194,6 +200,14 @@ class AlloyInstallerTest(unittest.TestCase):
             progress_text = progress.read_text()
             self.assertIn("- [x] green", progress_text)
             self.assertIn("focused check passed", progress_text)
+            gate = run_alloy(cwd, "gate", "check", "--task-id", "T1", "--json", check=False)
+            partial_gate = json.loads(gate.stdout)
+            self.assertFalse(partial_gate["ok"])
+            self.assertIn("review", partial_gate["blockedBy"])
+
+            for kind in ["tdd_red", "debug", "review", "verified"]:
+                run_alloy(cwd, "state", "add-evidence", "--task-id", "T1", "--kind", kind, "--summary", f"{kind} proof")
+
             gate = run_alloy(cwd, "gate", "check", "--task-id", "T1", "--json")
             self.assertTrue(json.loads(gate.stdout)["ok"])
             self.assertFalse((cwd / ".alloy" / "state").exists())

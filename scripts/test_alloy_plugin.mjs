@@ -9,17 +9,22 @@ import { spawnSync } from "node:child_process"
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const PLUGIN_TEMPLATE = join(ROOT, "templates", "opencode", "alloy-plugin.ts")
+const TASK_STATE_MODULE = join(ROOT, "lib", "task-state.mjs")
 
 async function runPluginScenario(source) {
   const tmp = mkdtempSync(join(tmpdir(), "alloy-plugin-test-"))
   const projectDir = join(tmp, "project")
   const homeDir = join(tmp, "home")
-  const pluginPath = join(tmp, "alloy-plugin.ts")
+  const pluginPath = join(projectDir, ".opencode", "plugins", "alloy.ts")
+  const taskStatePath = join(projectDir, ".opencode", "lib", "alloy-task-state.mjs")
   const runnerPath = join(tmp, "scenario.mjs")
 
   mkdirSync(projectDir, { recursive: true })
   mkdirSync(homeDir, { recursive: true })
+  mkdirSync(dirname(pluginPath), { recursive: true })
+  mkdirSync(dirname(taskStatePath), { recursive: true })
   await copyFile(PLUGIN_TEMPLATE, pluginPath)
+  await copyFile(TASK_STATE_MODULE, taskStatePath)
   writeStubModules(tmp)
   writeFileSync(
     runnerPath,
@@ -30,7 +35,9 @@ import { join } from "node:path"
 
 process.env.HOME = ${JSON.stringify(homeDir)}
 const projectDir = ${JSON.stringify(projectDir)}
+const taskStatePath = ${JSON.stringify(taskStatePath)}
 const { default: AlloyPlugin } = await import(${JSON.stringify(pluginPath)})
+const { checkGate } = await import(taskStatePath)
 const hooks = await AlloyPlugin({ directory: projectDir, worktree: projectDir, $: {} })
 
 ${source}
@@ -128,7 +135,7 @@ for (const name of ["alloy_progress", "alloy_state", "alloy_gate"]) {
 
 mkdirSync(join(projectDir, ".alloy", "tasks", "T1"), { recursive: true })
 writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "# T1 Plan\\nImplement plugin hooks", "utf8")
-writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "# T1 Progress\\n\\n## Gate\\n\\n- [ ] verified", "utf8")
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "# T1 Progress\\n\\n## Gate\\n\\n- [ ] tdd_red\\n- [ ] debug\\n- [ ] green\\n- [ ] review\\n- [ ] verified", "utf8")
 
 const envOut = { env: {} }
 await hooks["shell.env"]({ cwd: projectDir, sessionID: "s1" }, envOut)
@@ -148,6 +155,9 @@ await hooks["permission.ask"]({ id: "p1", sessionID: "s1" }, { status: "ask" })
 const toolOut = { title: "bash", output: '{"ok": true', metadata: { exitCode: 0 } }
 await hooks["tool.execute.after"]({ tool: "bash", sessionID: "s1", callID: "c2", args: { command: "npm test" } }, toolOut)
 assert.equal(JSON.parse(toolOut.output).ok, true)
+const gateAfterVerify = checkGate(projectDir, "T1")
+assert.equal(gateAfterVerify.ok, false)
+assert.ok(gateAfterVerify.blockedBy.includes("review"))
 await hooks.event({ event: { type: "session.start", properties: { sessionID: "s1" } } })
 
 const progress = await hooks.tool.alloy_progress.execute({ taskId: "T1", gate: "review", summary: "AC review passed" })

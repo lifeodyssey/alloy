@@ -22,23 +22,46 @@ import {
 import {
   checkContainerUsePrereqs,
 } from "./prereq-check.mjs"
+import {
+  DEFAULTS,
+  MCP_CONFIGS,
+  OPENCODE_PLUGIN_VERSION,
+  ZOD_VERSION,
+  defaultProjectConfig,
+  detectMcpConflicts,
+  findSkillSourcePath,
+  loadAtoms,
+  loadPack,
+  mergePack,
+  projectConfigPath,
+  resolveConfig,
+} from "./pack-resolution.mjs"
+import {
+  appendProgressNote as appendTaskProgressNote,
+  checkGate as checkTaskGate,
+  ensureAlloyMarkdownRoot as ensureTaskStateRoot,
+  listMarkdownTasks as listTaskStateTasks,
+  markProgressGate as markTaskProgressGate,
+  progressPath as taskProgressPath,
+} from "../lib/task-state.mjs"
+export {
+  DEFAULTS,
+  defaultProjectConfig,
+  detectMcpConflicts,
+  loadAtoms,
+  loadPack,
+  mergePack,
+  resolveConfig,
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(__dirname, "..")
 const PACKAGE = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8"))
-const DEFAULTS_PATH = join(REPO_ROOT, "defaults.json")
-export const DEFAULTS = loadDefaults()
-const OPENCODE_PLUGIN_VERSION = DEFAULTS.plugin["@opencode-ai/plugin"]
-const ZOD_VERSION = DEFAULTS.plugin.zod
-const MCP_CONFIGS = DEFAULTS.mcp
-const PACK_FIELDS = ["skills", "agents", "commands", "mcp", "modelRoles"]
-const SCOPE_KINDS = ["frontend", "backend", "infra"]
 const COMPLETION_COMMANDS = ["install", "add", "remove", "list", "search", "outdated", "upgrade", "version", "doctor", "completion"]
 const COMPLETION_PACKS = ["core", "frontend", "backend", "infra", "all"]
 const COMPLETION_TARGETS = ["local", "global"]
 const COMPLETION_SHELLS = ["bash", "zsh", "fish"]
-let atomsCache
-let vendorSkillPathsCache
+const SCOPE_KINDS = ["frontend", "backend", "infra"]
 
 const ROLE_TO_AGENT = {
   planner: ["Planner"],
@@ -59,24 +82,7 @@ const MANAGED_NAMES = [
 const DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]
 const DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]
 const RETIRED_ALLOY_AGENT_NAMES = ["orchestrator", "planner", "executor", "debugger", "reviewer", "verifier"].map((name) => `alloy-${name}`)
-const PACK_ALIASES = {
-  default: "core",
-  team: "core",
-  profile: "core",
-}
 const DEFAULT_PROJECT_CONFIG = ".alloy/alloy.project.json"
-
-function loadDefaults() {
-  try {
-    return JSON.parse(readFileSync(DEFAULTS_PATH, "utf8"))
-  } catch (error) {
-    if (error?.code === "ENOENT") {
-      console.error(`ERROR: Missing defaults.json at ${DEFAULTS_PATH}. Ensure you are running alloy from the repo root.`)
-      process.exit(1)
-    }
-    throw error
-  }
-}
 
 function usage() {
   return `Alloy
@@ -295,185 +301,8 @@ function listFiles(base) {
   return files
 }
 
-export function loadAtoms() {
-  if (atomsCache) return atomsCache
-  const atomsPath = join(REPO_ROOT, "packs", "atoms.json")
-  if (!pathExists(atomsPath)) {
-    atomsCache = {}
-    return atomsCache
-  }
-  const data = readJson(atomsPath)
-  atomsCache = data.atoms ?? {}
-  return atomsCache
-}
-
-export function loadPack(id) {
-  const normalized = PACK_ALIASES[id] ?? id
-  const packPath = join(REPO_ROOT, "packs", `${normalized}.json`)
-  if (pathExists(packPath)) return expandPack(readJson(packPath))
-  throw new Error(`Unknown pack: ${id}`)
-}
-
-export function mergePack(base, extra) {
-  const left = expandPack(base)
-  const right = expandPack(extra)
-  const merged = mergePackFields(left, right)
-  merged.id = left.id ?? right.id
-  merged.target = left.target ?? right.target
-  merged.description = `${left.description ?? ""} + ${right.id}`
-  return merged
-}
-
-function expandPack(pack, atoms = loadAtoms()) {
-  const { extends: atomNames = [], ...inlineFields } = pack
-  let expanded = { ...inlineFields }
-  for (const key of PACK_FIELDS) delete expanded[key]
-  for (const atomName of atomNames) {
-    const atom = atoms[atomName]
-    if (!atom) throw new Error(`Unknown atom "${atomName}" in pack ${pack.id ?? "<inline>"}`)
-    expanded = mergePackFields(expanded, atom)
-  }
-  return mergePackFields(expanded, inlineFields)
-}
-
-function mergePackFields(base, extra) {
-  const merged = { ...base }
-  for (const key of PACK_FIELDS) {
-    merged[key] = unique([...(base[key] ?? []), ...(extra[key] ?? [])])
-  }
-  return merged
-}
-
 function unique(items) {
-  return [...new Set(items)]
-}
-
-function buildPack(options, projectDir = process.cwd()) {
-  let project = loadProjectConfig(projectDir, false, options.config)
-  let packIds = options.explicitPack ? [options.pack] : project?.packs ?? [options.pack]
-  if (!packIds.length) packIds = ["core"]
-  let pack = loadPack(packIds[0])
-  for (const extra of packIds.slice(1)) pack = mergePack(pack, loadPack(extra))
-  return { pack, project }
-}
-
-function loadModelMap(modelName) {
-  const path = join(REPO_ROOT, "models", `${modelName}.json`)
-  if (!pathExists(path)) throw new Error(`Unknown model map: ${modelName}`)
-  return readJson(path)
-}
-
-function loadProjectConfig(projectDir, required = true, configPath) {
-  const path = projectConfigPath(projectDir, configPath)
-  if (!pathExists(path)) {
-    if (required) throw new Error(`Missing Alloy project config: ${path}`)
-    return null
-  }
-  return readJson(path)
-}
-
-function projectConfigPath(projectDir, configPath) {
-  if (!configPath || configPath === DEFAULT_PROJECT_CONFIG) return join(projectDir, DEFAULT_PROJECT_CONFIG)
-  return resolve(projectDir, configPath)
-}
-
-export function defaultProjectConfig(pack, modelName) {
-  const repoKind = defaultRepoKindForPack(pack)
-  return {
-    repoKind,
-    packs: [pack.id],
-    models: modelName,
-    mcp: { baseline: ["context7", "grep_app", "exa"], disabled: [] },
-    workflow: { mode: "standard", tdd: "required_for_code", claims: true, review: "standard" },
-    runtimes: { node: true, bun: true, npx: false },
-  }
-}
-
-function defaultRepoKindForPack(pack) {
-  return pack.id === "backend" ? "backend" : pack.id === "infra" ? "infra" : "frontend"
-}
-
-function resolveSkillSources(skills, repoKind) {
-  return Object.fromEntries(
-    skills
-      .map((skill) => [skill, findSkillSourcePath(skill, repoKind)])
-      .filter(([, source]) => Boolean(source)),
-  )
-}
-
-function findSkillSourcePath(skill, repoKind) {
-  for (const candidate of skillSourceCandidates(skill, repoKind)) {
-    if (pathExists(join(candidate, "SKILL.md"))) return candidate
-  }
-  return null
-}
-
-function skillSourceCandidates(skill, repoKind) {
-  const scopeKinds = unique([repoKind, ...SCOPE_KINDS].filter(Boolean))
-  return [
-    join(REPO_ROOT, "universal", "skills", skill),
-    ...scopeKinds.map((kind) => join(REPO_ROOT, "scopes", kind, "skills", skill)),
-    join(REPO_ROOT, "skills", skill),
-    ...scopeKinds.map((kind) => join(REPO_ROOT, "vendor", "skills", "scopes", kind, skill)),
-    join(REPO_ROOT, "vendor", "skills", "external", skill),
-    ...vendorSkillPathsFor(skill),
-  ]
-}
-
-function vendorSkillPathsFor(skill) {
-  if (!vendorSkillPathsCache) vendorSkillPathsCache = loadVendorSkillPaths()
-  return vendorSkillPathsCache.get(skill) ?? []
-}
-
-function loadVendorSkillPaths() {
-  const lockPath = join(REPO_ROOT, "vendor.lock.json")
-  const paths = new Map()
-  if (!pathExists(lockPath)) return paths
-  for (const entry of readJson(lockPath)) {
-    if (entry.kind !== "skill" || !entry.name) continue
-    paths.set(entry.name, (entry.paths ?? []).map((rel) => join(REPO_ROOT, rel)))
-  }
-  return paths
-}
-
-export function detectMcpConflicts(project, packMcp) {
-  const baseline = new Set(unique(project?.mcp?.baseline ?? packMcp ?? []))
-  const warnings = []
-  for (const name of project?.mcp?.disabled ?? []) {
-    if (!baseline.has(name)) warnings.push(`mcp.disabled lists "${name}" but it is not in mcp.baseline or the pack's MCP list — no-op`)
-  }
-  for (const name of project?.mcp?.baseline ?? []) {
-    if (!MCP_CONFIGS[name]) warnings.push(`mcp.baseline lists "${name}" which is not declared in defaults.json — will be dropped`)
-  }
-  return warnings
-}
-
-export function resolveConfig(options, projectDir = process.cwd()) {
-  const { pack, project } = buildPack(options, projectDir)
-  const modelName = options.models ?? project?.models ?? "github-copilot"
-  const models = loadModelMap(modelName)
-  const resolvedProject = project ?? defaultProjectConfig(pack, modelName)
-  const targetDir = options.target === "global" ? join(process.env.HOME, ".config", "opencode") : join(projectDir, ".opencode")
-  const disabledMcp = new Set(project?.mcp?.disabled ?? [])
-  const mcpNames = unique(project?.mcp?.baseline ?? pack.mcp ?? []).filter((name) => !disabledMcp.has(name))
-  for (const warning of detectMcpConflicts(project, pack.mcp)) console.warn(`WARN: ${warning}`)
-  const skills = pack.skills ?? []
-  const resolved = {
-    project: resolvedProject,
-    pack,
-    models,
-    modelName,
-    target: options.target,
-    targetDir,
-    agents: pack.agents ?? [],
-    skills,
-    skillSources: resolveSkillSources(skills, resolvedProject.repoKind),
-    commands: pack.commands ?? [],
-    mcp: Object.fromEntries(mcpNames.filter((name) => MCP_CONFIGS[name]).map((name) => [name, MCP_CONFIGS[name]])),
-    runtimes: project?.runtimes ?? { node: true, bun: true, npx: false },
-    configPath: options.config ?? DEFAULT_PROJECT_CONFIG,
-  }
-  return resolved
+  return [...new Set(items.filter(Boolean))]
 }
 
 function ensureAlloyProject(projectDir, resolved, dryRun = false, configPath) {
@@ -623,6 +452,7 @@ function installPlugin(resolved, projectDir, dryRun = false) {
     },
   }
   writeJson(join(resolved.targetDir, "package.json"), pkg, dryRun)
+  copyFile(join(REPO_ROOT, "lib", "task-state.mjs"), join(resolved.targetDir, "lib", "alloy-task-state.mjs"), dryRun)
   copyFile(join(REPO_ROOT, "templates", "opencode", "alloy-plugin.ts"), join(resolved.targetDir, "plugins", "alloy.ts"), dryRun)
   copyFile(join(REPO_ROOT, "templates", "opencode", "safety-net-rules-template.json"), join(projectDir, ".safety-net.json"), dryRun)
   writeText(join(resolved.targetDir, "alloy-runtime", "README.md"), "OpenCode loads the Alloy plugin from ../plugins/alloy.ts. Bun installs package.json dependencies.\n", dryRun)
@@ -718,7 +548,7 @@ function validateTargetFiles(resolved) {
   for (const agent of resolved.agents) if (!pathExists(join(resolved.targetDir, "agents", `${agent}.md`))) failures.push(`Target missing agent: ${agent}`)
   for (const command of resolved.commands) if (!pathExists(join(resolved.targetDir, "commands", `${command}.md`))) failures.push(`Target missing command: ${command}`)
   for (const skill of resolved.skills) if (!pathExists(join(resolved.targetDir, "skills", skill, "SKILL.md"))) failures.push(`Target missing skill: ${skill}`)
-  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts", "alloy.manifest.json"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
+  for (const rel of ["opencode.json", "package.json", "plugins/alloy.ts", "lib/alloy-task-state.mjs", "alloy.manifest.json"]) if (!pathExists(join(resolved.targetDir, rel))) failures.push(`Target missing ${rel}`)
   return failures
 }
 
@@ -1314,49 +1144,8 @@ function taskSlug(value) {
     .slice(0, 64) || "task"
 }
 
-function taskDir(projectDir, taskId) {
-  return join(projectDir, ".alloy", "tasks", taskId)
-}
-
-function taskProgressPath(projectDir, taskId) {
-  return join(taskDir(projectDir, taskId), "progress.md")
-}
-
-function ensureAlloyMarkdownRoot(projectDir) {
-  const alloyDir = join(projectDir, ".alloy")
-  mkdirSync(join(alloyDir, "tasks"), { recursive: true })
-  const ignorePath = join(alloyDir, ".gitignore")
-  if (!pathExists(ignorePath)) writeFileSync(ignorePath, "run/\n*.lock\n", "utf8")
-  return alloyDir
-}
-
-function ensureTaskProgress(projectDir, taskId) {
-  const dir = taskDir(projectDir, taskId)
-  mkdirSync(dir, { recursive: true })
-  const progressPath = taskProgressPath(projectDir, taskId)
-  if (!pathExists(progressPath)) {
-    writeFileSync(
-      progressPath,
-      [
-        `# ${taskId}: Progress`,
-        "",
-        "## Gate",
-        "",
-        "## Iterations",
-        "",
-        "## Findings",
-        "",
-        "## Handoff",
-        "",
-      ].join("\n"),
-      "utf8",
-    )
-  }
-  return progressPath
-}
-
 function ensureProjectTasksFile(projectDir) {
-  const alloyDir = ensureAlloyMarkdownRoot(projectDir)
+  const alloyDir = ensureTaskStateRoot(projectDir)
   const projectPath = join(alloyDir, "PROJECT.md")
   if (!pathExists(projectPath)) {
     writeFileSync(projectPath, ["# Alloy Project", "", "## Tasks", "", "| Task | Title | Status | Kind | Risk |", "| --- | --- | --- | --- | --- |", ""].join("\n"), "utf8")
@@ -1370,53 +1159,6 @@ function appendProjectTask(projectDir, task) {
   const row = `| ${task.id} | ${task.title.replace(/\|/g, "\\|")} | ${task.status} | ${task.kind} | ${task.risk} |`
   if (content.includes(`| ${task.id} |`)) return
   writeFileSync(projectPath, `${content.trimEnd()}\n${row}\n`, "utf8")
-}
-
-function appendToMarkdownSection(content, section, text) {
-  const heading = `## ${section}`
-  let lines = content.split(/\r?\n/)
-  let start = lines.findIndex((line) => line.trim() === heading)
-  if (start === -1) {
-    lines = [...lines, "", heading, ""]
-    start = lines.findIndex((line) => line.trim() === heading)
-  }
-  const next = lines.findIndex((line, index) => index > start && line.startsWith("## "))
-  const end = next === -1 ? lines.length : next
-  const before = lines.slice(0, end)
-  const after = lines.slice(end)
-  if (before.at(-1)?.trim()) before.push("")
-  return [...before, ...text.trimEnd().split(/\r?\n/), ...after].join("\n")
-}
-
-function appendProgressSection(projectDir, taskId, section, lines) {
-  const progressPath = ensureTaskProgress(projectDir, taskId)
-  const note = [`### ${section} - ${new Date().toISOString()}`, ...lines.filter(Boolean)].join("\n")
-  const content = readFileSync(progressPath, "utf8")
-  writeFileSync(progressPath, appendToMarkdownSection(content, section, note), "utf8")
-}
-
-function markProgressGate(projectDir, taskId, gate, note) {
-  const progressPath = ensureTaskProgress(projectDir, taskId)
-  const line = `- [x] ${gate} - ${new Date().toISOString()} | ${note}`
-  let content = readFileSync(progressPath, "utf8")
-  if (!content.split(/\r?\n/).some((item) => item.trim() === "## Gate")) content = `${content.trimEnd()}\n\n## Gate\n`
-  const lines = content.split(/\r?\n/)
-  const gateIndex = lines.findIndex((item) => item.trim() === "## Gate")
-  const nextHeading = lines.findIndex((item, index) => index > gateIndex && item.startsWith("## "))
-  const end = nextHeading === -1 ? lines.length : nextHeading
-  const existing = lines.findIndex((item, index) => index > gateIndex && index < end && new RegExp(`^- \\[[ xX]\\] ${gate}(?:\\b.*)?$`).test(item))
-  if (existing !== -1) lines[existing] = line
-  else lines.splice(end, 0, line)
-  writeFileSync(progressPath, lines.join("\n"), "utf8")
-}
-
-function listMarkdownTasks(projectDir) {
-  const tasksDir = join(projectDir, ".alloy", "tasks")
-  if (!pathExists(tasksDir)) return []
-  return readdirSync(tasksDir)
-    .filter((name) => !name.startsWith("."))
-    .filter((name) => pathExists(join(tasksDir, name)))
-    .sort()
 }
 
 function stateCommand(options, projectDir = process.cwd()) {
@@ -1434,9 +1176,9 @@ function stateCommand(options, projectDir = process.cwd()) {
       risk: options.risk ?? "normal",
       createdAt: now,
     }
-    ensureAlloyMarkdownRoot(projectDir)
+    ensureTaskStateRoot(projectDir)
     appendProjectTask(projectDir, task)
-    appendProgressSection(projectDir, id, "Handoff", [`- Task created: ${task.title}`, `- Kind: ${task.kind}`, `- Risk: ${task.risk}`, `- Status: ${task.status}`])
+    appendTaskProgressNote(projectDir, id, "Handoff", [`- Task created: ${task.title}`, `- Kind: ${task.kind}`, `- Risk: ${task.risk}`, `- Status: ${task.status}`])
     console.log(id)
     return 0
   }
@@ -1450,23 +1192,23 @@ function stateCommand(options, projectDir = process.cwd()) {
       options.exitCode !== undefined ? `- Exit code: ${options.exitCode}` : undefined,
       options.paths ? `- Paths: ${options.paths}` : undefined,
     ]
-    appendProgressSection(projectDir, options.taskId, "Findings", lines)
+    appendTaskProgressNote(projectDir, options.taskId, "Findings", lines)
     const gateKinds = new Set(["tdd_red", "debug", "green", "review", "verified"])
-    if (gateKinds.has(options.kind)) markProgressGate(projectDir, options.taskId, options.kind, options.summary)
+    if (gateKinds.has(options.kind)) markTaskProgressGate(projectDir, options.taskId, options.kind, options.summary)
     console.log(taskProgressPath(projectDir, options.taskId))
     return 0
   }
 
   if (action === "add-claim") {
     if (!options.taskId || !options.text) throw new Error("--task-id --text are required")
-    appendProgressSection(projectDir, options.taskId, "Handoff", [`- Claim: ${options.text}`, options.evidenceIds?.length ? `- Evidence ids (legacy reference): ${options.evidenceIds.join(", ")}` : undefined])
+    appendTaskProgressNote(projectDir, options.taskId, "Handoff", [`- Claim: ${options.text}`, options.evidenceIds?.length ? `- Evidence ids (legacy reference): ${options.evidenceIds.join(", ")}` : undefined])
     console.log(taskProgressPath(projectDir, options.taskId))
     return 0
   }
 
   if (action === "list") {
     if (!noun || noun === "tasks") {
-      for (const task of listMarkdownTasks(projectDir)) console.log(task)
+      for (const task of listTaskStateTasks(projectDir)) console.log(task)
       return 0
     }
     if (["claims", "evidence", "runs"].includes(noun)) {
@@ -1487,81 +1229,13 @@ function gateCommand(options, projectDir = process.cwd()) {
   const [action] = options.positionals
   if (action !== "check") throw new Error("Usage: alloy gate check --task-id ID [--json]")
   if (!options.taskId) throw new Error("--task-id is required")
-  const result = checkGate(projectDir, options.taskId)
+  const result = checkTaskGate(projectDir, options.taskId)
   if (options.json) console.log(JSON.stringify(result, null, 2))
   else {
     console.log(result.ok ? "Alloy gates passed" : "Alloy gates blocked")
     for (const item of result.checks) console.log(`${item.ok ? "OK" : "FAIL"}: ${item.name} - ${item.message}`)
   }
   return result.ok ? 0 : 1
-}
-
-function checkGate(projectDir, taskId) {
-  const progressPath = join(projectDir, ".alloy", "tasks", taskId, "progress.md")
-  if (!pathExists(progressPath)) {
-    return {
-      ok: false,
-      taskId,
-      progressPath: relative(projectDir, progressPath),
-      blockedBy: ["progress.md"],
-      checks: [{ name: "progress", ok: false, message: `Missing progress.md for task: ${taskId}` }],
-    }
-  }
-
-  const content = readFileSync(progressPath, "utf8")
-  const gateHeading = content.match(/^## Gate\s*$/m)
-  if (!gateHeading) {
-    return {
-      ok: false,
-      taskId,
-      progressPath: relative(projectDir, progressPath),
-      blockedBy: ["Gate"],
-      checks: [{ name: "Gate", ok: false, message: "progress.md must contain a ## Gate section" }],
-    }
-  }
-
-  const afterGate = content.slice(gateHeading.index + gateHeading[0].length)
-  const nextHeading = afterGate.search(/\n## /)
-  const gateBlock = nextHeading === -1 ? afterGate : afterGate.slice(0, nextHeading)
-  const checks = gateBlock
-    .split(/\r?\n/)
-    .map((line) => line.match(/^\s*-\s+\[([ xX])\]\s+(.+?)\s*$/))
-    .filter(Boolean)
-    .map((match) => {
-      const name = normalizeGateName(match[2])
-      const ok = match[1].toLowerCase() === "x"
-      return {
-        name,
-        ok,
-        message: ok ? `${name} checked` : `${name} is unchecked`,
-      }
-    })
-
-  if (!checks.length) {
-    return {
-      ok: false,
-      taskId,
-      progressPath: relative(projectDir, progressPath),
-      blockedBy: ["Gate"],
-      checks: [{ name: "Gate", ok: false, message: "## Gate must contain markdown checkbox items" }],
-    }
-  }
-
-  const blockedBy = checks.filter((item) => !item.ok).map((item) => item.name)
-  return {
-    ok: blockedBy.length === 0,
-    taskId,
-    progressPath: relative(projectDir, progressPath),
-    blockedBy,
-    checks,
-  }
-}
-
-function normalizeGateName(text) {
-  return text
-    .replace(/\s+[—|-]\s+.*$/, "")
-    .replace(/`/g, "")
-    .trim()
 }
 
 function syncCommand(options, projectDir = process.cwd()) {

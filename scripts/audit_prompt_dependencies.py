@@ -401,6 +401,7 @@ def main() -> int:
         default=Path("docs/opencode-skill-dependency-audit.md"),
     )
     parser.add_argument("--no-write", action="store_true")
+    parser.add_argument("--quiet", action="store_true", help="Suppress the markdown report and print only the gate summary.")
     args = parser.parse_args()
 
     root = args.root.resolve()
@@ -410,7 +411,8 @@ def main() -> int:
     report = render_report(root, findings, skill_names, matrix)
 
     if args.no_write:
-        print(report)
+        if not args.quiet:
+            print(report)
     else:
         report_path = root / args.report
         report_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,8 +1,19 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import { z } from "zod"
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs"
+import { appendFileSync, existsSync, readFileSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { createHash, randomUUID } from "node:crypto"
+import {
+  activeTaskId,
+  appendProgressNote,
+  cleanProgressText,
+  getIterationCount,
+  markProgressGate,
+  readCurrentPlan,
+  readStatus,
+  readTaskArtifact,
+  recordIteration,
+} from "../lib/alloy-task-state.mjs"
 
 interface AlloyManifest {
   version: string
@@ -54,143 +65,12 @@ const recordSchema = z.object({
   paths: z.array(z.string()).default([]),
 })
 
-function alloyDir(directory: string) {
-  return join(directory, ".alloy")
-}
-
-function taskDir(directory: string, taskId: string) {
-  return join(alloyDir(directory), "tasks", taskId)
-}
-
-function progressPath(directory: string, taskId: string) {
-  return join(taskDir(directory, taskId), "progress.md")
-}
-
 function manifestPath(directory: string) {
   return join(directory, ".opencode", "alloy.manifest.json")
 }
 
 function opencodeConfigPath(directory: string) {
   return join(directory, ".opencode", "opencode.json")
-}
-
-function ensureProgressFile(directory: string, taskId: string) {
-  const path = progressPath(directory, taskId)
-  mkdirSync(taskDir(directory, taskId), { recursive: true })
-  if (!existsSync(path)) {
-    writeFileSync(
-      path,
-      [
-        `# ${taskId}: Progress`,
-        "",
-        "## Gate",
-        "",
-        "- [ ] green",
-        "- [ ] review",
-        "- [ ] verified",
-        "",
-        "## Iterations",
-        "",
-        "## Findings",
-        "",
-        "## Handoff",
-        "",
-      ].join("\n"),
-      "utf8",
-    )
-  }
-  return path
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function cleanProgressText(value: unknown) {
-  return String(value ?? "")
-    .replace(/\s+/g, " ")
-    .trim()
-}
-
-function ensureMarkdownSection(content: string, section: string) {
-  const pattern = new RegExp(`^## ${escapeRegExp(section)}\\s*$`, "m")
-  if (pattern.test(content)) return content
-  return `${content.trimEnd()}\n\n## ${section}\n`
-}
-
-function appendToMarkdownSection(content: string, section: string, text: string) {
-  const withSection = ensureMarkdownSection(content, section)
-  const lines = withSection.split(/\r?\n/)
-  const heading = `## ${section}`
-  const start = lines.findIndex((line) => line.trim() === heading)
-  if (start === -1) return `${withSection.trimEnd()}\n\n${heading}\n${text.trimEnd()}\n`
-  const next = lines.findIndex((line, index) => index > start && line.startsWith("## "))
-  const end = next === -1 ? lines.length : next
-  const before = lines.slice(0, end)
-  const after = lines.slice(end)
-  if (before.at(-1)?.trim()) before.push("")
-  return [...before, ...text.trimEnd().split(/\r?\n/), ...after].join("\n")
-}
-
-function appendProgressNote(directory: string, taskId: string, section: string, lines: string[]) {
-  const path = ensureProgressFile(directory, taskId)
-  const title = `### ${section} — ${new Date().toISOString()}`
-  const body = [title, ...lines.filter(Boolean)].join("\n")
-  const content = readFileSync(path, "utf8")
-  writeFileSync(path, appendToMarkdownSection(content, section, body), "utf8")
-}
-
-function markProgressGate(directory: string, taskId: string, gate: string, note: string, checked = true) {
-  const path = ensureProgressFile(directory, taskId)
-  const mark = checked ? "x" : " "
-  const line = `- [${mark}] ${gate} — ${new Date().toISOString()} | ${cleanProgressText(note)}`
-  let content = readFileSync(path, "utf8")
-  content = ensureMarkdownSection(content, "Gate")
-  const pattern = new RegExp(`^- \\[[ xX]\\] ${escapeRegExp(gate)}(?:\\b.*)?$`, "m")
-  content = pattern.test(content) ? content.replace(pattern, line) : appendToMarkdownSection(content, "Gate", line)
-  writeFileSync(path, content, "utf8")
-}
-
-function readStatus(directory: string) {
-  const taskId = activeTaskId(directory)
-  if (!taskId) return "No active Alloy task. Use /discuss or /plan to create `.alloy/tasks/<id>`."
-  const plan = readTaskArtifact(directory, taskId, "plan.md", 3000)
-  const progress = readTaskArtifact(directory, taskId, "progress.md", 3000)
-  return [
-    `Active task: ${taskId}`,
-    plan ? `<alloy-plan>\n${plan}\n</alloy-plan>` : "No plan.md found for active task.",
-    progress ? `<alloy-progress>\n${progress}\n</alloy-progress>` : "No progress.md found for active task.",
-  ].join("\n\n")
-}
-
-function readCurrentPlan(directory: string) {
-  const taskId = activeTaskId(directory)
-  if (!taskId) return ""
-  return readTaskArtifact(directory, taskId, "plan.md", 2400).trim()
-}
-
-function activeTaskId(directory: string) {
-  const envTask = process.env.ALLOY_TASK_ID?.trim()
-  if (envTask) return envTask
-  const dir = join(alloyDir(directory), "tasks")
-  if (!existsSync(dir)) return undefined
-  const candidates = readdirSync(dir)
-    .filter((name) => !name.startsWith("."))
-    .map((name) => {
-      const taskDir = join(dir, name)
-      const hasArtifact = existsSync(join(taskDir, "plan.md")) || existsSync(join(taskDir, "progress.md"))
-      if (!hasArtifact) return undefined
-      return { name, mtime: statSync(taskDir).mtimeMs }
-    })
-    .filter(Boolean) as { name: string; mtime: number }[]
-  candidates.sort((a, b) => b.mtime - a.mtime || a.name.localeCompare(b.name))
-  return candidates[0]?.name
-}
-
-function readTaskArtifact(directory: string, taskId: string, file: string, limit: number) {
-  const path = join(alloyDir(directory), "tasks", taskId, file)
-  if (!existsSync(path)) return ""
-  return readFileSync(path, "utf8").slice(0, limit).trim()
 }
 
 function safeEvent(event: any) {
@@ -370,18 +250,6 @@ function maybeRecoverToolJson(output: any) {
     output.metadata ||= {}
     output.metadata.alloyJsonRecovered = true
   }
-}
-
-function getIterationCount(directory: string, taskId: string) {
-  const progress = readTaskArtifact(directory, taskId, "progress.md", 20000)
-  return (progress.match(/^- Iteration \d+\b/gm) ?? []).length
-}
-
-function recordIteration(directory: string, taskId?: string) {
-  if (!taskId) return { taskId, iter: 0 }
-  const iter = getIterationCount(directory, taskId) + 1
-  appendProgressNote(directory, taskId, "Iterations", [`- Iteration ${iter}: ralph-loop continuation`])
-  return { taskId, iter }
 }
 
 function ledgerSummary(directory: string) {
