@@ -44,7 +44,7 @@ ${source}
     encoding: "utf8",
   })
   await rm(tmp, { recursive: true, force: true })
-  assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(result.status, 0, result.stderr || result.stdout)
   return result.stdout.trim()
 }
 
@@ -122,12 +122,13 @@ const expectedHooks = [
   "tool.definition",
 ]
 for (const hook of expectedHooks) assert.equal(typeof hooks[hook], "function", hook)
-for (const name of ["alloy_evidence", "alloy_claim", "alloy_state", "alloy_gate"]) {
+for (const name of ["alloy_progress", "alloy_state", "alloy_gate"]) {
   assert.equal(typeof hooks.tool[name].execute, "function", name)
 }
 
-mkdirSync(join(projectDir, ".alloy", "projections"), { recursive: true })
-writeFileSync(join(projectDir, ".alloy", "projections", "status.md"), "Task: plugin rewrite", "utf8")
+mkdirSync(join(projectDir, ".alloy", "tasks", "T1"), { recursive: true })
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "# T1 Plan\\nImplement plugin hooks", "utf8")
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "# T1 Progress\\n\\n## Gate\\n\\n- [ ] verified", "utf8")
 
 const envOut = { env: {} }
 await hooks["shell.env"]({ cwd: projectDir, sessionID: "s1" }, envOut)
@@ -136,7 +137,7 @@ assert.ok(envOut.env.ALLOY_RUN_ID)
 
 const msgOut = { message: {}, parts: [] }
 await hooks["chat.message"]({ sessionID: "s1", agent: "Builder" }, msgOut)
-assert.match(msgOut.parts.at(-1).text, /Task: plugin rewrite/)
+assert.match(msgOut.parts.at(-1).text, /Implement plugin hooks/)
 
 await assert.rejects(
   hooks["tool.execute.before"]({ tool: "read", sessionID: "s1", callID: "c1" }, { args: { filePath: ".env" } }),
@@ -149,11 +150,10 @@ await hooks["tool.execute.after"]({ tool: "bash", sessionID: "s1", callID: "c2",
 assert.equal(JSON.parse(toolOut.output).ok, true)
 await hooks.event({ event: { type: "session.start", properties: { sessionID: "s1" } } })
 
-const evidence = JSON.parse(await hooks.tool.alloy_evidence.execute({ kind: "test", summary: "unit pass" }))
-assert.equal(evidence.summary, "unit pass")
-const claim = JSON.parse(await hooks.tool.alloy_claim.execute({ taskId: "T1", text: "done", evidenceIds: [evidence.id] }))
-assert.equal(claim.status, "verified")
-assert.match(await hooks.tool.alloy_state.execute({}), /Task: plugin rewrite/)
+const progress = await hooks.tool.alloy_progress.execute({ taskId: "T1", gate: "review", summary: "AC review passed" })
+assert.match(progress, /\\[x\\] review/)
+assert.match(progress, /AC review passed/)
+assert.match(await hooks.tool.alloy_state.execute({}), /Implement plugin hooks/)
 assert.match(await hooks.tool.alloy_gate.execute({ taskId: "T1" }), /alloy gate check --task-id T1 --json/)
 `)
 })
@@ -212,8 +212,8 @@ assert.match(chatText, /Run alloy install to create manifest/)
 test("magic detection, command routing, system injection, compaction, and definition hints work", async () => {
   await runPluginScenario(`
 mkdirSync(join(projectDir, ".opencode"), { recursive: true })
-mkdirSync(join(projectDir, ".alloy", "projections"), { recursive: true })
 mkdirSync(join(projectDir, ".alloy", "state"), { recursive: true })
+mkdirSync(join(projectDir, ".alloy", "tasks", "T1"), { recursive: true })
 mkdirSync(join(process.env.HOME, ".config", "alloy"), { recursive: true })
 writeFileSync(join(projectDir, "vendor.lock.json"), JSON.stringify({ lock: true }), "utf8")
 writeFileSync(join(projectDir, ".opencode", "alloy.manifest.json"), JSON.stringify({
@@ -227,14 +227,12 @@ writeFileSync(join(projectDir, ".opencode", "alloy.manifest.json"), JSON.stringi
   excluded: [],
 }), "utf8")
 writeFileSync(join(process.env.HOME, ".config", "alloy", "state.json"), JSON.stringify({ lastSyncedVendorLock: "wrong-sha" }), "utf8")
-writeFileSync(join(projectDir, ".alloy", "projections", "status.md"), "Status line", "utf8")
-writeFileSync(join(projectDir, ".alloy", "projections", "current-plan.md"), "# Current Plan\\nImplement plugin hooks", "utf8")
-writeFileSync(join(projectDir, ".alloy", "state", "tasks.jsonl"), JSON.stringify({ id: "T1", title: "Rewrite plugin", status: "open" }) + "\\n", "utf8")
-writeFileSync(join(projectDir, ".alloy", "state", "evidence.jsonl"), JSON.stringify({ id: "E1", taskId: "T1", summary: "RED test" }) + "\\n", "utf8")
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "# Current Plan\\nImplement plugin hooks", "utf8")
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "# T1 Progress\\n\\n## Gate\\n\\n- [ ] verified", "utf8")
 
 const config = { mcp: {} }
 await hooks.config(config)
-assert.equal(config.default_agent, "Orchestrator")
+assert.equal(config.default_agent, "Planner")
 assert.equal(config.mcp.context7.enabled, true)
 
 const chatOut = { message: {}, parts: [] }
@@ -245,17 +243,18 @@ assert.match(chatText, /global state stale, run alloy install --target global/)
 assert.match(chatText, /Implement plugin hooks/)
 
 const delegateOut = { message: { parts: [{ type: "text", text: "Please delegate this again after retry failed twice" }] }, parts: [] }
-await hooks["chat.message"]({ sessionID: "s1", agent: "Orchestrator" }, delegateOut)
+await hooks["chat.message"]({ sessionID: "s1", agent: "Planner" }, delegateOut)
 assert.match(delegateOut.parts.map((part) => part.text).join("\\n"), /delegate fallback/i)
 
 const systemOut = { system: [] }
 await hooks["experimental.chat.system.transform"]({ sessionID: "s1", model: {} }, systemOut)
-assert.match(systemOut.system.join("\\n"), /Status line/)
+assert.match(systemOut.system.join("\\n"), /<alloy-plan>/)
+assert.match(systemOut.system.join("\\n"), /<alloy-progress>/)
 
 const compactOut = { context: [] }
 await hooks["experimental.session.compacting"]({ sessionID: "s1" }, compactOut)
-assert.match(compactOut.context.join("\\n"), /Rewrite plugin/)
-assert.match(compactOut.context.join("\\n"), /RED test/)
+assert.match(compactOut.context.join("\\n"), /Implement plugin hooks/)
+assert.match(compactOut.context.join("\\n"), /T1 Progress/)
 
 const addOut = { parts: [] }
 await hooks["command.execute.before"]({ command: "add", sessionID: "s1", arguments: "humanizer" }, addOut)
@@ -273,23 +272,19 @@ assert.match(definition.description, /Alloy gate/)
 test("ralph-loop records iterations and exposes count for gate checks", async () => {
   await runPluginScenario(`
 mkdirSync(join(projectDir, ".alloy", "state"), { recursive: true })
-writeFileSync(join(projectDir, ".alloy", "state", "tasks.jsonl"), JSON.stringify({ id: "T1", title: "Follow-up", status: "open" }) + "\\n", "utf8")
 
 const first = { parts: [] }
 await hooks["command.execute.before"]({ command: "ralph-loop", sessionID: "s1", arguments: "--task-id T1" }, first)
 assert.match(first.parts.map((part) => part.text).join("\\n"), /ralph-loop/)
 
-await hooks.event({ event: { type: "iteration", properties: { taskId: "T1" } } })
+const second = { parts: [] }
+await hooks["command.execute.before"]({ command: "ralph-loop", sessionID: "s1", arguments: "--task-id T1" }, second)
 
-const rows = readFileSync(join(projectDir, ".alloy", "state", "iteration.jsonl"), "utf8")
-  .trim()
-  .split(/\\r?\\n/)
-  .map((line) => JSON.parse(line))
+const progress = readFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "utf8")
+const rows = progress.match(/^- Iteration \\d+/gm) ?? []
 assert.equal(rows.length, 2)
-assert.deepEqual(rows.map((row) => row.taskId), ["T1", "T1"])
-assert.deepEqual(rows.map((row) => row.iter), [1, 2])
-assert.match(rows[0].ts, /^\\d{4}-\\d{2}-\\d{2}T/)
+assert.match(progress, /ralph-loop continuation/)
 assert.equal(hooks.alloy.getIterationCount("T1"), 2)
-assert.match(await hooks.tool.alloy_gate.execute({ taskId: "T1" }), /Ralph Loop iterations: 2\\/5/)
+assert.ok((await hooks.tool.alloy_gate.execute({ taskId: "T1" })).includes("Ralph Loop iterations: 2/5"))
 `)
 })

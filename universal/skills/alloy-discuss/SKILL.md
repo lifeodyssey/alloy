@@ -1,207 +1,84 @@
----
 name: alloy-discuss
-description: Use BEFORE planning for large or ambiguous features. Extracts implementation gray areas through adaptive questioning so downstream planning has decision-locked context. Use when a feature is too large for direct planning, or when the user says "let's think this through first."
----
+description: Use before planning when requirements are ambiguous, large, user-visible, or likely to cause rework unless decisions are locked.
 
 # Alloy Discuss
 
-## Overview
+Use this skill to turn fuzzy user intent into decision-locked context for Planner and Builder.
 
-`alloy-discuss` extracts implementation decisions that downstream agents (Architect, Builder) need — so they don't have to ask the user again. It is deeper than normal planning: planning asks "what are we building and how?", discuss asks "what gray areas must be locked down first?"
+## Use When
 
-**When to use this vs alloy-plan:**
-- Use `alloy-plan` for everyday features where the design space is small
-- Use `alloy-discuss` for large features, ambiguous requirements, or "let's think this through" requests
-- Use `alloy-discuss` when prior planning surfaced too many unresolved gray areas
+- The user asks for a feature but acceptance criteria are incomplete.
+- Product behavior, UX, policy, migration, rollout, or compatibility choices are unclear.
+- The task is broad enough that a wrong assumption would cause rework.
+- There are competing interpretations that need a user decision.
 
-**Output:** `.alloy/plans/<id>/context.md` — decisions clear enough that downstream agents can act without asking the user again.
+## Do Not Use When
 
-## Roles (from GSD)
+- The change is a tiny typo, dependency bump, or clearly specified one-file edit.
+- The missing detail can be discovered from local code or docs.
+- The user explicitly asked to implement an already approved plan.
 
-- **User = Founder / Visionary.** They know what they want at the product level.
-- **Claude = Builder.** Your job is to extract the specific implementation choices the vision implies.
+## Artifact
 
-**Don't ask the user about:**
-- Codebase patterns (Explorer reads the code)
-- Technical risks (you identify these)
-- Implementation approach (that's for `alloy-plan`)
+Write or update:
 
-**Do ask the user about:**
-- Vision (what success looks like)
-- Gray-area implementation choices that change UX visibly
-- Edge cases where the product behavior is genuinely a product decision
+```text
+.alloy/tasks/<task-id>/context.md
+```
 
-## The Process
+Use a stable task id from the user, issue id, branch name, or a short slug. Do not create multiple ids for the same request.
 
-### Phase 1: Load Prior Context
-
-Before any questions:
-
-1. Read `.alloy/projections/status.md` — what's the current state?
-2. Read prior plans in `.alloy/plans/` — what has the team decided before?
-3. Read project `AGENTS.md` / `CLAUDE.md` / `README.md` — what conventions exist?
-4. Skim recent commits — what was just shipped?
-
-**Skip questions already decided in prior context.** If the team has an ADR saying "we use JWT for auth," don't ask "should we use JWT or sessions?"
-
-### Phase 2: Scout the Codebase
-
-Run `alloy-map-codebase` (or skim manually) to find:
-- Reusable patterns / abstractions
-- Existing similar features (you can model after them)
-- Anti-patterns to avoid (the team learned these the hard way)
-
-This becomes the "facts" half of context.md — what already exists.
-
-### Phase 3: Analyze the Feature — Identify Gray Areas
-
-Read the user's request. Generate **specific gray areas**, not generic categories.
-
-**WRONG (generic):**
-- "UI questions"
-- "UX questions"
-- "Behavior questions"
-
-**RIGHT (specific):**
-
-For "Build user authentication":
-- Session handling: cookie-based, JWT, or hybrid?
-- Error responses: uniform "invalid credentials" (no enumeration) or specific "email not found"?
-- Multi-device policy: allow N sessions, single session, or unlimited?
-- Recovery flow: email link, SMS code, security questions, or chained?
-- Password rules: enforce on registration, on change, or both?
-- Brute force defense: rate limit per IP, per account, both, or CAPTCHA?
-
-For "Add export to CSV":
-- Streaming or buffered? (impacts memory + latency tradeoff)
-- Server-generated or client-generated? (impacts large dataset behavior)
-- Default filename format? (impacts user re-finding)
-- Header row included? (impacts paste-into-spreadsheet UX)
-- Date / number format: locale-aware or fixed? (impacts internationalization)
-- Permission scope: caller's row-level access enforced? (impacts security)
-
-Each gray area becomes a discussion item with an ID: `D-01`, `D-02`, etc.
-
-### Phase 4: Present Gray Areas — User Selects
-
-> "I've identified N gray areas in this feature:
-> - D-01: Session handling (cookie vs JWT vs hybrid)
-> - D-02: Error responses (uniform vs specific)
-> - D-03: Multi-device policy
-> - D-04: Recovery flow shape
-> - D-05: Password rules surface
->
-> Which would you like to discuss? You can pick any subset, or 'all'."
-
-User picks (e.g., "D-01, D-04, all of recovery flow").
-
-**Don't deep-dive areas the user said are settled or out of scope.** Trust their selection.
-
-### Phase 5: Deep-Dive Each Selected Area
-
-For EACH selected D-NN:
-
-1. Restate the gray area in your own words
-2. Present 2–3 concrete options with tradeoffs
-3. Make a recommendation if you have one
-4. Ask ONE clarifying question if the user's answer is ambiguous
-5. Record the decision
-
-**Format the decision exactly:**
+## Context Template
 
 ```markdown
-### D-01: Session handling
-**Decision:** Cookie-based sessions with HttpOnly + SameSite=Strict.
-**Rationale:** Team already uses cookies elsewhere (per AGENTS.md). JWT adds complexity (revocation, secret rotation) without clear benefit for this use case.
-**Implications:** Need session store (Redis already provisioned per .alloy/state). Logout flow must clear cookie + invalidate session.
-**Source:** User on 2026-05-25.
-```
+# <task-id>: Context
 
-### Phase 6: Scope Creep Redirection
-
-When user mentions something OUTSIDE the current feature ("oh and while we're at it, let's also do X"):
-
-```
-> "X is interesting but it's outside the scope of this feature. I'm capturing it 
->  in `.alloy/deferred-ideas.md` so we don't lose it. We can plan it as a 
->  separate feature after this one ships."
-```
-
-Write to `.alloy/deferred-ideas.md`:
-```markdown
-## Deferred from <feature>, captured 2026-05-25
-- [topic] — brief description
-```
-
-**Never silently absorb scope creep.** Always redirect to deferred.
-
-### Phase 7: Write context.md
-
-Save decisions to `.alloy/plans/<id>/context.md`:
-
-```markdown
-# Context for <feature>
-
-## Background
-<one paragraph from prior context + codebase scout>
+## User Request
+- Original request:
+- Follow-up corrections:
+- Explicit constraints:
 
 ## Decisions Locked
+- Decision:
+  - Chosen:
+  - Reason:
+  - Rejected alternatives:
 
-### D-01: <area>
-**Decision:** ...
-**Rationale:** ...
-**Implications:** ...
+## Acceptance Signals
+- User-visible success:
+- Non-goals:
+- Compatibility expectations:
 
-### D-02: <area>
-...
+## Open Questions
+- [ ] Question:
+  - Why it blocks planning:
+  - Options:
 
-## Gray Areas Skipped
-- D-NN: <area> — user said "out of scope" or "defer"
+## Source Reality To Check In /plan
+- Files/directories:
+- Commands:
+- Docs/specs:
 
-## Facts From Codebase
-- Existing pattern: `src/auth/Session.kt` uses cookie + Redis
-- Existing convention: error responses use `ErrorResponse` shape (see `src/api/errors/`)
-- Anti-pattern to avoid: don't reinvent password hashing — use existing `BCryptHasher`
-
-## Next Step
-Invoke `alloy-plan`, which now reads this context and produces the final design plus implementation tasks.
+## Handoff To /plan
+- Task id:
+- Planning focus:
+- Risks:
 ```
 
-## Anti-Patterns
+## Question Discipline
 
-| Don't | Do |
-|---|---|
-| Use generic category labels ("UI", "UX", "Behavior") | Generate specific gray areas with concrete options |
-| Ask about codebase facts | Run `alloy-map-codebase` or grep yourself |
-| Silently absorb scope creep | Redirect to `.alloy/deferred-ideas.md` |
-| Re-ask questions already decided | Read prior context first |
-| Push for more areas than user wants | Trust their selection |
-| Make implementation decisions for the user | Recommend, but the user picks |
+Ask at most one blocking question at a time in chat. Prefer discovering codebase facts yourself. Ask the user only about intent, tradeoffs, and externally unknowable decisions.
 
-## Hand-Off
+## Subagent Policy
 
-After context.md is written and reviewed:
+Planner may spawn one-shot Explorer only for broad source discovery. Do not create persistent subagent files.
 
-> "Context locked at `.alloy/plans/<id>/context.md`. N decisions made, M deferred. Ready for `alloy-plan` to produce the implementation plan."
+## Final Output
 
-## Evidence
+Return:
 
-```
-alloy_evidence { kind: "discuss_done", taskId, summary: "context.md written with N decisions, M deferred" }
-alloy_evidence { kind: "decision", taskId, summary: "D-01: cookie sessions chosen because Y" }
-```
-
-## Related Skills
-
-- **alloy-map-codebase** — pre-discuss codebase scout
-- **alloy-plan** — turns context into the final design and implementation tasks
-- **grill-me** (vendor: Matt Pocock) — alternative for one-on-one decision pressure-testing on a single topic
-
-## Attribution
-
-Concept-only rewrite from:
-
-- **GSD discuss-phase** (rokicool/gsd-opencode and gsd-build/get-shit-done, MIT) — User/Builder framing, gray-area extraction, no-generic-categories rule, scope-creep redirection to deferred, D-NN decision IDs. No GSD command files or `gsd-sdk` runtime are vendored.
-- **Alloy** (MIT / first-party) — `.alloy/plans/<id>/context.md` artifact, evidence integration, hand-off to plan.
-
-See `/CREDITS.md` at repo root for the full attribution chain.
+- task id
+- context path
+- locked decisions count
+- open blocking questions
+- recommended next command

@@ -1,28 +1,24 @@
 ---
-description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Generate or refresh hierarchical AGENTS.md project instructions
+description: Generate or refresh concise project instructions
+agent: alloy-planner
 ---
 
 # /init-deep
 
-Use this to create a concise project knowledge base for agents.
+Create or refresh project knowledge files without changing implementation code.
 
 ## Workflow
 
-1. Read the root `AGENTS.md`, `README`, build files, test configs, and package manifests.
-2. Map the project structure with `find`, `rg --files`, language tooling, and `sg` when useful.
-3. Identify directories that need local instructions because they have distinct conventions.
-4. For each selected directory, write or update `AGENTS.md` with:
-   - purpose of the directory
-   - important entry points
-   - testing commands
-   - local conventions
-   - forbidden patterns
-5. Keep files short and factual.
-6. Review for duplication and contradictions.
+1. Read root `AGENTS.md`, `README`, build files, test configs, package manifests, and existing local instruction files.
+2. Map project structure with `rg --files`, language tooling, and `sg` when available.
+3. Identify directories that need local instructions.
+4. Write or update `AGENTS.md` with entry points, testing conventions, forbidden patterns, and task artifact conventions.
+5. Reference Alloy workflow state as `.alloy/tasks/<id>/context.md`, `plan.md`, and `progress.md`.
+6. Keep files short, factual, and non-duplicative.
 
 ## Rules
 
-- Preserve existing project-specific instructions unless they are stale and clearly contradicted by the repository.
+- Preserve existing project-specific instructions unless stale.
 - Do not include secrets.
 - Do not create deep instruction files for tiny or conventional directories.
-- Use `alloy-tdd` language for implementation guidance.
+- Do not write implementation code.

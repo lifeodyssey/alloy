@@ -10,7 +10,20 @@
     "paths": [
       "vendor/skills/superpowers/5.1.0/brainstorming"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "superpowers-brainstorming",
+        "version": "5.1.0",
+        "source": "https://github.com/obra/superpowers",
+        "upstreamPath": "skills/brainstorming",
+        "sha256": "ff35ca21e736d607180c427236972796326ba3ed9574d3d20333e9a5388f4838"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "superpowers-systematic-debugging",
@@ -23,7 +36,20 @@
     "paths": [
       "vendor/skills/superpowers/5.1.0/systematic-debugging"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "superpowers-systematic-debugging",
+        "version": "5.1.0",
+        "source": "https://github.com/obra/superpowers",
+        "upstreamPath": "skills/systematic-debugging",
+        "sha256": "479bbf65114c398eb91bf48bab386736c2abf22c03f7171fbf05b507067b51e3"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "superpowers-test-driven-development",
@@ -36,7 +62,20 @@
     "paths": [
       "vendor/skills/superpowers/5.1.0/test-driven-development"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "superpowers-test-driven-development",
+        "version": "5.1.0",
+        "source": "https://github.com/obra/superpowers",
+        "upstreamPath": "skills/test-driven-development",
+        "sha256": "6f3e82488337d6ca2defbb9a65fcd2a628b682eaa69f5e9362b71360aa337688"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "vercel-react-best-practices",
@@ -48,7 +87,19 @@
     "paths": [
       "vendor/skills/scopes/frontend/vercel-react-best-practices"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "vercel-react-best-practices",
+        "version": "vendored-local",
+        "source": "https://github.com/vercel-labs/agent-skills",
+        "sha256": "71d954ceb4567d80ad114b6999211440530446bd815cf13714fe1e849d1619f0"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "kotlin-backend-jpa-entity-mapping",
@@ -60,7 +111,19 @@
     "paths": [
       "vendor/skills/scopes/backend/kotlin-backend-jpa-entity-mapping"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "kotlin-backend-jpa-entity-mapping",
+        "version": "vendored-local",
+        "source": "https://github.com/Kotlin/kotlin-agent-skills",
+        "sha256": "599037e78611cefb1dd9b714e283986677908d2f70cb600ee970ba28002af917"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "postgres",
@@ -72,7 +135,19 @@
     "paths": [
       "vendor/skills/scopes/backend/postgres"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "postgres",
+        "version": "vendored-local",
+        "source": "https://github.com/timescale/pg-aiguide",
+        "sha256": "cbaf0ef49a227310e48b98eb54108afe5515292d5a371c6b309c20d2f137a1cd"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "design-postgres-tables",
@@ -84,7 +159,19 @@
     "paths": [
       "vendor/skills/scopes/backend/design-postgres-tables"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "design-postgres-tables",
+        "version": "vendored-local",
+        "source": "https://github.com/timescale/pg-aiguide",
+        "sha256": "a190a20f186ff799e6bccb1d87b6da46267721f4ac06839b5bf0f70f32cb104f"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "pgvector-semantic-search",
@@ -96,7 +183,19 @@
     "paths": [
       "vendor/skills/scopes/backend/pgvector-semantic-search"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "pgvector-semantic-search",
+        "version": "vendored-local",
+        "source": "https://github.com/timescale/pg-aiguide",
+        "sha256": "418e2af69fbb5fab79ed9a4a833bf6966c80758569da7289a4c75360e961b2be"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "terraform-skill",
@@ -108,7 +207,19 @@
     "paths": [
       "vendor/skills/scopes/infra/terraform-skill"
     ],
-    "vendoredAt": "2026-05-24"
+    "vendoredAt": "2026-05-24",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "terraform-skill",
+        "version": "vendored-local",
+        "source": "https://github.com/antonbabenko/terraform-skill",
+        "sha256": "ff80374c54130b195748746d37b42c69cab34cbccc2e67a52146f62ef3b37a5d"
+      }
+    ],
+    "distilledAt": "2026-05-24",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "ralph-loop",
@@ -116,12 +227,25 @@
     "source": "anthropics/claude-plugins-official",
     "version": "0.1.0",
     "license": "MIT",
-    "sha256": "<placeholder>",
+    "sha256": "7fec5cc3d1b22e0597fa692d872395b2d1a040aa8536b9213247142855502671",
     "paths": [
       "vendor/skills/external/ralph-loop"
     ],
     "vendoredAt": "2026-05-26",
-    "upstreamPath": "skills/ralph-loop"
+    "upstreamPath": "skills/ralph-loop",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "ralph-loop",
+        "version": "0.1.0",
+        "source": "anthropics/claude-plugins-official",
+        "upstreamPath": "skills/ralph-loop",
+        "sha256": "<placeholder>"
+      }
+    ],
+    "distilledAt": "2026-05-26",
+    "autoUpdate": true,
+    "internal": false
   },
   {
     "name": "handoff",
@@ -130,10 +254,167 @@
     "upstreamPath": "skills/productivity/handoff",
     "version": "main",
     "license": "MIT",
-    "sha256": "d215dd8f2a19bf85fdaf67a3cdb5077641f6b4108f229ba79579414793d7b0a3",
+    "sha256": "9628fcb7971262c41733f3a74bd425872213bca57dc0e053c6338f64ed0ad4a3",
     "paths": [
       "vendor/skills/external/mattpocock/main/handoff"
     ],
-    "vendoredAt": "2026-05-26"
+    "vendoredAt": "2026-05-26",
+    "fusionType": "verbatim",
+    "sources": [
+      {
+        "name": "handoff",
+        "version": "main",
+        "source": "https://github.com/mattpocock/skills",
+        "upstreamPath": "skills/productivity/handoff",
+        "sha256": "d215dd8f2a19bf85fdaf67a3cdb5077641f6b4108f229ba79579414793d7b0a3"
+      }
+    ],
+    "distilledAt": "2026-05-26",
+    "autoUpdate": true,
+    "internal": false
+  },
+  {
+    "name": "alloy-tdd",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-tdd/SKILL.md"
+    ],
+    "fusionType": "inline-append",
+    "sources": [
+      {
+        "name": "superpowers-test-driven-development",
+        "version": "5.1.0"
+      },
+      {
+        "name": "mattpocock-tdd",
+        "version": "main"
+      },
+      {
+        "name": "team-tdd-legacy",
+        "version": "0.1.2"
+      }
+    ],
+    "sha256": "6ab58b28bb134ee17aeb823c3e471981e54aba25994076bbfbda5cfac6880e11",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
+  },
+  {
+    "name": "alloy-debug",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-debug/SKILL.md"
+    ],
+    "fusionType": "inline-append",
+    "sources": [
+      {
+        "name": "superpowers-systematic-debugging",
+        "version": "5.1.0"
+      }
+    ],
+    "sha256": "6393abd6e7c9f0d3693a388c8740868248e5667a6a0cec2b494cb86b9e4f3622",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
+  },
+  {
+    "name": "alloy-plan",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-plan/SKILL.md"
+    ],
+    "fusionType": "inline-append",
+    "sources": [
+      {
+        "name": "superpowers-brainstorming",
+        "version": "5.1.0"
+      },
+      {
+        "name": "superpowers-writing-plans",
+        "version": "5.1.0"
+      }
+    ],
+    "sha256": "bdf1d94613ac3af3c9608be68e78cc8ca01ce995fa25f6b41d9b48ecdd12e79f",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
+  },
+  {
+    "name": "alloy-execute",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-execute/SKILL.md"
+    ],
+    "fusionType": "rewrite",
+    "sources": [
+      {
+        "name": "alloy-execute-legacy",
+        "version": "0.1.2"
+      }
+    ],
+    "sha256": "93deeb649e2f6ec4c0608e11bb60e61094738bddb6ef4112e6434740789c3ce3",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
+  },
+  {
+    "name": "alloy-verify",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-verify/SKILL.md"
+    ],
+    "fusionType": "rewrite",
+    "sources": [
+      {
+        "name": "alloy-verify-legacy",
+        "version": "0.1.2"
+      }
+    ],
+    "sha256": "128c312f7dab38f851dd7667b85b589e5560f7409cb96de1e907b09f40b8e207",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
+  },
+  {
+    "name": "alloy-qa",
+    "kind": "skill",
+    "source": "first-party/alloy",
+    "version": "0.1.4",
+    "license": "MIT",
+    "paths": [
+      "universal/skills/alloy-qa/SKILL.md"
+    ],
+    "fusionType": "rewrite",
+    "sources": [
+      {
+        "name": "gstack-qa",
+        "version": "local"
+      }
+    ],
+    "sha256": "8ae301d566042bb103f2e05c1c5f02c5c7385720d7abf71c7dacf8b6f512a106",
+    "distilledAt": "2026-06-11",
+    "autoUpdate": false,
+    "internal": true,
+    "vendoredAt": "2026-06-11"
   }
 ]

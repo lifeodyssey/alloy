@@ -83,6 +83,11 @@ async function check(name) {
     console.error(`No vendor.lock.json entry named: ${name}`)
     process.exit(2)
   }
+  if (entry.internal) {
+    console.log(`${name}: internal (no upstream to check)`)
+    return
+  }
+
   if (entry.source === "vendored-local" || entry.version === "vendored-local") {
     console.log(`${name}: vendored-local (no upstream to check)`)
     return
@@ -207,6 +212,10 @@ async function apply(name) {
   const entry = entries.find((e) => e.name === name)
   if (!entry) {
     console.error(`No vendor.lock.json entry named: ${name}`)
+    process.exit(2)
+  }
+  if (entry.internal) {
+    console.error(`${name} is internal; cannot --apply`)
     process.exit(2)
   }
   if (entry.source === "vendored-local" || entry.version === "vendored-local") {

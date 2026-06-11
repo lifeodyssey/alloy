@@ -1,18 +1,28 @@
 ---
-description: Start a bounded Ralph Loop retry cycle
-agent: Orchestrator
+description: Run one bounded Alloy retry iteration
+agent: alloy-builder
 ---
 
-# ralph-loop
+# /ralph-loop
 
-Delegate to the `ralph-loop` skill.
+Run one retry iteration for an active Alloy task. This is a bounded command, not an autonomous daemon.
 
 ## Workflow
 
-1. Invoke the `ralph-loop` skill.
-2. Parse `$ARGUMENTS` for the task, maximum iteration count, required checks, and stop condition.
-3. Run one bounded pass at a time, preserving findings and verification evidence between passes.
-4. Stop when the goal is satisfied, the stop condition is met, the iteration budget is exhausted, or the user cancels the loop.
+1. Identify the task id from `$ARGUMENTS`, `ALLOY_TASK_ID`, or the most recent `.alloy/tasks/<id>/progress.md`.
+2. Read the approved `plan.md` and current `progress.md`.
+3. Pick exactly one failed gate, failed command, or unresolved finding.
+4. Use `alloy-debug` before changing code.
+5. Update `progress.md` under `## Iterations` and `## Findings`.
+6. Re-run the smallest meaningful verification command.
+7. Stop after one iteration and report the next command.
+
+## Stop Conditions
+
+- No approved plan.
+- No reproducible failure or unchecked gate.
+- Same fix strategy has failed twice.
+- Required services, credentials, or permissions are missing.
 
 ## User Task
 

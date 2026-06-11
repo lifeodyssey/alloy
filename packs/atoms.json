@@ -25,25 +25,16 @@
         "ralph-loop"
       ]
     },
-    "alloy-v3-agents": {
+    "alloy-primary-agents": {
       "agents": [
-        "Orchestrator",
-        "Explorer",
-        "Architect",
-        "Builder",
-        "Fixer",
-        "Reviewer",
-        "Tester"
+        "Planner",
+        "Builder"
       ]
     },
-    "alloy-v3-modelRoles": {
+    "alloy-primary-modelRoles": {
       "modelRoles": [
-        "orchestrator",
         "planner",
-        "executor",
-        "reviewer",
-        "verifier",
-        "explorer"
+        "executor"
       ]
     },
     "alloy-sdd-commands": {

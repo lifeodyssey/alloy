@@ -1,5 +1,5 @@
 ---
-description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Create a continuation summary for a new OpenCode session
+description: Create a continuation summary for a new OpenCode session
 ---
 
 # /handoff
@@ -13,13 +13,13 @@ Inspect, when available:
 - The latest user request and constraints from this conversation.
 - Current `git status --short`.
 - Recent `git diff --stat`.
-- Relevant `.alloy/state/*.jsonl` records and `.alloy/projections/*.md` artifacts.
+- Active `.alloy/tasks/<id>/context.md`, `plan.md`, and `progress.md`.
 - Files changed or discussed in this session.
 - Verification already run and remaining gaps.
 
 ## Output Format
 
-```
+```text
 HANDOFF CONTEXT
 ===============
 
@@ -31,9 +31,12 @@ GOAL
 ----
 [one sentence]
 
-CURRENT STATE
--------------
-- [what is true now]
+CURRENT TASK
+------------
+- task id:
+- plan:
+- progress:
+- gate status:
 
 WORK COMPLETED
 --------------

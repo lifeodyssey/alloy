@@ -10,7 +10,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "agents").mkdir()
-            (root / "agents" / "Orchestrator.md").write_text(
+            (root / "agents" / "Planner.md").write_text(
                 'Use .sisyphus/boulder.json, team-tdd, frontend-tdd, pg-aiguide, '
                 'github MCP, @Oracle, @plannotator/opencode, and "skills": ["*"].',
                 encoding="utf-8",
@@ -29,13 +29,34 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         self.assertIn("@plannotator/opencode", names)
         self.assertIn('skills:["*"]', names)
 
+    def test_removed_command_rule_does_not_match_prefixed_slash_command(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "commands").mkdir()
+            (root / "commands" / "ralph-loop.md").write_text(
+                "Run /ralph-loop for bounded autopilot loops.",
+                encoding="utf-8",
+            )
+
+            names = {finding.reference for finding in audit.audit_repository(root)}
+
+            self.assertNotIn("/ralph", names)
+
+            (root / "commands" / "legacy.md").write_text(
+                "Run /ralph for the removed command.",
+                encoding="utf-8",
+            )
+            names = {finding.reference for finding in audit.audit_repository(root)}
+
+            self.assertIn("/ralph", names)
+
     def test_builds_dependency_matrix_for_approved_references(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             opencode = root / "opencode"
             (root / "agents").mkdir()
-            (root / "agents" / "Orchestrator.md").write_text(
-                "Invoke alloy-tdd, alloy-plan, alloy-debug, @Architect, "
+            (root / "agents" / "Planner.md").write_text(
+                "Invoke alloy-tdd, alloy-plan, alloy-debug, @Builder, "
                 "use context7, and use exa.",
                 encoding="utf-8",
             )
@@ -46,7 +67,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
             (opencode / "skills" / "alloy-debug").mkdir(parents=True)
             (opencode / "skills" / "alloy-debug" / "SKILL.md").write_text("# Alloy Debug")
             (opencode / "agents").mkdir(parents=True)
-            (opencode / "agents" / "Architect.md").write_text("# Alloy Architect")
+            (opencode / "agents" / "Builder.md").write_text("# Alloy Builder")
             (opencode / "opencode.json").write_text(
                 '{"mcp":{"context7":{"enabled":true},"exa":{"enabled":true}},"plugin":[]}',
                 encoding="utf-8",
@@ -59,7 +80,7 @@ class AuditPromptDependenciesTest(unittest.TestCase):
         self.assertTrue(by_ref["alloy-tdd"].opencode_visible)
         self.assertTrue(by_ref["alloy-plan"].opencode_visible)
         self.assertTrue(by_ref["alloy-debug"].opencode_visible)
-        self.assertTrue(by_ref["@Architect"].opencode_visible)
+        self.assertTrue(by_ref["@Builder"].opencode_visible)
         self.assertTrue(by_ref["context7"].opencode_visible)
         self.assertTrue(by_ref["exa"].opencode_visible)
 

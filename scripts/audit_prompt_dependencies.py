@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -72,10 +73,10 @@ class DependencyRow:
 
 
 RULES = (
-    Rule(".sisyphus", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy` state and projections."),
-    Rule("boulder.json", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy` state and projections."),
+    Rule(".sisyphus", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy/tasks/<id>` markdown artifacts."),
+    Rule("boulder.json", "workflow", "legacy Sisyphus state", "Use Alloy `.alloy/tasks/<id>` markdown artifacts."),
     Rule("call_omo_agent", "tool", "OMO-only tool API", "Use native Alloy/OpenCode agents."),
-    Rule("@Oracle", "agent", "old OMO built-in alias", "Use @Architect."),
+    Rule("@Oracle", "agent", "old OMO built-in alias", "Use Planner or a one-shot Explorer subagent."),
     Rule("@plannotator/opencode", "plugin", "removed plugin", "Use Alloy plan/review/gate artifacts instead."),
     Rule("opencode-ralph-loop", "plugin", "removed plugin", "Use Alloy review and verification gates."),
     Rule("/ralph", "command", "removed command", "Use Alloy review and verification gates."),
@@ -152,13 +153,8 @@ DEPENDENCIES = (
     Dependency("context7", "context7", "mcp", "opencode.json", "mcp", "keep: default documentation MCP"),
     Dependency("grep_app", "grep_app", "mcp", "opencode.json", "mcp", "keep: default public code search MCP"),
     Dependency("exa", "exa", "mcp", "opencode.json", "mcp", "keep: default web search MCP"),
-    Dependency("@Orchestrator", "Orchestrator", "agent", "repo", "agent", "keep: Alloy routing agent"),
-    Dependency("@Explorer", "Explorer", "agent", "repo", "agent", "keep: Alloy exploration agent"),
-    Dependency("@Architect", "Architect", "agent", "repo", "agent", "keep: Alloy planning agent"),
+    Dependency("@Planner", "Planner", "agent", "repo", "agent", "keep: Alloy planning agent"),
     Dependency("@Builder", "Builder", "agent", "repo", "agent", "keep: Alloy implementation agent"),
-    Dependency("@Fixer", "Fixer", "agent", "repo", "agent", "keep: Alloy debugging and patching agent"),
-    Dependency("@Reviewer", "Reviewer", "agent", "repo", "agent", "keep: Alloy review agent"),
-    Dependency("@Tester", "Tester", "agent", "repo", "agent", "keep: Alloy testing and verification agent"),
     Dependency("gh", "gh", "cli", "system", "cli", "keep: GitHub CLI replacement for GitHub MCP", ("`gh`", "gh CLI")),
     Dependency("az devops", "az", "cli", "system", "cli", "keep: Azure DevOps CLI replacement for Azure MCP", ("`az devops`", "az devops")),
     Dependency("psql", "psql", "cli", "system", "cli", "keep: Postgres CLI replacement for Postgres MCP", ("`psql`", "psql")),
@@ -179,6 +175,12 @@ def iter_scan_paths(root: Path) -> list[Path]:
     return sorted(paths)
 
 
+def matches_rule_reference(line: str, reference: str) -> bool:
+    if not reference.startswith("/"):
+        return reference in line
+    return re.search(rf"(?<![\w/-]){re.escape(reference)}(?![\w/-])", line) is not None
+
+
 def audit_repository(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     for path in iter_scan_paths(root):
@@ -188,7 +190,7 @@ def audit_repository(root: Path) -> list[Finding]:
             continue
         for number, line in enumerate(text.splitlines(), start=1):
             for rule in RULES:
-                if rule.reference in line:
+                if matches_rule_reference(line, rule.reference):
                     findings.append(
                         Finding(
                             reference=rule.reference,
@@ -376,7 +378,7 @@ def render_report(
             "## Policy",
             "",
             "- `alloy-tdd`, `alloy-plan`, and `alloy-debug` are Alloy-owned entrypoints.",
-            "- GSD and OMO Slim runtimes are not installable through Alloy v2.",
+            "- GSD and OMO Slim runtimes are not installable through Alloy v0.1.4.",
             "- Default configs must not include OMO plugins, GSD command paths, or wildcard skill pools.",
             "- GitHub, Azure DevOps, and Postgres workflows use `gh`, `az devops`, and `psql`.",
             "",

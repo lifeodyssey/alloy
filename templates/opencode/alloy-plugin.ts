@@ -1,6 +1,6 @@
 import { type Plugin, tool } from "@opencode-ai/plugin"
 import { z } from "zod"
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { createHash, randomUUID } from "node:crypto"
 
@@ -22,27 +22,7 @@ type TextPart = {
 
 type JsonRecord = Record<string, unknown>
 
-interface PresetSpec {
-  agents: string[]
-  skills_visible: string[] | "all"
-  mcps_enabled: string[] | "all"
-}
-
-interface PresetsDef {
-  presets: Record<string, PresetSpec>
-}
-
-const DEFAULT_AGENT = "Orchestrator"
-
-// === OMO preset hot-swap (Task 9) ===
-let activePreset = "default"
-let presetsDef: PresetsDef | null = null
-
-const FALLBACK_PRESETS: PresetsDef = {
-  presets: {
-    default: { agents: [], skills_visible: "all", mcps_enabled: "all" },
-  },
-}
+const DEFAULT_AGENT = "Planner"
 
 const DEFAULT_MCP: Record<string, JsonRecord> = {
   context7: { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true },
@@ -56,6 +36,7 @@ const DEFAULT_MCP: Record<string, JsonRecord> = {
 }
 
 const COMMAND_SKILLS: Record<string, string> = {
+  discuss: "alloy-discuss",
   plan: "alloy-plan",
   execute: "alloy-execute",
   verify: "alloy-verify",
@@ -77,8 +58,12 @@ function alloyDir(directory: string) {
   return join(directory, ".alloy")
 }
 
-function statePath(directory: string, name: string) {
-  return join(alloyDir(directory), "state", `${name}.jsonl`)
+function taskDir(directory: string, taskId: string) {
+  return join(alloyDir(directory), "tasks", taskId)
+}
+
+function progressPath(directory: string, taskId: string) {
+  return join(taskDir(directory, taskId), "progress.md")
 }
 
 function manifestPath(directory: string) {
@@ -89,65 +74,123 @@ function opencodeConfigPath(directory: string) {
   return join(directory, ".opencode", "opencode.json")
 }
 
-function appendJsonl(directory: string, name: string, record: Record<string, unknown>) {
-  const path = statePath(directory, name)
-  mkdirSync(join(alloyDir(directory), "state"), { recursive: true })
-  appendFileSync(path, `${JSON.stringify(record)}\n`, "utf8")
+function ensureProgressFile(directory: string, taskId: string) {
+  const path = progressPath(directory, taskId)
+  mkdirSync(taskDir(directory, taskId), { recursive: true })
+  if (!existsSync(path)) {
+    writeFileSync(
+      path,
+      [
+        `# ${taskId}: Progress`,
+        "",
+        "## Gate",
+        "",
+        "- [ ] green",
+        "- [ ] review",
+        "- [ ] verified",
+        "",
+        "## Iterations",
+        "",
+        "## Findings",
+        "",
+        "## Handoff",
+        "",
+      ].join("\n"),
+      "utf8",
+    )
+  }
+  return path
 }
 
-function loadPresets(directory: string): PresetsDef {
-  if (presetsDef) return presetsDef
-  const path = join(directory, ".opencode", "presets.json")
-  if (!existsSync(path)) return FALLBACK_PRESETS
-  presetsDef = JSON.parse(readFileSync(path, "utf8")) as PresetsDef
-  return presetsDef
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-function getActivePreset(directory: string): PresetSpec {
-  const defs = loadPresets(directory)
-  return defs.presets[activePreset] ?? defs.presets.default ?? FALLBACK_PRESETS.presets.default
+function cleanProgressText(value: unknown) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
-function applyPreset(directory: string, name: string): boolean {
-  const defs = loadPresets(directory)
-  if (!defs.presets[name]) return false
-  const prev = activePreset
-  activePreset = name
-  appendJsonl(directory, "preset", {
-    id: randomUUID(),
-    event: "preset_changed",
-    from: prev,
-    to: name,
-    ts: new Date().toISOString(),
-  })
-  return true
+function ensureMarkdownSection(content: string, section: string) {
+  const pattern = new RegExp(`^## ${escapeRegExp(section)}\\s*$`, "m")
+  if (pattern.test(content)) return content
+  return `${content.trimEnd()}\n\n## ${section}\n`
+}
+
+function appendToMarkdownSection(content: string, section: string, text: string) {
+  const withSection = ensureMarkdownSection(content, section)
+  const lines = withSection.split(/\r?\n/)
+  const heading = `## ${section}`
+  const start = lines.findIndex((line) => line.trim() === heading)
+  if (start === -1) return `${withSection.trimEnd()}\n\n${heading}\n${text.trimEnd()}\n`
+  const next = lines.findIndex((line, index) => index > start && line.startsWith("## "))
+  const end = next === -1 ? lines.length : next
+  const before = lines.slice(0, end)
+  const after = lines.slice(end)
+  if (before.at(-1)?.trim()) before.push("")
+  return [...before, ...text.trimEnd().split(/\r?\n/), ...after].join("\n")
+}
+
+function appendProgressNote(directory: string, taskId: string, section: string, lines: string[]) {
+  const path = ensureProgressFile(directory, taskId)
+  const title = `### ${section} — ${new Date().toISOString()}`
+  const body = [title, ...lines.filter(Boolean)].join("\n")
+  const content = readFileSync(path, "utf8")
+  writeFileSync(path, appendToMarkdownSection(content, section, body), "utf8")
+}
+
+function markProgressGate(directory: string, taskId: string, gate: string, note: string, checked = true) {
+  const path = ensureProgressFile(directory, taskId)
+  const mark = checked ? "x" : " "
+  const line = `- [${mark}] ${gate} — ${new Date().toISOString()} | ${cleanProgressText(note)}`
+  let content = readFileSync(path, "utf8")
+  content = ensureMarkdownSection(content, "Gate")
+  const pattern = new RegExp(`^- \\[[ xX]\\] ${escapeRegExp(gate)}(?:\\b.*)?$`, "m")
+  content = pattern.test(content) ? content.replace(pattern, line) : appendToMarkdownSection(content, "Gate", line)
+  writeFileSync(path, content, "utf8")
 }
 
 function readStatus(directory: string) {
-  const path = join(alloyDir(directory), "projections", "status.md")
-  if (!existsSync(path)) return "Alloy status is not initialized."
-  return readFileSync(path, "utf8").slice(0, 4000)
+  const taskId = activeTaskId(directory)
+  if (!taskId) return "No active Alloy task. Use /discuss or /plan to create `.alloy/tasks/<id>`."
+  const plan = readTaskArtifact(directory, taskId, "plan.md", 3000)
+  const progress = readTaskArtifact(directory, taskId, "progress.md", 3000)
+  return [
+    `Active task: ${taskId}`,
+    plan ? `<alloy-plan>\n${plan}\n</alloy-plan>` : "No plan.md found for active task.",
+    progress ? `<alloy-progress>\n${progress}\n</alloy-progress>` : "No progress.md found for active task.",
+  ].join("\n\n")
 }
 
 function readCurrentPlan(directory: string) {
-  const path = join(alloyDir(directory), "projections", "current-plan.md")
-  if (!existsSync(path)) return ""
-  return readFileSync(path, "utf8").slice(0, 2400).trim()
+  const taskId = activeTaskId(directory)
+  if (!taskId) return ""
+  return readTaskArtifact(directory, taskId, "plan.md", 2400).trim()
 }
 
 function activeTaskId(directory: string) {
-  const path = join(alloyDir(directory), "state", "tasks.jsonl")
-  if (!existsSync(path)) return undefined
-  const lines = readFileSync(path, "utf8").trim().split(/\r?\n/).filter(Boolean)
-  for (const line of lines.reverse()) {
-    try {
-      const task = JSON.parse(line)
-      if (!["closed", "done"].includes(task.status)) return task.id
-    } catch {
-      // Ignore malformed ledger rows rather than breaking tool execution.
-    }
-  }
-  return undefined
+  const envTask = process.env.ALLOY_TASK_ID?.trim()
+  if (envTask) return envTask
+  const dir = join(alloyDir(directory), "tasks")
+  if (!existsSync(dir)) return undefined
+  const candidates = readdirSync(dir)
+    .filter((name) => !name.startsWith("."))
+    .map((name) => {
+      const taskDir = join(dir, name)
+      const hasArtifact = existsSync(join(taskDir, "plan.md")) || existsSync(join(taskDir, "progress.md"))
+      if (!hasArtifact) return undefined
+      return { name, mtime: statSync(taskDir).mtimeMs }
+    })
+    .filter(Boolean) as { name: string; mtime: number }[]
+  candidates.sort((a, b) => b.mtime - a.mtime || a.name.localeCompare(b.name))
+  return candidates[0]?.name
+}
+
+function readTaskArtifact(directory: string, taskId: string, file: string, limit: number) {
+  const path = join(alloyDir(directory), "tasks", taskId, file)
+  if (!existsSync(path)) return ""
+  return readFileSync(path, "utf8").slice(0, limit).trim()
 }
 
 function safeEvent(event: any) {
@@ -251,7 +294,7 @@ function maybeDelegateTaskRetry(input: any, output: { parts: any[] }) {
     textPart(
       [
         "## Alloy Delegate Fallback",
-        "The delegated task appears to be in a retry loop. Fall back to a smaller local task, capture the blocker in evidence, or ask for a narrower handoff before retrying delegation.",
+          "The delegated task appears to be in a retry loop. Fall back to a smaller local task, capture the blocker in progress.md, or ask for a narrower handoff before retrying delegation.",
       ].join("\n"),
     ),
   )
@@ -329,74 +372,21 @@ function maybeRecoverToolJson(output: any) {
   }
 }
 
-function parseJsonlLine(line: string) {
-  try {
-    return JSON.parse(line)
-  } catch {
-    return undefined
-  }
-}
-
-function readJsonl(directory: string, name: string, limit = 5) {
-  const path = statePath(directory, name)
-  if (!existsSync(path)) return []
-  return readFileSync(path, "utf8")
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map(parseJsonlLine)
-    .filter(Boolean)
-    .slice(-limit)
-}
-
-function readAllJsonl(directory: string, name: string) {
-  const path = statePath(directory, name)
-  if (!existsSync(path)) return []
-  return readFileSync(path, "utf8")
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map(parseJsonlLine)
-    .filter(Boolean)
-}
-
 function getIterationCount(directory: string, taskId: string) {
-  return readAllJsonl(directory, "iteration").filter((row: any) => row.taskId === taskId).length
+  const progress = readTaskArtifact(directory, taskId, "progress.md", 20000)
+  return (progress.match(/^- Iteration \d+\b/gm) ?? []).length
 }
 
 function recordIteration(directory: string, taskId?: string) {
-  if (!taskId) return undefined
-  const record = {
-    taskId,
-    iter: getIterationCount(directory, taskId) + 1,
-    ts: new Date().toISOString(),
-  }
-  appendJsonl(directory, "iteration", record)
-  return record
-}
-
-function summarizeRecord(record: any) {
-  const id = record.id ? `[${record.id}] ` : ""
-  const status = record.status ? ` (${record.status})` : ""
-  const summary = record.title ?? record.summary ?? record.text ?? record.kind ?? "record"
-  return `- ${id}${summary}${status}`
+  if (!taskId) return { taskId, iter: 0 }
+  const iter = getIterationCount(directory, taskId) + 1
+  appendProgressNote(directory, taskId, "Iterations", [`- Iteration ${iter}: ralph-loop continuation`])
+  return { taskId, iter }
 }
 
 function ledgerSummary(directory: string) {
-  const sections: string[] = []
-  const currentPlan = readCurrentPlan(directory)
-  if (currentPlan) sections.push(`### Current Plan\n${currentPlan}`)
-
-  const activeTasks = readJsonl(directory, "tasks", 8).filter((task: any) => !["closed", "done"].includes(task.status))
-  if (activeTasks.length) sections.push(`### Active Tasks\n${activeTasks.map(summarizeRecord).join("\n")}`)
-
-  const evidence = readJsonl(directory, "evidence", 8)
-  if (evidence.length) sections.push(`### Recent Evidence\n${evidence.map(summarizeRecord).join("\n")}`)
-
-  const claims = readJsonl(directory, "claims", 8)
-  if (claims.length) sections.push(`### Recent Claims\n${claims.map(summarizeRecord).join("\n")}`)
-
-  return sections.length ? `## Alloy Ledger Summary\n${sections.join("\n\n")}` : ""
+  const status = readStatus(directory)
+  return status ? `## Alloy Task Summary\n${status}` : ""
 }
 
 function normalizeCommand(command: string) {
@@ -470,8 +460,8 @@ function routeCommand(input: { command: string; arguments?: string }, output: { 
     textPart(
       [
         "## Alloy Command Intercept",
-        `Route /${command} through the ${skill} skill and record phase evidence before closing the task.`,
-        command === "ralph-loop" ? "Ralph Loop iteration recorded in .alloy/state/iteration.jsonl." : "",
+        `Route /${command} through the ${skill} skill and update progress.md before closing the task.`,
+        command === "ralph-loop" ? "Ralph Loop iteration recorded in the active task progress.md." : "",
         args ? `Request: ${args}` : "",
       ]
         .filter(Boolean)
@@ -501,12 +491,6 @@ function shouldKeepSkillLine(line: string, visibleSkills: Set<string>, managedSk
   return true
 }
 
-function shouldKeepPresetSkillLine(line: string, presetSkills: Set<string>) {
-  const name = skillNameFromLine(line)
-  if (!name) return true
-  return presetSkills.has(name)
-}
-
 function filterAvailableSkillsBlock(text: string, manifest: AlloyManifest, agent?: string) {
   const visibleAgents = new Set(manifest.visible?.agents ?? [])
   const agentCanSeeSkills = !agent || visibleAgents.size === 0 || visibleAgents.has(agent)
@@ -517,17 +501,6 @@ function filterAvailableSkillsBlock(text: string, manifest: AlloyManifest, agent
   return text.replace(/<available_skills>([\s\S]*?)<\/available_skills>/gi, (_match, body: string) => {
     const lines = body.split(/\r?\n/)
     const filtered = lines.filter((line) => shouldKeepSkillLine(line, visibleSkills, managedSkills))
-    return `<available_skills>${filtered.join("\n")}</available_skills>`
-  })
-}
-
-function filterPresetSkillsBlock(text: string, preset: PresetSpec) {
-  if (preset.skills_visible === "all") return text
-  const presetSkills = new Set(preset.skills_visible)
-
-  return text.replace(/<available_skills>([\s\S]*?)<\/available_skills>/gi, (_match, body: string) => {
-    const lines = body.split(/\r?\n/)
-    const filtered = lines.filter((line) => shouldKeepPresetSkillLine(line, presetSkills))
     return `<available_skills>${filtered.join("\n")}</available_skills>`
   })
 }
@@ -549,23 +522,48 @@ async function filterAvailableSkills(directory: string, input: any, output: { me
   }
 }
 
-function filterByPreset(directory: string, _input: any, output: { messages: any[] }) {
-  const preset = getActivePreset(directory)
-  if (preset.skills_visible === "all") return
-  for (const message of output.messages ?? []) {
-    if (message?.role !== "system") continue
-    mutateTextParts(message, (text) => filterPresetSkillsBlock(text, preset))
-  }
-}
-
 function rewriteToolDefinition(input: { toolID: string }, output: { description: string }) {
   const toolID = input.toolID.toLowerCase()
   if (!["bash", "write", "edit"].includes(toolID)) return
   const hint =
     toolID === "bash"
-      ? " Alloy gate: record meaningful commands as evidence and avoid bypassing project safety gates."
-      : " Alloy gate: update evidence/claims for task-relevant file changes and respect manifest-managed files."
+      ? " Alloy gate: record meaningful commands in .alloy/tasks/<id>/progress.md and avoid bypassing project safety gates."
+      : " Alloy gate: update progress.md for task-relevant file changes and respect manifest-managed files."
   if (!output.description.includes("Alloy gate")) output.description = `${output.description}${hint}`
+}
+
+function commandExitCode(output: any) {
+  const raw = output?.metadata?.exitCode ?? output?.exitCode
+  return typeof raw === "number" ? raw : undefined
+}
+
+function isSuccessfulVerificationCommand(command: string) {
+  return /\b(test|typecheck|lint|check|pytest|cargo test|go test|bun test|npm test|pnpm test|yarn test)\b/i.test(command)
+}
+
+function recordToolExecution(directory: string, input: any, output: any) {
+  const taskId = taskIdFromHookInput(input, directory)
+  if (!taskId) return
+
+  const toolName = cleanProgressText(input?.tool ?? "tool")
+  const command = cleanProgressText(input?.args?.command)
+  const exitCode = commandExitCode(output)
+  const status = typeof exitCode === "number" ? `exit ${exitCode}` : "exit unknown"
+
+  if (command || ["bash", "edit", "write"].includes(toolName)) {
+    appendProgressNote(directory, taskId, "Findings", [
+      `- Tool: ${toolName}`,
+      command ? `- Command: \`${command}\`` : "",
+      `- Result: ${status}`,
+    ])
+  }
+
+  if (exitCode !== 0 || !command) return
+  if (/^git\s+commit\b/i.test(command)) markProgressGate(directory, taskId, "commit", command)
+  if (isSuccessfulVerificationCommand(command)) {
+    markProgressGate(directory, taskId, "green", command)
+    markProgressGate(directory, taskId, "verified", command)
+  }
 }
 
 export const AlloyPlugin: Plugin = async ({ directory }) => {
@@ -585,7 +583,6 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     config: async (config) => {
       if (!config) return
       injectConfigDefaults(config)
-      loadPresets(projectDir)
       bootWarnings = await detectMagicWarnings(projectDir)
       bootWarningsChecked = true
       bootWarningsEmitted = false
@@ -611,12 +608,9 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     },
 
     "permission.ask": async (input) => {
-      appendJsonl(projectDir, "runs", {
-        id: randomUUID(),
-        event: "permission.ask",
-        payload: input,
-        createdAt: new Date().toISOString(),
-      })
+      const taskId = taskIdFromHookInput(input, projectDir)
+      if (!taskId) return
+      appendProgressNote(projectDir, taskId, "Findings", [`- Permission requested: ${cleanProgressText(input?.id ?? input?.tool ?? "unknown")}`])
     },
 
     "tool.execute.before": async (input, output) => {
@@ -629,34 +623,19 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
 
     "tool.execute.after": async (input, output) => {
       maybeRecoverToolJson(output)
-      appendJsonl(projectDir, "evidence", {
-        id: randomUUID(),
-        taskId: activeTaskId(projectDir),
-        kind: input.tool === "bash" ? "command" : "tool",
-        source: "opencode-plugin",
-        summary: `${input.tool} executed`,
-        command: input.args?.command,
-        exitCode: output?.metadata?.exitCode,
-        paths: [],
-        createdAt: new Date().toISOString(),
-      })
+      recordToolExecution(projectDir, input, output)
       if (isRalphLoopToolExecution(input, output)) recordIteration(projectDir, taskIdFromHookInput(input, projectDir))
     },
 
     event: async ({ event }) => {
-      appendJsonl(projectDir, "runs", {
-        id: randomUUID(),
-        event: event.type,
-        payload: safeEvent(event),
-        createdAt: new Date().toISOString(),
-      })
-      if (isIterationEvent(event)) recordIteration(projectDir, taskIdFromHookInput(event, projectDir))
+      const taskId = activeTaskId(projectDir)
+      if (!taskId || !String(event?.type ?? "").toLowerCase().includes("phase")) return
+      appendProgressNote(projectDir, taskId, "Handoff", [`- Event: ${cleanProgressText(safeEvent(event).type)}`])
     },
 
     "experimental.chat.messages.transform": async (input, output) => {
       if (!output || !Array.isArray(output.messages)) return
       await filterAvailableSkills(projectDir, input, output)
-      filterByPreset(projectDir, input, output)
     },
 
     "experimental.chat.system.transform": async (_input, output) => {
@@ -680,53 +659,33 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     },
 
     tool: {
-      alloy_switch_preset: tool({
-        description: "Switch the active Alloy preset (plan-mode / execute-mode / review-mode / default) without restarting session.",
-        args: {
-          preset: tool.schema.string(),
-        },
-        async execute(args) {
-          const ok = applyPreset(projectDir, args.preset)
-          return ok
-            ? `Preset switched to ${args.preset}. Skills/agents/MCPs hot-reloaded.`
-            : `Unknown preset: ${args.preset}. Available: ${Object.keys(loadPresets(projectDir).presets).join(", ")}`
-        },
-      }),
-
-      alloy_evidence: tool({
-        description: "Record Alloy workflow evidence for the current task.",
+      alloy_progress: tool({
+        description: "Append a note or gate update to .alloy/tasks/<id>/progress.md.",
         args: {
           taskId: tool.schema.string().optional(),
-          kind: tool.schema.string(),
+          section: tool.schema.string().optional(),
+          gate: tool.schema.string().optional(),
+          status: tool.schema.string().optional(),
           summary: tool.schema.string(),
+          detail: tool.schema.string().optional(),
           command: tool.schema.string().optional(),
         },
         async execute(args) {
-          const parsed = recordSchema.parse(args)
-          const record = { id: randomUUID(), ...parsed, createdAt: new Date().toISOString() }
-          appendJsonl(projectDir, "evidence", record)
-          return JSON.stringify(record)
-        },
-      }),
-
-      alloy_claim: tool({
-        description: "Record an Alloy completion claim.",
-        args: {
-          taskId: tool.schema.string(),
-          text: tool.schema.string(),
-          evidenceIds: tool.schema.array(tool.schema.string()).optional(),
-        },
-        async execute(args) {
-          const record = {
-            id: randomUUID(),
-            taskId: args.taskId,
-            text: args.text,
-            status: args.evidenceIds?.length ? "verified" : "unverified",
-            evidenceIds: args.evidenceIds ?? [],
-            createdAt: new Date().toISOString(),
+          const taskId = args.taskId ?? activeTaskId(projectDir)
+          if (!taskId) throw new Error("No active Alloy task. Pass taskId or create .alloy/tasks/<id> first.")
+          const summary = cleanProgressText(args.summary)
+          const detail = cleanProgressText(args.detail)
+          const command = cleanProgressText(args.command)
+          if (args.gate) {
+            markProgressGate(projectDir, taskId, cleanProgressText(args.gate), [summary, detail, command].filter(Boolean).join(" | "), args.status !== "unchecked")
+          } else {
+            appendProgressNote(projectDir, taskId, args.section ?? "Findings", [
+              `- Summary: ${summary}`,
+              detail ? `- Detail: ${detail}` : "",
+              command ? `- Command: \`${command}\`` : "",
+            ])
           }
-          appendJsonl(projectDir, "claims", record)
-          return JSON.stringify(record)
+          return readTaskArtifact(projectDir, taskId, "progress.md", 6000)
         },
       }),
 

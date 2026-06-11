@@ -70,7 +70,7 @@ Repos:
 - https://github.com/rokicool/gsd-opencode
 - https://github.com/gsd-build/get-shit-done
 
-**Note:** GSD requires its `gsd-sdk` CLI runtime. We absorbed concepts only — none of GSD's command files or agent prompts are vendored, all skills are re-authored to use Alloy's `.alloy/state/*.jsonl` ledger instead.
+**Note:** GSD requires its `gsd-sdk` CLI runtime. We absorbed concepts only — none of GSD's command files or agent prompts are vendored; all skills are re-authored to use Alloy's `.alloy/tasks/<task-id>/progress.md` task workflow instead.
 
 For Task 7, this concept-only treatment remains intentional for `alloy-discuss`, `alloy-map-codebase`, and the GSD portions of `alloy-plan` / `alloy-autopilot`: the workflows are rewritten into Alloy's portable skill vocabulary rather than copying GSD runtime-dependent files.
 
@@ -85,7 +85,7 @@ Repo: https://github.com/garrytan/gstack (local fork at `~/.gstack/repos/gstack/
 
 **Note:** gstack requires its 60-script `bin/` runtime + `~/.gstack/` state directory. We absorbed `qa` content only — gstack's preamble/telemetry/learnings/brain runtime are all stripped.
 
-For Task 7, `alloy-qa` remains rewritten rather than vendored. It adopts the 11-phase workflow, 8-category health rubric, WTF-likelihood self-regulator, and Phase 8e.5 regression discipline, while replacing gstack runtime calls with `playwright-cli`, `.alloy/qa-reports/`, and Alloy evidence ledger events.
+For Task 7, `alloy-qa` remains rewritten rather than vendored. It adopts the 11-phase workflow, 8-category health rubric, WTF-likelihood self-regulator, and Phase 8e.5 regression discipline, while replacing gstack runtime calls with `playwright-cli`, `.alloy/qa-reports/`, and Alloy markdown progress events.
 
 ### OMO Slim (alvinunreal/oh-my-opencode-slim — MIT)
 

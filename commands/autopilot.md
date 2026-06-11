@@ -1,19 +1,30 @@
 ---
-description: Run the Alloy SDD pipeline unattended with bounded risk controls
-agent: alloy-orchestrator
+description: Run the Alloy phase machine with bounded unattended execution
+agent: alloy-builder
 ---
 
 # /autopilot
 
-Chain Alloy plan, execute, and verify phases for bounded unattended work.
+Run a bounded `/discuss -> /plan -> /execute -> /verify` chain for work the user has explicitly allowed to proceed.
 
 ## Workflow
 
-1. Invoke the `alloy-autopilot` skill.
-2. Parse `$ARGUMENTS` for the plan id plus optional `--risk low|med|high` and `--max-iters N` arguments.
-3. Chain `alloy-discuss`, `alloy-plan`, `alloy-execute`, and `alloy-verify` as needed.
-4. Stop on `BLOCKED` or exhausted iteration budget, and preserve resume state.
-5. Write output to `.alloy/plans/<id>/context.md`, `.alloy/plans/<id>/plan.md`, `.alloy/plans/<id>/progress.md`, `.alloy/plans/<id>/findings.md`, `.alloy/plans/<id>/verification.md`, and `.alloy/state/autopilot.jsonl`.
+1. Invoke `alloy-autopilot`.
+2. Parse `$ARGUMENTS` for task id, requested outcome, risk level, required checks, and max iteration count.
+3. Use `.alloy/tasks/<id>/context.md`, `plan.md`, and `progress.md` as the only durable task state.
+4. If requirements are ambiguous, stop after `/discuss` and ask for the missing decision.
+5. If no approved plan exists, run `/plan`, write `approved: false`, and stop for approval unless the user explicitly authorized unattended approval in this message.
+6. Execute one ordered task at a time with `alloy-tdd` or `alloy-debug`.
+7. Update `progress.md` with `## Gate`, `## Iterations`, `## Findings`, and `## Handoff`.
+8. Run `/verify`, update gate checkboxes, and stop on `DONE`, `DONE_WITH_CONCERNS`, or `BLOCKED`.
+
+## Stop Conditions
+
+- Any required gate remains unchecked.
+- A verification command cannot run.
+- The same fix strategy fails twice.
+- Scope expands beyond the approved plan.
+- The iteration budget is exhausted.
 
 ## User Task
 

@@ -1,29 +1,24 @@
 ---
-description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Plan and perform a safe refactor with codebase awareness
-agent: Orchestrator
+description: Plan and perform a safe refactor through the Alloy phase machine
+agent: alloy-builder
 ---
 
 # /refactor
 
-Usage:
-
-`/refactor <target> [--scope=file|module|project] [--strategy=safe|aggressive]`
+Use `/refactor <target> [--scope=file|module|project] [--strategy=safe|aggressive]` for behavior-preserving code changes.
 
 ## Workflow
 
-1. Clarify the target, desired outcome, scope, and risk tolerance.
-2. If the request is open-ended, ask for the specific improvement before touching code.
-3. Search definitions and references with `rg`, LSP, and `sg` when available.
-4. Map affected files, tests, public interfaces, and likely regression paths.
-5. For small refactors, invoke `alloy-tdd` and make one behavior-preserving change at a time.
-6. For broad refactors, create an Alloy task and plan, then execute one bounded card at a time.
-7. Run focused tests after each meaningful step.
-8. Run `@Reviewer` for evidence-based review.
-9. Run `@Tester` and `alloy gate check` before final reporting.
+1. If scope or intent is unclear, route to `/discuss`.
+2. For non-trivial refactors, route to `/plan` and write `.alloy/tasks/<id>/plan.md`.
+3. Execute only after the plan is approved.
+4. Use `rg`, language tooling, and tests to map references before editing.
+5. Use `alloy-tdd` or an equivalent contract guard before changing behavior-sensitive code.
+6. Update `.alloy/tasks/<id>/progress.md` with changed files, commands, gates, risks, and rollback notes.
+7. Run `/verify` before reporting completion.
 
-## Safety
+## Rules
 
-- Do not change public interfaces without reference search and explicit rationale.
-- Do not mix refactoring with new behavior unless the user asks.
-- Do not use OMO-only tool APIs.
-- Use `gh`, `az devops`, and `psql` instead of removed MCPs.
+- Do not mix refactoring with new product behavior unless the user asks.
+- Do not change public interfaces without explicit rationale.
+- Spawn one-shot subagents only for broad scan, multi-file diagnosis, review, or QA.

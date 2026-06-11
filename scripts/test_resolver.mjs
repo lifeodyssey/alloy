@@ -250,8 +250,8 @@ test("addVisibleItem and removeVisibleItem preserve explicit intent", () => {
     installedAt: "2026-05-26T00:00:00.000Z",
     pack: "core",
     models: "github-copilot",
-    managed: { skills: ["alloy-tdd"], agents: ["Orchestrator"], commands: [], mcp: [] },
-    visible: { skills: ["alloy-tdd"], agents: ["Orchestrator"] },
+    managed: { skills: ["alloy-tdd"], agents: ["Planner"], commands: [], mcp: [] },
+    visible: { skills: ["alloy-tdd"], agents: ["Planner"] },
     explicit: { added: [], removed: [] },
   }
 
@@ -274,8 +274,8 @@ test("normalizeManifest migrates legacy explicit.removed into top-level excluded
     installedAt: "2026-05-26T00:00:00.000Z",
     pack: "core",
     models: "github-copilot",
-    managed: { skills: ["alloy-tdd"], agents: ["Orchestrator"], commands: [], mcp: [] },
-    visible: { skills: [], agents: ["Orchestrator"] },
+    managed: { skills: ["alloy-tdd"], agents: ["Planner"], commands: [], mcp: [] },
+    visible: { skills: [], agents: ["Planner"] },
     explicit: { added: ["humanizer"], removed: ["alloy-tdd"] },
   })
 

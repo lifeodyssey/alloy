@@ -1,19 +1,30 @@
 ---
 description: Clarify ambiguous work before writing an Alloy plan
-agent: alloy-orchestrator
+agent: alloy-planner
 ---
 
 # /discuss
 
-Extract decision-locked context for a future Alloy plan.
+Clarify requirements and record decision-locked context for a future Alloy plan.
 
 ## Workflow
 
 1. Invoke the `alloy-discuss` skill.
-2. Identify or create a stable plan id for `.alloy/plans/<id>/`.
-3. Read prior Alloy state, project guidance, and relevant codebase context.
-4. Identify specific gray areas, discuss selected decisions with the user, and record outcomes.
-5. Write output to `.alloy/plans/<id>/context.md`.
+2. Identify or create a stable task id for `.alloy/tasks/<id>/`.
+3. Read existing `.alloy/tasks/<id>/context.md` and `plan.md` if they exist.
+4. Ask one question at a time when a decision blocks planning.
+5. Record decisions, constraints, non-goals, and open questions in `.alloy/tasks/<id>/context.md`.
+6. Do not write implementation code.
+
+## Output
+
+Chat response should include:
+
+- task id
+- context path
+- decisions captured
+- unresolved questions
+- whether `/plan` is ready
 
 ## User Task
 

@@ -1,16 +1,18 @@
 ---
-description: DEPRECATED v0.1.0 — use /plan /execute /verify instead. Stop Alloy workflow continuation for this session
+description: Stop the active Alloy workflow without deleting task artifacts
+agent: alloy-builder
 ---
 
 # /stop-continuation
 
-Use this when the user wants to pause automated workflow progress and return to manual control.
+Stop after the current safe point and return control to the user.
 
-## What To Do
+## Workflow
 
-1. Stop starting new Alloy workflow steps.
-2. Leave existing `.alloy` artifacts intact.
-3. Summarize the current task, latest completed step, and next safe resume command.
-4. Tell the user that `/start-work` can resume from Alloy state later.
+1. Do not start new Alloy workflow steps.
+2. Leave `.alloy/tasks/<id>/context.md`, `plan.md`, and `progress.md` intact.
+3. Append a short `## Handoff` note to `progress.md` when a task is active.
+4. Summarize current task, latest completed step, unchecked gates, and next safe resume command.
+5. Tell the user `/start-work <task-id>` can resume.
 
 Do not delete planning state or project files.

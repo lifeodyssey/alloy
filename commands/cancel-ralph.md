@@ -1,15 +1,16 @@
 ---
-description: Cancel the active Ralph Loop and return control to the user
-agent: Orchestrator
+description: Stop the active Ralph Loop-style retry cycle and hand control back
+agent: alloy-builder
 ---
 
-# cancel-ralph
+# /cancel-ralph
 
-Cancel the active Ralph Loop by delegating to `ralph-loop/cancel-ralph.md`.
+Stop scheduling continuation passes for the current task.
 
 ## Workflow
 
-1. Stop scheduling any further loop iterations.
-2. Preserve current artifacts, findings, and verification evidence.
-3. Summarize the latest completed iteration and unresolved work.
-4. Return control to the user without starting another executor pass.
+1. Identify the active `.alloy/tasks/<id>/progress.md`.
+2. Append a `## Handoff` note with the latest completed iteration, failed attempts, unchecked gates, and next safe command.
+3. Do not start another executor pass.
+4. Do not delete artifacts, locks, branch state, or verification output.
+5. Return control to the user with `BLOCKED` or `DONE_WITH_CONCERNS`.

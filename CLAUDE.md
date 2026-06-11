@@ -8,7 +8,7 @@ These guide every architectural decision in alloy. Encode them when adding new f
 2. **Plugin-first, CLI-minimal**: 用户日常在 chat 里完成所有操作。CLI 只用于 `install` / `doctor` / `completion`
 3. **不替用户做选择**: install 时 prompt 让用户选 (像 npx skills)。User overlay (用户手动装的 skill) 默认全 visible
 4. **Vendor over rewrite**: 上游 skills 走 inline copy + alloy append，**不重写不删除**
-5. **状态外置但极简**: JSONL append-only ledger + state machine guard table。**不上数据库** (永远)
+5. **状态外置但极简**: `.alloy/tasks/<id>/` markdown artifacts + gate checkboxes。**不上数据库，不写 JSONL ledger**。
 6. **零依赖运行时**: `.mjs` + zod + jsdoc。**没 build step**。Install 即可用
 
 ## What Alloy is NOT
@@ -66,66 +66,32 @@ Runtime requirements: Node 20+, Bun 1.1+ (Bun is needed for OpenCode's local plu
 
 ### Resolver pipeline
 
+```text
+defaults.json + packs/*.json + models/*.json + .alloy/alloy.project.json
+  -> bin/alloy.mjs (resolveConfig/install/doctor/gate)
+  -> .opencode/
+       agents/{Planner,Builder}.md
+       skills/<name>/SKILL.md
+       commands/*.md
+       plugins/alloy.ts
+       opencode.json
+       package.json
+  -> .alloy/
+       alloy.project.json
+       workflow.md
+       policies/{claims,tdd,review,debug}.md
+       .gitignore
+       tasks/<task-id>/{context.md,plan.md,progress.md}
 ```
-defaults.json  +  packs/*.json  +  models/*.json  +  .alloy/alloy.project.json
-       │
-       ▼
-bin/alloy.mjs  (resolveConfig)
-       │
-       ├─► .opencode/                .alloy/
-       │     agents/                   alloy.project.json
-       │     skills/                   workflow.md
-       │     commands/                 policies/{claims,tdd,review,debug}.md
-       │     plugins/alloy.ts          state/{tasks,claims,evidence,runs}.jsonl
-       │     opencode.json             projections/{status,current-plan}.md
-       │     package.json
-       │
-       └── (the Bun plugin writes back into .alloy/state/*.jsonl at runtime)
-```
 
-`bin/alloy.mjs` is the single CLI entry. Subcommands: `init`, `resolve`, `install` (default), `doctor`, `state {add-task|add-evidence|add-claim|list ...}`, `gate check`, `sync`. The flow:
+`bin/alloy.mjs` is the single CLI entry. Subcommands: `init`, `resolve`, `install`, `doctor`, `state {add-task|add-evidence|add-claim|list ...}`, `gate check`, and `sync`.
 
-1. `loadPack(id)` reads `packs/<id>.json` (with `PACK_ALIASES` mapping `default`/`team`/`profile` → `core`) and expands `extends` entries from `packs/atoms.json`.
-2. `mergePack` unions skills/agents/commands/mcp/modelRoles when a project's `packs` array lists multiple ids; old inline pack arrays still work during migration.
-3. `resolveConfig` combines the pack with `models/<name>.json` (role → model assignments) and the project's `.alloy/alloy.project.json` overrides.
-4. The installer copies repo-local `agents/`, `commands/`, scoped skills from `universal/skills/` + `scopes/<repoKind>/skills/`, vendored scoped skills from `vendor/skills/`, and `templates/opencode/alloy-plugin.ts` into the target `.opencode/`, generates `opencode.json` + `package.json`, and seeds `.alloy/` from `templates/alloy/`.
-5. `MANAGED_NAMES` defines what the installer owns inside `.opencode/`; anything else is left untouched.
-
-### Packs (declarative inventory)
-
-`packs/*.json` declare what to install by extending atoms from `packs/atoms.json`. Every pack includes the same 7 agents, model roles, command groups, and minimal MCP baseline; what varies is the scope skill atom:
-
-| Pack | Adds beyond core skills |
-|---|---|
-| `core` | Alloy core skills plus `git-master` and `humanizer` |
-| `frontend` | + `frontend-ui-ux`, `playwright-cli`, `vercel-react-best-practices` |
-| `backend` | + `kotlin-backend-jpa-entity-mapping`, `postgres`, `design-postgres-tables`, `pgvector-semantic-search` |
-| `infra` | + `terraform-skill` |
-| `all` | every first-party + vendored third-party skill |
-
-MCP baseline is always `context7`, `grep_app`, `exa`. GitHub/Azure/Postgres use CLI replacements (`gh`, `az devops`, `psql`) — do NOT add project-specific MCP servers.
-
-### Source-of-truth split
-
-- **Repo-level sources** (what Alloy ships): `agents/*.md`, `universal/skills/*/SKILL.md`, `scopes/<kind>/skills/*/SKILL.md`, `commands/*.md`, `packs/*.json`, `models/*.json`, `templates/`, `vendor/`.
-- **Installed-into-target outputs**: `.opencode/` (machine-readable for OpenCode) and `.alloy/` (workflow state + Markdown policies).
-- Inside `.alloy/`: **JSONL files are source of truth**, Markdown in `policies/` is human/agent-readable policy, Markdown in `projections/` is generated from JSONL.
-
-### Vendor policy
-
-`vendor/skills/` holds licensed third-party skill content (Superpowers, Vercel, Kotlin, Timescale, Terraform). `vendor.lock.json` records `{name, kind, source, version, license, sha256, paths}` for every vendored item. Doctor verifies these paths exist. `third_party_notices/` carries license text.
-
-## Hard Rules
-
-These constraints are enforced by code and tests. Violating them will fail `npm test`, `bash setup.sh --doctor`, or `audit_prompt_dependencies.py`.
-
-- **No non-deterministic per-skill install commands**. Skills are installed by copying from `universal/skills/`, `scopes/<kind>/skills/`, legacy `skills/`, or `vendor/skills/` into the target `.opencode/skills/`.
-- **No OMO Slim and no GSD runtime/commands**. The `--with`/`--without` flags are removed and now throw. `DEPRECATED_AGENTS = ["orchestrator_append", "librarian_append", "code-reviewer", "plan-reviewer", "executor"]` and `DEPRECATED_SKILLS = ["team-tdd", "frontend-tdd", "backend-tdd", "tdd"]` must not appear in prompts or packs.
-- **No global writes by default**. `--target local` (current repo `.opencode/`) is the default; `--target global` writes to `~/.config/opencode/` and should be used explicitly.
-- **MCP baseline is fixed** to `context7`, `grep_app`, `exa`. Additional MCPs in `defaults.json` must stay `enabled: false` unless explicitly opted in. Do not introduce GitHub/Azure/Postgres MCP servers — use the CLI replacements.
-- **Plugin dependency versions and MCP URLs are pinned in `defaults.json`** (single source of truth). `bin/alloy.mjs` reads `DEFAULTS.plugin` and `DEFAULTS.mcp` at startup. Doctor's `validateRootOpencodeConfig` fails if root `opencode.json` MCP URLs drift from `defaults.json`. When bumping plugin versions, edit only `defaults.json` and re-run doctor.
-- **`--profile` is a deprecated alias** for `--pack` and must keep working during migration.
-- **Prompt → installable consistency**: every skill/agent/MCP/CLI referenced in `agents/*.md`, `commands/*.md`, `README.md`, or `INSTALL.md` must be installable by some pack or be a real system CLI. `scripts/audit_prompt_dependencies.py` is the gate; it is wired into `setup.sh`'s flow and tested by `scripts/test_audit_prompt_dependencies.py`.
+1. `loadPack(id)` reads `packs/<id>.json` (with `PACK_ALIASES` mapping `default`/`team`/`profile` -> `core`) and expands `extends` entries from `packs/atoms.json`.
+2. `mergePack` unions skills/agents/commands/mcp/modelRoles when a config lists multiple pack ids.
+3. `resolveConfig` combines pack, model preset, and `.alloy/alloy.project.json` overrides.
+4. Installer copies repo-local `agents/`, `commands/`, scoped skills from `universal/skills/` plus vendored skills, and `templates/opencode/alloy-plugin.ts` into `.opencode/`.
+5. `.alloy/tasks/<task-id>/progress.md` is the gate source of truth. Do not reintroduce `.alloy/state/*.jsonl` or `.alloy/projections/*.md`.
+6. One-shot subagents such as Explorer/Fixer/Reviewer/Tester are prompt conventions only; do not add persistent agent files for them.
 
 ## Testing Model
 

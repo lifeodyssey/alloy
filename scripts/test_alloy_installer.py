@@ -111,15 +111,17 @@ class AlloyInstallerTest(unittest.TestCase):
             "alloy-map-codebase",
             "alloy-qa",
         }
-        self.assertEqual(frontend, baseline | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"})
+        self.assertEqual(
+            frontend,
+            baseline | workflow_extras | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"},
+        )
         self.assertEqual(
             backend,
-            baseline | {"kotlin-backend-jpa-entity-mapping", "postgres", "design-postgres-tables", "pgvector-semantic-search"},
+            baseline
+            | workflow_extras
+            | {"kotlin-backend-jpa-entity-mapping", "postgres", "design-postgres-tables", "pgvector-semantic-search"},
         )
-        self.assertEqual(infra, baseline | {"terraform-skill"})
-        self.assertTrue(workflow_extras.isdisjoint(frontend))
-        self.assertTrue(workflow_extras.isdisjoint(backend))
-        self.assertTrue(workflow_extras.isdisjoint(infra))
+        self.assertEqual(infra, baseline | workflow_extras | {"terraform-skill"})
 
     def test_install_generates_alloy_project_and_plugin_dependencies(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -133,10 +135,14 @@ class AlloyInstallerTest(unittest.TestCase):
             plugin_exists = (cwd / ".opencode" / "plugins" / "alloy.ts").exists()
             safety_net_exists = (cwd / ".safety-net.json").exists()
 
-        self.assertTrue(project["runtimes"]["bun"])
-        self.assertEqual(agents, {"Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"})
-        self.assertEqual(config["default_agent"], "Orchestrator")
-        self.assertEqual(set(config["agent"].keys()), {"Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"})
+            self.assertTrue(project["runtimes"]["bun"])
+            self.assertTrue((cwd / ".alloy" / ".gitignore").exists())
+            self.assertTrue((cwd / ".alloy" / "tasks").is_dir())
+            self.assertFalse((cwd / ".alloy" / "state").exists())
+            self.assertFalse((cwd / ".alloy" / "projections").exists())
+            self.assertEqual(agents, {"Planner", "Builder"})
+            self.assertEqual(config["default_agent"], "Planner")
+            self.assertEqual(set(config["agent"].keys()), {"Planner", "Builder"})
         self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
         self.assertEqual(plugin_pkg["dependencies"]["zod"], "4.4.3")
         self.assertTrue(plugin_exists)
@@ -146,7 +152,7 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertIn(("am", ("--no-verify",)), safety_net_rules)
         self.assertIn(("am", ("-n",)), safety_net_rules)
 
-    def test_install_migrates_legacy_specs_dir_to_plans_dir(self):
+    def test_install_migrates_legacy_specs_dir_to_tasks_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             legacy_dir = cwd / ".alloy" / "specs" / "demo"
@@ -156,18 +162,49 @@ class AlloyInstallerTest(unittest.TestCase):
             run_setup(cwd, "--pack", "core", "--target", "local")
 
             self.assertFalse((cwd / ".alloy" / "specs").exists())
-            self.assertTrue((cwd / ".alloy" / "plans" / "demo" / "plan.md").exists())
+            self.assertTrue((cwd / ".alloy" / "tasks" / "demo" / "plan.md").exists())
 
-    def test_install_writes_presets_json(self):
+    def test_state_command_writes_markdown_task_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+
+            add_task = run_alloy(cwd, "state", "add-task", "--task-id", "T1", "--title", "Markdown state", "--kind", "docs")
+            self.assertIn("T1", add_task.stdout)
+
+            progress = cwd / ".alloy" / "tasks" / "T1" / "progress.md"
+            project = cwd / ".alloy" / "PROJECT.md"
+            self.assertTrue(project.exists())
+            self.assertTrue(progress.exists())
+            self.assertIn("| T1 | Markdown state | open | docs | normal |", project.read_text())
+
+            run_alloy(
+                cwd,
+                "state",
+                "add-evidence",
+                "--task-id",
+                "T1",
+                "--kind",
+                "green",
+                "--summary",
+                "focused check passed",
+                "--cmd",
+                "npm test",
+            )
+
+            progress_text = progress.read_text()
+            self.assertIn("- [x] green", progress_text)
+            self.assertIn("focused check passed", progress_text)
+            gate = run_alloy(cwd, "gate", "check", "--task-id", "T1", "--json")
+            self.assertTrue(json.loads(gate.stdout)["ok"])
+            self.assertFalse((cwd / ".alloy" / "state").exists())
+            self.assertFalse((cwd / ".alloy" / "projections").exists())
+
+    def test_install_does_not_write_presets_json(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             run_setup(cwd, "--pack", "core", "--target", "local")
-            presets = json.loads((cwd / ".opencode" / "presets.json").read_text())
 
-        self.assertIn("default", presets["presets"])
-        self.assertIn("plan-mode", presets["presets"])
-        self.assertIn("execute-mode", presets["presets"])
-        self.assertIn("review-mode", presets["presets"])
+            self.assertFalse((cwd / ".opencode" / "presets.json").exists())
 
     def test_install_writes_manifest_with_managed_visible_and_explicit_sections(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -179,7 +216,7 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(manifest["pack"], "core")
         self.assertEqual(manifest["models"], "github-copilot")
         self.assertIn("alloy-tdd", manifest["managed"]["skills"])
-        self.assertIn("Orchestrator", manifest["managed"]["agents"])
+        self.assertEqual(manifest["managed"]["agents"], ["Planner", "Builder"])
         self.assertIn("plan", manifest["managed"]["commands"])
         self.assertEqual(manifest["managed"]["mcp"], ["context7", "grep_app", "exa"])
         self.assertEqual(manifest["visible"]["skills"], manifest["managed"]["skills"])
@@ -445,11 +482,18 @@ class AlloyInstallerTest(unittest.TestCase):
             "alloy-debug",
             "git-master",
             "humanizer",
+            "alloy-discuss",
+            "alloy-execute",
+            "alloy-verify",
+            "alloy-using",
+            "alloy-autopilot",
+            "alloy-map-codebase",
+            "alloy-qa",
             "frontend-ui-ux",
             "playwright-cli",
             "vercel-react-best-practices",
         ]
-        inline_equivalent_agents = ["Orchestrator", "Explorer", "Architect", "Builder", "Fixer", "Reviewer", "Tester"]
+        inline_equivalent_agents = ["Planner", "Builder"]
         inline_equivalent_commands = [
             "autopilot",
             "discuss",
@@ -501,7 +545,7 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(config["mcp"]["custom-mcp"]["url"], "https://user.example/custom")
         self.assertIn("grep_app", config["mcp"])
         self.assertIn("UserAgent", config["agent"])
-        self.assertIn("Orchestrator", config["agent"])
+        self.assertIn("Planner", config["agent"])
 
     def test_scope_skills_load_from_new_dirs(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -551,24 +595,35 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertFalse((cwd / ".opencode" / "commands" / "gsd").exists())
         self.assertFalse((cwd / ".opencode" / "bin" / "gsd-sdk").exists())
 
-    def test_state_and_gate_block_then_pass_with_evidence(self):
+    def test_markdown_progress_gate_blocks_then_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             run_setup(cwd, "--pack", "core", "--target", "local")
-            task = parse_json(run_alloy(cwd, "state", "add-task", "--title", "Implement login", "--kind", "code").stdout)
+            task_id = "AB-1234"
+            task_dir = cwd / ".alloy" / "tasks" / task_id
+            task_dir.mkdir(parents=True)
+            progress = task_dir / "progress.md"
+            progress.write_text(
+                "# AB-1234: Implement login — Progress\n\n"
+                "## Gate\n\n"
+                "- [x] tdd_red — failing login test added\n"
+                "- [ ] green\n"
+                "- [ ] review\n"
+                "- [ ] verified\n"
+            )
 
-            blocked = run_alloy(cwd, "gate", "check", "--task-id", task["id"], "--json", check=False)
+            blocked = run_alloy(cwd, "gate", "check", "--task-id", task_id, "--json", check=False)
             self.assertNotEqual(blocked.returncode, 0)
             blocked_json = parse_json(blocked.stdout)
             self.assertFalse(blocked_json["ok"])
-            self.assertIn("tdd_gate", [item["name"] for item in blocked_json["checks"] if not item["ok"]])
+            self.assertEqual(blocked_json["blockedBy"], ["green", "review", "verified"])
 
-            run_alloy(cwd, "state", "add-evidence", "--task-id", task["id"], "--kind", "tdd_red", "--summary", "Failing test added")
-            run_alloy(cwd, "state", "add-evidence", "--task-id", task["id"], "--kind", "tdd_green", "--summary", "Test passes")
-            run_alloy(cwd, "state", "add-evidence", "--task-id", task["id"], "--kind", "test", "--summary", "npm test passed")
-            passed = run_alloy(cwd, "gate", "check", "--task-id", task["id"], "--json")
+            progress.write_text(progress.read_text().replace("- [ ] green", "- [x] green — tests pass"))
+            progress.write_text(progress.read_text().replace("- [ ] review", "- [x] review — Reviewer AC 4/4"))
+            progress.write_text(progress.read_text().replace("- [ ] verified", "- [x] verified — npm test"))
+            passed = run_alloy(cwd, "gate", "check", "--task-id", task_id, "--json")
 
-        self.assertTrue(parse_json(passed.stdout)["ok"])
+            self.assertTrue(parse_json(passed.stdout)["ok"])
 
     def test_sync_dry_run_is_project_local(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -616,7 +671,7 @@ class AlloyInstallerTest(unittest.TestCase):
             config = json.loads((root / "web" / ".opencode" / "opencode.json").read_text())
 
             self.assertIn("frontend-ui-ux", skill_names(root / "web"))
-            self.assertEqual(config["agent"]["Architect"]["model"], "openai/gpt-5.4")
+            self.assertEqual(config["agent"]["Planner"]["model"], "openai/gpt-5.4")
 
     def test_audit_only_does_not_install(self):
         with tempfile.TemporaryDirectory() as tmp:
