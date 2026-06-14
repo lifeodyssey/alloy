@@ -315,6 +315,23 @@ assert.match(readFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md
 `)
 })
 
+test("session.end clears the run secret dir using the session-mapped run id", async () => {
+  await runPluginScenario(`
+mkdirSync(join(projectDir, ".alloy", "run", "run123"), { recursive: true })
+writeFileSync(join(projectDir, ".alloy", "run", "run123", "env"), "OP_PASSWORD=secret", "utf8")
+
+// shell.env captures run123 for session s1 in the plugin closure (no process.env reliance afterwards).
+const envOut = { env: { ALLOY_RUN_ID: "run123" } }
+await hooks["shell.env"]({ cwd: projectDir, sessionID: "s1" }, envOut)
+assert.equal(envOut.env.ALLOY_RUN_ID, "run123")
+assert.ok(existsSync(join(projectDir, ".alloy", "run", "run123", "env")))
+
+// session.end wipes the secret dir for that session's captured run id.
+await hooks.event({ event: { type: "session.end", properties: { sessionID: "s1" } } })
+assert.ok(!existsSync(join(projectDir, ".alloy", "run", "run123")))
+`)
+})
+
 test("ralph-loop records iterations and exposes count for gate checks", async () => {
   await runPluginScenario(`
 mkdirSync(join(projectDir, ".alloy", "state"), { recursive: true })

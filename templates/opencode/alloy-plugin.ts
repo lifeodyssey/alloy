@@ -473,6 +473,9 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
   let bootWarningsChecked = false
   let bootWarningsEmitted = false
   let phaseReminderCount = 0
+  // Per-session run id captured in shell.env so session.end can clear the right secret dir
+  // without depending on process.env (which the plugin process may not inherit).
+  const runIdBySession = new Map<string, string>()
 
   async function ensureBootWarnings() {
     if (bootWarningsChecked) return
@@ -489,9 +492,12 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
       bootWarningsEmitted = false
     },
 
-    "shell.env": async (_input, output) => {
+    "shell.env": async (input, output) => {
       output.env.ALLOY_PROJECT_DIR = projectDir
-      output.env.ALLOY_RUN_ID ||= randomUUID()
+      const sessionId = (input as any)?.sessionID
+      const runId = (sessionId && runIdBySession.get(String(sessionId))) || output.env.ALLOY_RUN_ID || randomUUID()
+      output.env.ALLOY_RUN_ID = runId
+      if (sessionId) runIdBySession.set(String(sessionId), runId)
       output.env.ALLOY_TASK_ID ||= ""
     },
 
@@ -542,7 +548,9 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
           }
         }
         if (type.includes("end") || type.includes("idle") || type.includes("delete")) {
-          clearRunSecrets(projectDir, process.env.ALLOY_RUN_ID)
+          const runId = (sessionId && runIdBySession.get(String(sessionId))) || process.env.ALLOY_RUN_ID
+          clearRunSecrets(projectDir, runId)
+          if (sessionId) runIdBySession.delete(String(sessionId))
           if (taskId && sessionId) releaseTaskLock(projectDir, taskId, String(sessionId))
         }
         return
