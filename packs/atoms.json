@@ -98,6 +98,11 @@
     "core-infrastructure": {
       "skills": [],
       "plugins": []
+    },
+    "alloy-qa-e2e": {
+      "skills": ["alloy-qa-e2e", "azure-devops-context"],
+      "agents": ["QA"],
+      "commands": ["qa"]
     }
   }
 }
