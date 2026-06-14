@@ -11,6 +11,7 @@
     "alloy-legacy-commands",
     "mcp-baseline",
     "mattpocock-handoff",
-    "core-infrastructure"
+    "core-infrastructure",
+    "alloy-qa-e2e"
   ]
 }

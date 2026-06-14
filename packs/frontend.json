@@ -10,6 +10,7 @@
     "alloy-sdd-commands",
     "alloy-legacy-commands",
     "mcp-baseline",
-    "frontend-skills"
+    "frontend-skills",
+    "alloy-qa-e2e"
   ]
 }
