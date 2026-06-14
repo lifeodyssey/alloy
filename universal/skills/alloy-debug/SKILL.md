@@ -60,3 +60,14 @@ If the same fix strategy fails twice:
 ## Final Output
 
 Report symptom, root cause, changed files, regression proof, commands run, gate updates, and unresolved risk.
+
+## Deep References (bundled upstream)
+
+This skill is a lean alloy-specific overview. When an investigation gets hard, read these files bundled next to this SKILL.md (they ship with the skill):
+
+- `references/root-cause-tracing.md` — tracing a failure to its origin
+- `references/condition-based-waiting.md` (+ `condition-based-waiting-example.ts`) — replacing flaky sleeps with condition waits
+- `references/defense-in-depth.md` — layering guards so a class of bug cannot recur
+- `references/find-polluter.sh` — bisecting test pollution / order-dependent failures
+
+Source (fusionType `inline-append`): obra/superpowers v5.1.0 `systematic-debugging`. Verbatim upstream copies also live under `vendor/skills/superpowers/5.1.0/systematic-debugging/` in the Alloy source repo.

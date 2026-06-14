@@ -6,13 +6,18 @@ import { createHash, randomUUID } from "node:crypto"
 import {
   activeTaskId,
   appendProgressNote,
+  checkGate,
+  claimTaskLock,
   cleanProgressText,
+  clearRunSecrets,
   getIterationCount,
   markProgressGate,
   readCurrentPlan,
+  readPlanApproval,
   readStatus,
   readTaskArtifact,
   recordIteration,
+  releaseTaskLock,
 } from "../lib/alloy-task-state.mjs"
 
 interface AlloyManifest {
@@ -338,6 +343,29 @@ function routeCommand(input: { command: string; arguments?: string }, output: { 
   )
 }
 
+function enforceCommandGate(command: string, directory: string) {
+  const normalized = normalizeCommand(command)
+  if (normalized === "execute") {
+    const { taskId, hasPlan, approved } = readPlanApproval(directory)
+    if (taskId && hasPlan && !approved) {
+      throw new Error(
+        `Alloy gate: plan for ${taskId} is not approved. Set 'approved: true' in .alloy/tasks/${taskId}/plan.md (or rerun /plan) before /execute.`,
+      )
+    }
+  }
+  if (normalized === "verify") {
+    const taskId = activeTaskId(directory)
+    if (!taskId) return
+    const gate = checkGate(directory, taskId)
+    const missing = ["tdd_red", "green"].filter((name) => gate.blockedBy?.includes(name))
+    if (missing.length) {
+      throw new Error(
+        `Alloy gate: ${taskId} cannot verify — ${missing.join(", ")} still unchecked in progress.md. Complete the red→green TDD loop first.`,
+      )
+    }
+  }
+}
+
 function skillNameFromLine(line: string) {
   const trimmed = line.trim()
   const nameAttr = trimmed.match(/\bname=["']([^"']+)["']/i)
@@ -426,6 +454,11 @@ function recordToolExecution(directory: string, input: any, output: any) {
     ])
   }
 
+  // RED proof: a verification command that FAILS records tdd_red (red half of red-green).
+  if (command && isSuccessfulVerificationCommand(command) && typeof exitCode === "number" && exitCode !== 0) {
+    markProgressGate(directory, taskId, "tdd_red", command)
+  }
+
   if (exitCode !== 0 || !command) return
   if (/^git\s+commit\b/i.test(command)) markProgressGate(directory, taskId, "commit", command)
   if (isSuccessfulVerificationCommand(command)) {
@@ -496,8 +529,25 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
     },
 
     event: async ({ event }) => {
+      const type = String(event?.type ?? "").toLowerCase()
       const taskId = activeTaskId(projectDir)
-      if (!taskId || !String(event?.type ?? "").toLowerCase().includes("phase")) return
+      if (type.includes("session")) {
+        const sessionId = safeEvent(event).sessionID
+        if ((type.includes("start") || type.includes("created")) && taskId && sessionId) {
+          const claim = claimTaskLock(projectDir, taskId, String(sessionId))
+          if (!claim.ok) {
+            appendProgressNote(projectDir, taskId, "Findings", [
+              `- Lock conflict: session ${claim.owner} already owns ${taskId} (age ${Math.round((claim.ageMs ?? 0) / 1000)}s). Close it or switch task.`,
+            ])
+          }
+        }
+        if (type.includes("end") || type.includes("idle") || type.includes("delete")) {
+          clearRunSecrets(projectDir, process.env.ALLOY_RUN_ID)
+          if (taskId && sessionId) releaseTaskLock(projectDir, taskId, String(sessionId))
+        }
+        return
+      }
+      if (!taskId || !type.includes("phase")) return
       appendProgressNote(projectDir, taskId, "Handoff", [`- Event: ${cleanProgressText(safeEvent(event).type)}`])
     },
 
@@ -519,6 +569,7 @@ export const AlloyPlugin: Plugin = async ({ directory }) => {
 
     "command.execute.before": async (input, output) => {
       if (!input?.command || !output || !Array.isArray(output.parts)) return
+      enforceCommandGate(input.command, projectDir)
       routeCommand(input, output, projectDir)
     },
 

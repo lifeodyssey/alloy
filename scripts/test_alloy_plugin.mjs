@@ -279,6 +279,42 @@ assert.match(definition.description, /Alloy gate/)
 `)
 })
 
+test("gate enforcement blocks unapproved execute and incomplete verify, ticks tdd_red on failure, and claims task lock", async () => {
+  await runPluginScenario(`
+mkdirSync(join(projectDir, ".alloy", "tasks", "T1"), { recursive: true })
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "---\\nid: T1\\napproved: false\\n---\\n# Plan", "utf8")
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "# T1\\n\\n## Gate\\n\\n- [ ] tdd_red\\n- [ ] debug\\n- [ ] green\\n- [ ] review\\n- [ ] verified\\n\\n## Findings\\n", "utf8")
+
+// /execute is blocked while the plan is unapproved (code-enforced, not advisory).
+await assert.rejects(
+  hooks["command.execute.before"]({ command: "execute", sessionID: "s1" }, { parts: [] }),
+  /not approved/,
+)
+
+// /verify is blocked while tdd_red + green are unchecked.
+await assert.rejects(
+  hooks["command.execute.before"]({ command: "verify", sessionID: "s1" }, { parts: [] }),
+  /cannot verify/,
+)
+
+// Approve the plan -> /execute routes normally.
+writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "---\\nid: T1\\napproved: true\\n---\\n# Plan", "utf8")
+const execOut = { parts: [] }
+await hooks["command.execute.before"]({ command: "execute", sessionID: "s1", arguments: "go" }, execOut)
+assert.match(execOut.parts.map((part) => part.text).join("\\n"), /alloy-execute/)
+
+// A FAILED verification command records tdd_red (red half of red-green).
+await hooks["tool.execute.after"]({ tool: "bash", sessionID: "s1", callID: "c1", args: { command: "npm test" } }, { title: "bash", output: "fail", metadata: { exitCode: 1 } })
+assert.match(readFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "utf8"), /\\[x\\] tdd_red/)
+
+// session.start claims the task lock; a competing session is reported as a conflict.
+await hooks.event({ event: { type: "session.start", properties: { sessionID: "s1" } } })
+assert.ok(existsSync(join(projectDir, ".alloy", "tasks", "T1", ".lock")))
+await hooks.event({ event: { type: "session.start", properties: { sessionID: "s2" } } })
+assert.match(readFileSync(join(projectDir, ".alloy", "tasks", "T1", "progress.md"), "utf8"), /Lock conflict/)
+`)
+})
+
 test("ralph-loop records iterations and exposes count for gate checks", async () => {
   await runPluginScenario(`
 mkdirSync(join(projectDir, ".alloy", "state"), { recursive: true })
