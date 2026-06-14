@@ -1,0 +1,6 @@
+# Credential safety
+.env
+.playwright/.auth/
+
+# Playwright trace archives (may contain DOM snapshots with credentials)
+tasks/*/qa/artifacts/traces/
