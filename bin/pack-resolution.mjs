@@ -152,8 +152,8 @@ export function findSkillSourcePath(skill, repoKind) {
 function skillSourceCandidates(skill, repoKind) {
   const scopeKinds = unique([repoKind, ...SCOPE_KINDS].filter(Boolean))
   return [
-    join(REPO_ROOT, "universal", "skills", skill),
-    ...scopeKinds.map((kind) => join(REPO_ROOT, "scopes", kind, "skills", skill)),
+    join(REPO_ROOT, "skills", skill),
+    ...scopeKinds.map((kind) => join(REPO_ROOT, "skills", "scopes", kind, skill)),
     join(REPO_ROOT, "vendor", "skills", "universal", skill),
     ...scopeKinds.map((kind) => join(REPO_ROOT, "vendor", "skills", "scopes", kind, skill)),
     ...(vendorSkillPathsFor(skill) ?? []),

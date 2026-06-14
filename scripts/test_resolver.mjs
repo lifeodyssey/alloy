@@ -215,10 +215,10 @@ test("detectMcpConflicts is silent when configuration is consistent", () => {
   assert.deepEqual(warnings, [])
 })
 
-test("resolveConfig maps skills to universal and scoped source directories", () => {
+test("resolveConfig maps skills to skills/ and vendor source directories", () => {
   const resolved = resolveConfig({ pack: "frontend", target: "local", explicitPack: true })
-  assert.match(resolved.skillSources["alloy-tdd"], /universal\/skills\/alloy-tdd$/)
-  assert.match(resolved.skillSources["frontend-ui-ux"], /scopes\/frontend\/skills\/frontend-ui-ux$/)
+  assert.match(resolved.skillSources["alloy-tdd"], /skills\/alloy-tdd$/)
+  assert.match(resolved.skillSources["frontend-ui-ux"], /skills\/scopes\/frontend\/frontend-ui-ux$/)
   assert.match(resolved.skillSources["vercel-react-best-practices"], /vendor\/skills\/scopes\/frontend\/vercel-react-best-practices$/)
 })
 

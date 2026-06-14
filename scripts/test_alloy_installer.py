@@ -115,7 +115,7 @@ class AlloyInstallerTest(unittest.TestCase):
         }
         self.assertEqual(
             frontend,
-            baseline | workflow_extras | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"},
+            baseline | workflow_extras | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices", "alloy-qa-e2e", "azure-devops-context"},
         )
         self.assertEqual(
             backend,
@@ -144,7 +144,7 @@ class AlloyInstallerTest(unittest.TestCase):
             self.assertTrue((cwd / ".alloy" / "tasks").is_dir())
             self.assertFalse((cwd / ".alloy" / "state").exists())
             self.assertFalse((cwd / ".alloy" / "projections").exists())
-            self.assertEqual(agents, {"Planner", "Builder"})
+            self.assertEqual(agents, {"Planner", "Builder", "QA"})
             self.assertEqual(config["default_agent"], "Planner")
             self.assertEqual(set(config["agent"].keys()), {"Planner", "Builder"})
             self.assertEqual(plugin_pkg["dependencies"]["@opencode-ai/plugin"], "1.15.10")
@@ -230,7 +230,7 @@ class AlloyInstallerTest(unittest.TestCase):
         self.assertEqual(manifest["pack"], "core")
         self.assertEqual(manifest["models"], "github-copilot")
         self.assertIn("alloy-tdd", manifest["managed"]["skills"])
-        self.assertEqual(manifest["managed"]["agents"], ["Planner", "Builder"])
+        self.assertEqual(manifest["managed"]["agents"], ["Planner", "Builder", "QA"])
         self.assertIn("plan", manifest["managed"]["commands"])
         self.assertEqual(manifest["managed"]["mcp"], ["context7", "grep_app", "exa"])
         self.assertEqual(manifest["visible"]["skills"], manifest["managed"]["skills"])
@@ -506,8 +506,10 @@ class AlloyInstallerTest(unittest.TestCase):
             "frontend-ui-ux",
             "playwright-cli",
             "vercel-react-best-practices",
+            "alloy-qa-e2e",
+            "azure-devops-context",
         ]
-        inline_equivalent_agents = ["Planner", "Builder"]
+        inline_equivalent_agents = ["Planner", "Builder", "QA"]
         inline_equivalent_commands = [
             "autopilot",
             "discuss",
@@ -521,6 +523,7 @@ class AlloyInstallerTest(unittest.TestCase):
             "stop-continuation",
             "ultrawork",
             "ulw-loop",
+            "qa",
         ]
 
         self.assertEqual(resolved["pack"]["skills"], inline_equivalent_skills)
@@ -569,7 +572,7 @@ class AlloyInstallerTest(unittest.TestCase):
 
             frontend_source = Path(resolved["skillSources"]["frontend-ui-ux"])
             vercel_source = Path(resolved["skillSources"]["vercel-react-best-practices"])
-            self.assertTrue(frontend_source.as_posix().endswith("scopes/frontend/skills/frontend-ui-ux"))
+            self.assertTrue(frontend_source.as_posix().endswith("skills/scopes/frontend/frontend-ui-ux"))
             self.assertTrue(vercel_source.as_posix().endswith("vendor/skills/scopes/frontend/vercel-react-best-practices"))
             self.assertTrue((frontend_source / "SKILL.md").is_file())
             self.assertTrue((vercel_source / "SKILL.md").is_file())

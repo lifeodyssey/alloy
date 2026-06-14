@@ -89,7 +89,7 @@ defaults.json + packs/*.json + models/*.json + .alloy/alloy.project.json
 1. `loadPack(id)` reads `packs/<id>.json` (with `PACK_ALIASES` mapping `default`/`team`/`profile` -> `core`) and expands `extends` entries from `packs/atoms.json`.
 2. `mergePack` unions skills/agents/commands/mcp/modelRoles when a config lists multiple pack ids.
 3. `resolveConfig` combines pack, model preset, and `.alloy/alloy.project.json` overrides.
-4. Installer copies repo-local `agents/`, `commands/`, scoped skills from `universal/skills/` plus vendored skills, and `templates/opencode/alloy-plugin.ts` into `.opencode/`.
+4. Installer copies repo-local `agents/`, `commands/`, first-party skills from `skills/` (with scope-specific skills under `skills/scopes/<kind>/`) plus vendored skills, and `templates/opencode/alloy-plugin.ts` into `.opencode/`. The `skills/` layout matches what `npx skills add` expects, so first-party skills are installable both via `alloy install` and via `npx skills add <repo>`.
 5. `.alloy/tasks/<task-id>/progress.md` is the gate source of truth. Do not reintroduce `.alloy/state/*.jsonl` or `.alloy/projections/*.md`.
 6. One-shot subagents such as Explorer/Fixer/Reviewer/Tester are prompt conventions only; do not add persistent agent files for them.
 
@@ -111,6 +111,6 @@ When changing pack content, plugin versions, MCP baseline, or installer behavior
 ## Project Conventions
 
 - Keep agents (`agents/*.md`) and commands (`commands/*.md`) as the single source of OpenCode prompts — the installer copies them verbatim.
-- New universal first-party skills go under `universal/skills/<name>/SKILL.md`; scope-only first-party skills go under `scopes/<kind>/skills/<name>/SKILL.md`. Vendored skills stay under `vendor/skills/` and get registered in `vendor.lock.json`.
+- New universal first-party skills go under `skills/<name>/SKILL.md`; scope-only first-party skills go under `skills/scopes/<kind>/<name>/SKILL.md`. This `skills/` layout is the `npx skills add`-compatible convention (so first-party skills install via both `alloy install` and `npx skills add <repo>`). Vendored skills stay under `vendor/skills/` and get registered in `vendor.lock.json`.
 - When adding a skill/agent/command, also add it to the appropriate atom in `packs/atoms.json` and extend that atom from a pack — otherwise it will not be installed into any target repo.
 - `templates/AGENTS.md` is the per-target-repo `AGENTS.md` template (different from this `CLAUDE.md`); customize it after `setup.sh` runs.

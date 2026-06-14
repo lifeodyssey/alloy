@@ -280,7 +280,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-tdd/SKILL.md"
+      "skills/alloy-tdd/SKILL.md"
     ],
     "fusionType": "inline-append",
     "sources": [
@@ -310,7 +310,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-debug/SKILL.md"
+      "skills/alloy-debug/SKILL.md"
     ],
     "fusionType": "inline-append",
     "sources": [
@@ -332,7 +332,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-plan/SKILL.md"
+      "skills/alloy-plan/SKILL.md"
     ],
     "fusionType": "inline-append",
     "sources": [
@@ -358,7 +358,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-execute/SKILL.md"
+      "skills/alloy-execute/SKILL.md"
     ],
     "fusionType": "rewrite",
     "sources": [
@@ -380,7 +380,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-verify/SKILL.md"
+      "skills/alloy-verify/SKILL.md"
     ],
     "fusionType": "rewrite",
     "sources": [
@@ -402,7 +402,7 @@
     "version": "0.1.4",
     "license": "MIT",
     "paths": [
-      "universal/skills/alloy-qa/SKILL.md"
+      "skills/alloy-qa/SKILL.md"
     ],
     "fusionType": "rewrite",
     "sources": [

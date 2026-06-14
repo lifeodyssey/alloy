@@ -834,9 +834,8 @@ function internalInventory() {
 function scanSkillNames() {
   const names = []
   const roots = [
-    join(REPO_ROOT, "universal", "skills"),
-    ...SCOPE_KINDS.map((kind) => join(REPO_ROOT, "scopes", kind, "skills")),
     join(REPO_ROOT, "skills"),
+    ...SCOPE_KINDS.map((kind) => join(REPO_ROOT, "skills", "scopes", kind)),
     ...SCOPE_KINDS.map((kind) => join(REPO_ROOT, "vendor", "skills", "scopes", kind)),
     join(REPO_ROOT, "vendor", "skills", "external"),
   ]
