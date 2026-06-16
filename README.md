@@ -19,6 +19,27 @@ cd /path/to/target-repo
 bash ~/src/alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
+Or install only the QA surface with APM:
+
+```bash
+# one-time, if apm is not installed
+curl -fsSL https://aka.ms/apm-unix -o /tmp/apm-install.sh
+APM_INSTALL_DIR="$HOME/.local/bin" sh /tmp/apm-install.sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# from a target repo
+apm install /path/to/alloy/packages/apm-qa --target opencode
+```
+
+This APM package installs only:
+
+- `.opencode/agents/qa.md`
+- `.opencode/commands/qa.md`
+- `.agents/skills/alloy-qa-e2e`, `.agents/skills/azure-devops-context`, `.agents/skills/playwright-cli`
+- OpenCode MCP config for `context7` and `figma-official`
+
+Use Alloy's own installer when you also need the OpenCode TypeScript gate plugin (`alloy-plugin.ts`) and full pack wiring.
+
 Or use the CLI directly from this repo during development:
 
 ```bash
