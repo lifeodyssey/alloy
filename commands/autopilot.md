@@ -14,7 +14,7 @@ Run a bounded `/discuss -> /plan -> /execute -> /verify` chain for work the user
 3. Use `.alloy/tasks/<id>/context.md`, `plan.md`, and `progress.md` as the only durable task state.
 4. If requirements are ambiguous, stop after `/discuss` and ask for the missing decision.
 5. If no approved plan exists, run `/plan`, write `approved: false`, and stop for approval unless the user explicitly authorized unattended approval in this message.
-6. Execute one ordered task at a time with `alloy-tdd` or `alloy-debug`.
+6. Execute one ordered task at a time with `alloy-tdd` or upstream `superpowers:systematic-debugging`.
 7. Update `progress.md` with `## Gate`, `## Iterations`, `## Findings`, and `## Handoff`.
 8. Run `/verify`, update gate checkboxes, and stop on `DONE`, `DONE_WITH_CONCERNS`, or `BLOCKED`.
 

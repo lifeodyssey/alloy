@@ -64,14 +64,15 @@ Do not check `verified` here unless the full task verification command also pass
 
 Report acceptance criterion, RED command/result, GREEN command/result, files changed, and any remaining verification needed.
 
-## Deep References (bundled upstream)
+## References
 
-This skill is a lean alloy-specific overview. When you need the full TDD philosophy, read these files bundled next to this SKILL.md (they ship with the skill):
+Read these when you need the full TDD discipline; each ships next to this SKILL.md:
 
-- `references/tests.md` — integration-style testing; what to test vs. what not to
-- `references/mocking.md` — mock only at system boundaries, never your own classes
-- `references/deep-modules.md` — small interface, deep implementation
-- `references/interface-design.md` — designing clean interfaces
-- `references/refactoring.md` — refactoring discipline
+- [tests.md](./references/tests.md) — integration-style testing; what to test vs. what not to
+- [mocking.md](./references/mocking.md) — mock only at system boundaries, never your own classes
+- [deep-modules.md](./references/deep-modules.md) — small interface, deep implementation
+- [interface-design.md](./references/interface-design.md) — designing clean interfaces
+- [refactoring.md](./references/refactoring.md) — refactoring discipline
 
-Sources (fusionType `inline-append`): obra/superpowers v5.1.0 `test-driven-development` + mattpocock/skills `engineering/tdd`. Verbatim upstream copies also live under `vendor/skills/superpowers/5.1.0/test-driven-development/` in the Alloy source repo.
+---
+*Adapted from [obra/superpowers](https://github.com/obra/superpowers) `test-driven-development` and [mattpocock/skills](https://github.com/mattpocock/skills) `engineering/tdd`.*

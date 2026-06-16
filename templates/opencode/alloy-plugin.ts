@@ -45,16 +45,16 @@ const DEFAULT_MCP: Record<string, JsonRecord> = {
   grep_app: { type: "remote", url: "https://mcp.grep.app", enabled: true },
   exa: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: true },
   "chrome-devtools": { type: "remote", url: "https://mcp.chrome-devtools.dev/mcp", enabled: false },
-  "sequential-thinking": { type: "remote", url: "https://mcp.sequential-thinking.dev/mcp", enabled: false },
-  "figma-official": { type: "remote", url: "https://mcp.figma.com/mcp", enabled: false },
+  "sequential-thinking": { type: "remote", url: "https://mcp.sequential-thinking.dev/mcp", enabled: true },
+  "figma-official": { type: "remote", url: "https://mcp.figma.com/mcp", enabled: true },
   "a11y-mcp": { type: "remote", url: "https://mcp.a11y.dev/mcp", enabled: false },
   "container-use": { type: "remote", url: "https://mcp.container-use.dev/mcp", enabled: false },
 }
 
 const COMMAND_SKILLS: Record<string, string> = {
-  discuss: "alloy-discuss",
+  discuss: "superpowers:brainstorming",
   plan: "alloy-plan",
-  execute: "alloy-execute",
+  execute: "superpowers:subagent-driven-development",
   verify: "alloy-verify",
   autopilot: "alloy-autopilot",
   "ralph-loop": "ralph-loop",

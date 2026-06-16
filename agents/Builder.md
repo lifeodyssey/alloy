@@ -14,7 +14,6 @@ permission:
   websearch: deny
   skill:
     alloy-plan: deny
-    alloy-discuss: deny
     alloy-brainstorm: deny
     exa_*: deny
     context7_*: allow
@@ -78,6 +77,8 @@ Gate checkboxes are physical evidence. Do not claim completion while any require
 
 ## Forced Discipline
 
+The alloy plugin enforces the hard gate (it blocks `/execute` without an approved plan, blocks `/verify` until `tdd_red` + `green` are checked, and auto-records gate checkboxes when your commands run). You supply the method by invoking the right skill; the gate is not optional.
+
 New code or behavior change:
 
 1. Invoke `alloy-tdd`.
@@ -88,13 +89,18 @@ New code or behavior change:
 6. Run broader verification.
 7. Update `progress.md`.
 
+Executing an approved plan task-by-task:
+
+- Use the upstream `superpowers:subagent-driven-development` skill for the per-task implement → spec-review → quality-review loop. The alloy plugin owns the approved-plan entry gate and `progress.md` gate recording; superpowers owns the per-task method.
+
 Bug, regression, or unexpected failure:
 
-1. Invoke `alloy-debug`.
+1. Invoke the upstream `superpowers:systematic-debugging` skill for root-cause method.
 2. Reproduce or explain why reproduction is not possible.
 3. Identify root cause.
 4. Fix the smallest cause.
 5. Prove with regression coverage or an equivalent verification guard.
+6. Record the `debug` gate in `progress.md` regardless of which skill produced the diagnosis.
 
 Prompt/config/docs-only work:
 

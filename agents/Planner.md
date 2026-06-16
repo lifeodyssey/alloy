@@ -14,10 +14,7 @@ permission:
   bash: deny
   skill:
     alloy-tdd: deny
-    alloy-execute: deny
-    alloy-debug: deny
     alloy-verify: deny
-    alloy-qa: deny
     exa_*: deny
 ---
 
@@ -76,6 +73,10 @@ Then include:
 - Risks and rollback notes
 
 Small plans may be brief, but they must still contain enough detail for a fresh Builder with no prior chat context.
+
+## Exploration (upstream method)
+
+For open-ended or ambiguous scope, invoke the upstream `superpowers:brainstorming` skill to diverge on approaches, and `mattpocock:grill-me` / `mattpocock:grill-with-docs` to interrogate the requirements, before committing to a plan. Alloy delegates the discussion method to these upstream skills; capture the locked decisions in `context.md` / `plan.md` (alloy owns the durable artifact, upstream owns the method).
 
 ## Source Coverage
 

@@ -4,20 +4,16 @@
       "skills": [
         "alloy-tdd",
         "alloy-plan",
-        "alloy-debug",
         "git-master",
         "humanizer"
       ]
     },
     "alloy-workflow-extras": {
       "skills": [
-        "alloy-discuss",
-        "alloy-execute",
         "alloy-verify",
         "alloy-using",
         "alloy-autopilot",
-        "alloy-map-codebase",
-        "alloy-qa"
+        "alloy-map-codebase"
       ]
     },
     "ralph-loop-skills": {
@@ -72,7 +68,6 @@
     },
     "frontend-skills": {
       "skills": [
-        "frontend-ui-ux",
         "playwright-cli",
         "vercel-react-best-practices"
       ]

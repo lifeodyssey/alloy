@@ -103,19 +103,16 @@ class AlloyInstallerTest(unittest.TestCase):
             backend = skill_names(root / "backend")
             infra = skill_names(root / "infra")
 
-        baseline = {"alloy-tdd", "alloy-plan", "alloy-debug", "git-master", "humanizer"}
+        baseline = {"alloy-tdd", "alloy-plan", "git-master", "humanizer"}
         workflow_extras = {
-            "alloy-discuss",
-            "alloy-execute",
             "alloy-verify",
             "alloy-using",
             "alloy-autopilot",
             "alloy-map-codebase",
-            "alloy-qa",
         }
         self.assertEqual(
             frontend,
-            baseline | workflow_extras | {"frontend-ui-ux", "playwright-cli", "vercel-react-best-practices", "alloy-qa-e2e", "azure-devops-context"},
+            baseline | workflow_extras | {"playwright-cli", "vercel-react-best-practices", "alloy-qa-e2e", "azure-devops-context"},
         )
         self.assertEqual(
             backend,
@@ -253,8 +250,8 @@ class AlloyInstallerTest(unittest.TestCase):
 
         self.assertEqual(cli_manifest["pack"], "frontend")
         self.assertEqual(setup_manifest["pack"], "frontend")
-        self.assertIn("frontend-ui-ux", cli_manifest["managed"]["skills"])
-        self.assertIn("frontend-ui-ux", setup_manifest["managed"]["skills"])
+        self.assertIn("playwright-cli", cli_manifest["managed"]["skills"])
+        self.assertIn("playwright-cli", setup_manifest["managed"]["skills"])
 
     def test_global_install_writes_alloy_state_under_home(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -273,13 +270,13 @@ class AlloyInstallerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
             run_alloy(cwd, "install", "--pack", "core")
-            run_alloy(cwd, "add", "frontend-ui-ux")
+            run_alloy(cwd, "add", "playwright-cli")
             manifest = read_manifest(cwd)
 
-            self.assertTrue((cwd / ".opencode" / "skills" / "frontend-ui-ux" / "SKILL.md").is_file())
-            self.assertIn("frontend-ui-ux", manifest["managed"]["skills"])
-            self.assertIn("frontend-ui-ux", manifest["visible"]["skills"])
-            self.assertIn("frontend-ui-ux", manifest["explicit"]["added"])
+            self.assertTrue((cwd / ".opencode" / "skills" / "playwright-cli" / "SKILL.md").is_file())
+            self.assertIn("playwright-cli", manifest["managed"]["skills"])
+            self.assertIn("playwright-cli", manifest["visible"]["skills"])
+            self.assertIn("playwright-cli", manifest["explicit"]["added"])
 
     def test_remove_hides_skill_and_records_excluded_choice(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -493,17 +490,12 @@ class AlloyInstallerTest(unittest.TestCase):
         inline_equivalent_skills = [
             "alloy-tdd",
             "alloy-plan",
-            "alloy-debug",
             "git-master",
             "humanizer",
-            "alloy-discuss",
-            "alloy-execute",
             "alloy-verify",
             "alloy-using",
             "alloy-autopilot",
             "alloy-map-codebase",
-            "alloy-qa",
-            "frontend-ui-ux",
             "playwright-cli",
             "vercel-react-best-practices",
             "alloy-qa-e2e",
@@ -570,13 +562,13 @@ class AlloyInstallerTest(unittest.TestCase):
             resolved = parse_json(run_alloy(cwd, "resolve", "--pack", "frontend", "--json").stdout)
             run_setup(cwd, "--pack", "frontend", "--target", "local")
 
-            frontend_source = Path(resolved["skillSources"]["frontend-ui-ux"])
+            frontend_source = Path(resolved["skillSources"]["playwright-cli"])
             vercel_source = Path(resolved["skillSources"]["vercel-react-best-practices"])
-            self.assertTrue(frontend_source.as_posix().endswith("skills/scopes/frontend/frontend-ui-ux"))
+            self.assertTrue(frontend_source.as_posix().endswith("skills/scopes/frontend/playwright-cli"))
             self.assertTrue(vercel_source.as_posix().endswith("vendor/skills/scopes/frontend/vercel-react-best-practices"))
             self.assertTrue((frontend_source / "SKILL.md").is_file())
             self.assertTrue((vercel_source / "SKILL.md").is_file())
-            self.assertTrue((cwd / ".opencode" / "skills" / "frontend-ui-ux" / "SKILL.md").is_file())
+            self.assertTrue((cwd / ".opencode" / "skills" / "playwright-cli" / "SKILL.md").is_file())
             self.assertTrue((cwd / ".opencode" / "skills" / "vercel-react-best-practices" / "SKILL.md").is_file())
 
     def test_removed_gsd_and_omo_paths_fail_fast(self):
@@ -687,7 +679,7 @@ class AlloyInstallerTest(unittest.TestCase):
             run_alloy(root, "sync", "--workspace", str(workspace))
             config = json.loads((root / "web" / ".opencode" / "opencode.json").read_text())
 
-            self.assertIn("frontend-ui-ux", skill_names(root / "web"))
+            self.assertIn("playwright-cli", skill_names(root / "web"))
             self.assertEqual(config["agent"]["Planner"]["model"], "openai/gpt-5.4")
 
     def test_audit_only_does_not_install(self):

@@ -119,6 +119,12 @@ Return:
 - unresolved risks
 - next command: `Review the plan, set approved: true, then run /execute.`
 
-## Upstream (fusionType `inline-append`)
+## References
 
-This skill distills obra/superpowers v5.1.0 `brainstorming` + `writing-plans`. The verbatim upstream copies live under `vendor/skills/superpowers/5.1.0/` in the Alloy source repo; read them for the full brainstorming dialogue discipline and plan-writing depth when a plan is large or high-risk.
+When a plan is large or high-risk, use the upstream method skills before finalizing:
+
+- `superpowers:brainstorming` — full divergent design dialogue
+- `superpowers:writing-plans` — plan-writing depth and task decomposition
+
+---
+*Adapted from [obra/superpowers](https://github.com/obra/superpowers) `brainstorming` and `writing-plans`.*

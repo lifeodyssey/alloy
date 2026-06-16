@@ -14,7 +14,6 @@ permission:
   websearch: deny
   skill:
     alloy-plan: deny
-    alloy-debug: deny
     alloy-tdd: deny
     alloy-verify: deny
 ---

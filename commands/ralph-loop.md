@@ -12,7 +12,7 @@ Run one retry iteration for an active Alloy task. This is a bounded command, not
 1. Identify the task id from `$ARGUMENTS`, `ALLOY_TASK_ID`, or the most recent `.alloy/tasks/<id>/progress.md`.
 2. Read the approved `plan.md` and current `progress.md`.
 3. Pick exactly one failed gate, failed command, or unresolved finding.
-4. Use `alloy-debug` before changing code.
+4. Use upstream `superpowers:systematic-debugging` before changing code.
 5. Update `progress.md` under `## Iterations` and `## Findings`.
 6. Re-run the smallest meaningful verification command.
 7. Stop after one iteration and report the next command.

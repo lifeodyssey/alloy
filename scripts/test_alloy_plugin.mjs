@@ -301,7 +301,7 @@ await assert.rejects(
 writeFileSync(join(projectDir, ".alloy", "tasks", "T1", "plan.md"), "---\\nid: T1\\napproved: true\\n---\\n# Plan", "utf8")
 const execOut = { parts: [] }
 await hooks["command.execute.before"]({ command: "execute", sessionID: "s1", arguments: "go" }, execOut)
-assert.match(execOut.parts.map((part) => part.text).join("\\n"), /alloy-execute/)
+assert.match(execOut.parts.map((part) => part.text).join("\\n"), /subagent-driven-development/)
 
 // A FAILED verification command records tdd_red (red half of red-green).
 await hooks["tool.execute.after"]({ tool: "bash", sessionID: "s1", callID: "c1", args: { command: "npm test" } }, { title: "bash", output: "fail", metadata: { exitCode: 1 } })
