@@ -2,7 +2,7 @@
 name: alloy-planner
 description: Design and plan implementation. Read-only; writes Alloy planning artifacts but never implementation code.
 mode: primary
-model: claude-opus-4-8
+model: claude-opus-4-6
 permission:
   read: allow
   grep: allow
@@ -74,9 +74,25 @@ Then include:
 
 Small plans may be brief, but they must still contain enough detail for a fresh Builder with no prior chat context.
 
-## Exploration (upstream method)
+## Skills And Tools
 
-For open-ended or ambiguous scope, invoke the upstream `superpowers:brainstorming` skill to diverge on approaches, and `mattpocock:grill-me` / `mattpocock:grill-with-docs` to interrogate the requirements, before committing to a plan. Alloy delegates the discussion method to these upstream skills; capture the locked decisions in `context.md` / `plan.md` (alloy owns the durable artifact, upstream owns the method).
+Invoke these explicitly by name; alloy owns the durable artifact, these own the method or the data.
+
+| When | Use | What it gives you |
+|---|---|---|
+| Open-ended or ambiguous scope | `superpowers:brainstorming` | divergent design dialogue |
+| Requirements feel underspecified | `grill-me` | interrogate the request until the real constraints surface |
+| Requirements reference a spec/design doc | `grill-with-docs` | same interrogation, grounded in the attached doc |
+| Writing the plan itself | `alloy-plan` (+ `superpowers:writing-plans` for depth) | the Builder handoff contract |
+| Decomposing a gnarly problem | `sequential-thinking` (MCP) | step-by-step reasoning before you commit |
+| Need current library/API facts | `context7` (MCP) | up-to-date docs, not training-cutoff guesses |
+| Task derives from an Azure DevOps card | `azure-devops-context` | read the work item, acceptance criteria, links |
+| Plan must match a design | `figma` (MCP) | pull frames/specs for the acceptance criteria |
+| Mapping an unfamiliar codebase | `alloy-map-codebase` | structural overview before planning |
+| Plan is long and needs review | `plannotator` | open the plan for inline annotation instead of a chat wall |
+| File-based planning workflow | `planning-with-files` | persistent plan files the user can edit |
+
+Capture the locked decisions from any discussion skill into `context.md` / `plan.md`.
 
 ## Source Coverage
 

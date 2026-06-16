@@ -7,6 +7,10 @@ description: Use only when the user explicitly allows bounded unattended executi
 
 Autopilot chains `/execute` and `/verify` under strict stop conditions. It does not add a scheduler, daemon, or extra persistent agent.
 
+## Relationship To ralph-loop
+
+`ralph-loop` owns the unattended iteration mechanism. Autopilot does not reimplement looping — it delegates the loop to `ralph-loop` and contributes the alloy-specific layer on top: the approved-plan entry gate, `progress.md` gate recording, risk tiers, and the stop conditions below. Use `/ralph-loop` for the raw loop; use `/autopilot` when you want that loop wrapped in alloy's gate and risk controls.
+
 ## Entry Conditions
 
 - User explicitly requests unattended or autopilot execution.
@@ -24,8 +28,8 @@ Autopilot chains `/execute` and `/verify` under strict stop conditions. It does 
 
 1. Read `plan.md` and `progress.md`.
 2. Confirm gates and stop conditions.
-3. Run one `/execute` task at a time.
-4. Use `alloy-tdd` and `alloy-debug` as required.
+3. Run one `/execute` task at a time (via `ralph-loop` for the iteration mechanism).
+4. Use `alloy-tdd` for new code and `superpowers:systematic-debugging` for failures, as required.
 5. Append every iteration to `progress.md`.
 6. Run `/verify` after implementation tasks are complete.
 7. Stop and report status.

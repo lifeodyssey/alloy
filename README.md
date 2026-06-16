@@ -27,6 +27,21 @@ node bin/alloy.mjs install --pack core --target local --models github-copilot
 node bin/alloy.mjs doctor
 ```
 
+## Requirements
+
+Required runtime:
+
+- Node 20+
+- Bun 1.1+ — OpenCode resolves the local plugin dependency path through Bun; the installer pins plugin deps into the target `.opencode/package.json`.
+
+Optional, only needed by specific skills:
+
+- Playwright + chromium (`npx playwright install chromium`) — `alloy-qa-e2e`
+- Azure CLI `az` (logged in) — `azure-devops-context` / QA card fetch
+- 1Password CLI `op` + `OP_SERVICE_ACCOUNT_TOKEN` — QA credential resolution
+- `ffmpeg` — QA GIF generation from video
+- `FIGMA_TOKEN` — QA Figma design comparison
+
 ## Runtime Shape
 
 Alloy installs into OpenCode's `.opencode/` layout while keeping source packs in this repo.
@@ -43,7 +58,7 @@ Alloy installs into OpenCode's `.opencode/` layout while keeping source packs in
     verify.md
   skill/
     alloy-plan/SKILL.md
-    alloy-execute/SKILL.md
+    alloy-tdd/SKILL.md
   alloy.manifest.json
 ```
 
@@ -134,18 +149,51 @@ Alloy skills are intentionally detailed. Chat summaries can be short, but durabl
 - subagent handoff notes
 - final handoff status
 
-Core skills:
+First-party skills (shipped in this repo):
 
-- `alloy-discuss`
-- `alloy-plan`
-- `alloy-execute`
-- `alloy-tdd`
-- `alloy-debug`
-- `alloy-verify`
-- `alloy-qa`
-- `alloy-autopilot`
-- `alloy-map-codebase`
-- `alloy-using`
+- `alloy-plan` — write the Builder handoff contract (`plan.md`)
+- `alloy-tdd` — red-green-refactor + gate proof
+- `alloy-verify` — close acceptance-criteria gates
+- `alloy-autopilot` — bounded unattended execution (delegates the loop to `ralph-loop`)
+- `alloy-map-codebase` — structural codebase overview
+- `alloy-using` — workflow entry guide
+- `alloy-qa-e2e` — end-to-end QA entry (spawns the QA agent)
+- `azure-devops-context` — read Azure DevOps work items
+- `git-master` — commit / squash / rebase (includes REBASE mode)
+- `humanizer` — de-AI prose
+- `using-sandboxes` — run untrusted commands safely
+- `playwright-cli` (frontend scope) — deterministic browser automation
+
+Method skills are **not** reimplemented here — they are delegated to upstream (see below).
+
+## Third-Party Dependencies (delegated, not rewritten)
+
+Alloy ships the code-enforced gate and thin orchestration; the *methods* come from upstream, unchanged.
+
+Delegated skills:
+
+| Skill | Used by | Source |
+|---|---|---|
+| `superpowers:brainstorming` | Planner (diverge) | obra/superpowers |
+| `superpowers:writing-plans` | Planner (plan depth) | obra/superpowers |
+| `superpowers:subagent-driven-development` | Builder (execute per-task) | obra/superpowers |
+| `superpowers:systematic-debugging` | Builder (bug root cause) | obra/superpowers |
+| `grill-me` | Planner (interrogate request) | mattpocock |
+| `grill-with-docs` | Planner (interrogate vs a doc) | mattpocock |
+
+MCP servers (enabled by default):
+
+- `sequential-thinking` — step-by-step reasoning
+- `context7` — current library/API docs
+- `figma` — design frames for QA
+- `grep_app` — cross-repo code search
+- `exa` — web search (denied at the agent layer)
+
+Plugins:
+
+- `plannotator` — inline annotation of long plans/docs
+- `planning-with-files` — file-based planning workflow
+- `ralph-loop` — unattended iteration loop (used by `alloy-autopilot`)
 
 ## Packs
 

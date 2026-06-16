@@ -2,7 +2,7 @@
 name: alloy-builder
 description: Implement approved plans with TDD, fix bugs with systematic debugging, and verify task gates.
 mode: primary
-model: claude-sonnet-4-6
+model: gpt-5.5
 permission:
   read: allow
   grep: allow
@@ -14,7 +14,6 @@ permission:
   websearch: deny
   skill:
     alloy-plan: deny
-    alloy-brainstorm: deny
     exa_*: deny
     context7_*: allow
 ---
@@ -74,6 +73,21 @@ Maintain `progress.md` with:
 - `## Handoff`
 
 Gate checkboxes are physical evidence. Do not claim completion while any required checkbox is unchecked.
+
+## Skills And Tools
+
+Invoke these explicitly by name. The plugin enforces the gate; these supply the method.
+
+| When | Use |
+|---|---|
+| New code or behavior change | `alloy-tdd` (red-green-refactor + gate proof) |
+| Executing an approved plan task-by-task | `superpowers:subagent-driven-development` |
+| Bug, regression, unexpected failure | `superpowers:systematic-debugging` |
+| Committing, squashing, or rewriting history | `git-master` |
+| Running untrusted or destructive commands safely | `using-sandboxes` |
+| Need to locate code across an unfamiliar area | `alloy-map-codebase` |
+| Need current library/API facts mid-implementation | `context7` (MCP, allowed) |
+| Closing task gates | `alloy-verify` |
 
 ## Forced Discipline
 
