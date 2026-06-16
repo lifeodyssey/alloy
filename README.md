@@ -35,7 +35,8 @@ This APM package installs only:
 
 - `.opencode/agents/qa.md`
 - `.opencode/commands/qa.md`
-- `.agents/skills/alloy-qa-e2e`, `.agents/skills/azure-devops-context`, `.agents/skills/playwright-cli`
+- `.agents/skills/alloy-qa-e2e`, `.agents/skills/azure-devops-context`
+- `.agents/skills/playwright-cli` from upstream `microsoft/playwright-cli` (pinned in `packages/apm-qa/apm.yml`, includes its references)
 - OpenCode MCP config for `context7` and `figma-official`
 
 Use Alloy's own installer when you also need the OpenCode TypeScript gate plugin (`alloy-plugin.ts`) and full pack wiring.

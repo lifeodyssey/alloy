@@ -1,6 +1,6 @@
 ---
 name: alloy-qa-e2e
-description: Automated end-to-end QA — read acceptance criteria (Azure DevOps or manual), generate Playwright test plan, execute with screenshots/video/GIF, produce acceptance report. Uses Playwright CLI for deterministic, reportable execution.
+description: Automated end-to-end QA — read acceptance criteria (Azure DevOps or manual), generate Playwright test plan, execute with GIF-first evidence, video fallback, and PNG checkpoints, produce acceptance report. Uses Playwright CLI for deterministic, reportable execution.
 ---
 
 # Alloy QA E2E
@@ -20,7 +20,7 @@ Trigger this skill when you want to QA-test a feature against its acceptance cri
 You will be asked for:
 1. **Acceptance Criteria** — Azure DevOps work item URL/ID, or paste markdown AC
 2. **Base URL** — the deployed app URL to test against (e.g. `https://app.example.com`)
-3. **Figma (optional)** — a Figma frame link for design comparison
+3. **Figma (optional)** — a Figma frame link; QA Agent explains available sources and lets you choose: FIGMA_TOKEN REST, figma-official MCP, or local figma-cli
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ You will be asked for:
 - Playwright installed: `npx playwright install chromium`
 
 ### Optional
-- `FIGMA_TOKEN` — for Figma design comparison
+- `FIGMA_TOKEN` — one possible Figma source; QA Agent may also use figma-official MCP or local figma-cli if you choose it
 - Azure CLI (`az`) logged in — for Azure DevOps work item fetch
 - `ffmpeg` — for GIF generation from video
 
@@ -107,4 +107,5 @@ APP_SUBMIT_SELECTOR=
 AZURE_DEVOPS_ORG=
 AZURE_DEVOPS_PROJECT=
 FIGMA_TOKEN=
+FIGMA_SOURCE=ask  # ask | FIGMA_TOKEN_REST | figma-official MCP | silships/figma-cli | iannuttall/figma-cli
 ```

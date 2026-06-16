@@ -9,9 +9,10 @@ includes:
   - .apm/prompts/qa.prompt.md
   - .apm/skills/alloy-qa-e2e/
   - .apm/skills/azure-devops-context/
-  - .apm/skills/playwright-cli/
 
 dependencies:
+  apm:
+    - microsoft/playwright-cli#9b118a1a737662fa118d591b5687340b86005d5c
   mcp:
     - name: context7
       registry: false
