@@ -1,0 +1,13 @@
+{
+  "id": "qa",
+  "description": "Alloy QA pack: QA agent, QA E2E skill, Azure DevOps context, Playwright CLI, and Figma MCP.",
+  "target": "local",
+  "extends": [
+    "alloy-primary-modelRoles",
+    "figma-mcp"
+  ],
+  "agents": ["QA"],
+  "commands": ["qa"],
+  "skills": ["alloy-qa-e2e", "azure-devops-context", "playwright-cli"],
+  "mcp": ["context7", "figma-official"]
+}

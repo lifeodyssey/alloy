@@ -66,6 +66,11 @@
         "exa"
       ]
     },
+    "figma-mcp": {
+      "mcp": [
+        "figma-official"
+      ]
+    },
     "frontend-skills": {
       "skills": [
         "playwright-cli",
