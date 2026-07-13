@@ -43,6 +43,22 @@ class ApmPackagesTest(unittest.TestCase):
         ]:
             self.assertTrue((base / path).exists(), path)
 
+    def test_domain_packages_depend_on_base_and_ship_rules(self):
+        for package, gate in [
+            ("apm-frontend", "browser_evidence"),
+            ("apm-backend", "green"),
+            ("apm-infra", "dryrun_evidence"),
+        ]:
+            data = self.manifest(package)
+            if data is None:
+                self.skipTest("pyyaml not installed")
+            deps = data.get("dependencies", {}).get("apm", [])
+            self.assertTrue(any("apm-base" in d for d in deps), f"{package} must depend on apm-base")
+            rules_path = REPO / "packages" / package / ".apm" / "files" / "alloy" / "rules.json"
+            self.assertTrue(rules_path.exists(), f"{package} missing rules.json")
+            rules = json.loads(rules_path.read_text())
+            self.assertIn(gate, rules["requiredGates"])
+
     def test_base_apm_install_smoke(self):
         import tempfile
 

@@ -1,0 +1,19 @@
+name: alloy-frontend
+version: 0.2.0
+description: "Alloy frontend package: base plus UI skills, browser-evidence verify gate, and frontend file-pattern rules."
+license: MIT
+target: opencode
+type: hybrid
+includes:
+  - .apm/skills/playwright-cli/
+  - .apm/skills/vercel-react-best-practices/
+  - .apm/files/alloy/rules.json
+
+dependencies:
+  apm:
+    - lifeodyssey/alloy/packages/apm-base
+  mcp:
+    - name: figma-official
+      registry: false
+      transport: http
+      url: https://mcp.figma.com/mcp
