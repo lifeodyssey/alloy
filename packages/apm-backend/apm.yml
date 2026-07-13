@@ -1,0 +1,16 @@
+name: alloy-backend
+version: 0.2.0
+description: "Alloy backend package: base plus Kotlin/JPA and Postgres skills with test-evidence verify rules."
+license: MIT
+target: opencode
+type: hybrid
+includes:
+  - .apm/skills/kotlin-backend-jpa-entity-mapping/
+  - .apm/skills/postgres/
+  - .apm/skills/design-postgres-tables/
+  - .apm/skills/pgvector-semantic-search/
+  - .apm/files/alloy/rules.json
+
+dependencies:
+  apm:
+    - lifeodyssey/alloy/packages/apm-base
