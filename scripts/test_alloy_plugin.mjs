@@ -36,7 +36,7 @@ import { join } from "node:path"
 process.env.HOME = ${JSON.stringify(homeDir)}
 const projectDir = ${JSON.stringify(projectDir)}
 const taskStatePath = ${JSON.stringify(taskStatePath)}
-const { default: AlloyPlugin } = await import(${JSON.stringify(pluginPath)})
+const { default: AlloyPlugin, computeVerifyBlockers, matchReminder } = await import(${JSON.stringify(pluginPath)})
 const { checkGate } = await import(taskStatePath)
 const hooks = await AlloyPlugin({ directory: projectDir, worktree: projectDir, $: {} })
 
@@ -349,5 +349,24 @@ assert.equal(rows.length, 2)
 assert.match(progress, /ralph-loop continuation/)
 assert.equal(hooks.alloy.getIterationCount("T1"), 2)
 assert.ok((await hooks.tool.alloy_gate.execute({ taskId: "T1" })).includes("Ralph Loop iterations: 2/5"))
+`)
+})
+
+test("computeVerifyBlockers appends domain requiredGates", async () => {
+  await runPluginScenario(`
+assert.deepEqual(
+  computeVerifyBlockers(["browser_evidence"], { requiredGates: ["browser_evidence"] }),
+  ["browser_evidence"],
+)
+assert.deepEqual(computeVerifyBlockers([], { requiredGates: ["browser_evidence"] }), [])
+assert.deepEqual(computeVerifyBlockers(["tdd_red"], {}), ["tdd_red"])
+`)
+})
+
+test("matchReminder matches file patterns from rules", async () => {
+  await runPluginScenario(`
+const rules = { reminders: [{ pattern: "\\\\.(tsx|css)$", note: "frontend reminder" }] }
+assert.equal(matchReminder("src/App.tsx", rules), "frontend reminder")
+assert.equal(matchReminder("src/main.go", rules), undefined)
 `)
 })
