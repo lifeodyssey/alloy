@@ -108,17 +108,17 @@ test("loadPack: deleted workflow pack no longer resolves", () => {
 
 test("loadAtoms exposes atomic pack building blocks", () => {
   const atoms = loadAtoms()
-  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-plan", "alloy-debug", "git-master", "humanizer"])
-  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-execute"))
+  assert.deepEqual(atoms["alloy-baseline-5"].skills, ["alloy-tdd", "alloy-plan", "git-master", "humanizer"])
+  assert.ok(atoms["alloy-workflow-extras"].skills.includes("alloy-verify"))
   assert.deepEqual(atoms["mcp-baseline"].mcp, ["context7", "grep_app", "exa"])
-  assert.ok(atoms["frontend-skills"].skills.includes("frontend-ui-ux"))
+  assert.ok(atoms["frontend-skills"].skills.includes("vercel-react-best-practices"))
 })
 
 test("loadPack expands extends into concrete arrays", () => {
   const frontend = loadPack("frontend")
   assert.ok(frontend.skills.includes("alloy-tdd"))
   assert.ok(frontend.skills.includes("alloy-plan"))
-  assert.ok(frontend.skills.includes("frontend-ui-ux"))
+  assert.ok(frontend.skills.includes("vercel-react-best-practices"))
   assert.deepEqual(frontend.mcp, ["context7", "grep_app", "exa"])
   assert.equal(frontend.extends, undefined)
 })
@@ -162,7 +162,7 @@ test("mergePack expands extends while preserving inline pack compatibility", () 
   const b = { id: "b", extends: ["frontend-skills"], skills: ["frontend-ui-ux"], commands: ["inline-command"] }
   const merged = mergePack(a, b)
   assert.deepEqual(merged.mcp, ["context7", "grep_app", "exa"])
-  assert.deepEqual(merged.skills, ["inline-skill", "frontend-ui-ux", "playwright-cli", "vercel-react-best-practices"])
+  assert.deepEqual(merged.skills, ["inline-skill", "playwright-cli", "vercel-react-best-practices", "frontend-ui-ux"])
   assert.deepEqual(merged.agents, ["InlineAgent"])
   assert.deepEqual(merged.commands, ["inline-command"])
 })
@@ -218,7 +218,7 @@ test("detectMcpConflicts is silent when configuration is consistent", () => {
 test("resolveConfig maps skills to skills/ and vendor source directories", () => {
   const resolved = resolveConfig({ pack: "frontend", target: "local", explicitPack: true })
   assert.match(resolved.skillSources["alloy-tdd"], /skills\/alloy-tdd$/)
-  assert.match(resolved.skillSources["frontend-ui-ux"], /skills\/scopes\/frontend\/frontend-ui-ux$/)
+  assert.match(resolved.skillSources["playwright-cli"], /skills\/scopes\/frontend\/playwright-cli$/)
   assert.match(resolved.skillSources["vercel-react-best-practices"], /vendor\/skills\/scopes\/frontend\/vercel-react-best-practices$/)
 })
 

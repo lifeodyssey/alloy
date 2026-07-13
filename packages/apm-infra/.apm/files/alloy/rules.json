@@ -1,0 +1,10 @@
+{
+  "domain": "infra",
+  "requiredGates": ["dryrun_evidence"],
+  "reminders": [
+    {
+      "pattern": "\\.(tf|tfvars|hcl)$",
+      "note": "Infra file touched — run terraform fmt/validate; verified requires a plan/apply dry-run recorded as the dryrun_evidence gate; destructive changes need explicit confirmation."
+    }
+  ]
+}

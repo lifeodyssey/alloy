@@ -1,0 +1,21 @@
+name: alloy-qa
+version: 0.1.0
+description: "QA-only Alloy package for OpenCode: QA agent, /qa prompt, QA E2E skills, Azure DevOps context, Playwright CLI, and Figma MCP."
+license: MIT
+target: opencode
+type: hybrid
+includes:
+  - .apm/agents/qa.agent.md
+  - .apm/prompts/qa.prompt.md
+  - .apm/skills/alloy-qa-e2e/
+  - .apm/skills/azure-devops-context/
+
+dependencies:
+  apm:
+    - lifeodyssey/alloy/packages/apm-base
+    - microsoft/playwright-cli#9b118a1a737662fa118d591b5687340b86005d5c
+  mcp:
+    - name: figma-official
+      registry: false
+      transport: http
+      url: https://mcp.figma.com/mcp

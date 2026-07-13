@@ -304,28 +304,6 @@
     "vendoredAt": "2026-06-11"
   },
   {
-    "name": "alloy-debug",
-    "kind": "skill",
-    "source": "first-party/alloy",
-    "version": "0.1.4",
-    "license": "MIT",
-    "paths": [
-      "skills/alloy-debug/SKILL.md"
-    ],
-    "fusionType": "inline-append",
-    "sources": [
-      {
-        "name": "superpowers-systematic-debugging",
-        "version": "5.1.0"
-      }
-    ],
-    "sha256": "6393abd6e7c9f0d3693a388c8740868248e5667a6a0cec2b494cb86b9e4f3622",
-    "distilledAt": "2026-06-11",
-    "autoUpdate": false,
-    "internal": true,
-    "vendoredAt": "2026-06-11"
-  },
-  {
     "name": "alloy-plan",
     "kind": "skill",
     "source": "first-party/alloy",
@@ -352,28 +330,6 @@
     "vendoredAt": "2026-06-11"
   },
   {
-    "name": "alloy-execute",
-    "kind": "skill",
-    "source": "first-party/alloy",
-    "version": "0.1.4",
-    "license": "MIT",
-    "paths": [
-      "skills/alloy-execute/SKILL.md"
-    ],
-    "fusionType": "rewrite",
-    "sources": [
-      {
-        "name": "alloy-execute-legacy",
-        "version": "0.1.2"
-      }
-    ],
-    "sha256": "93deeb649e2f6ec4c0608e11bb60e61094738bddb6ef4112e6434740789c3ce3",
-    "distilledAt": "2026-06-11",
-    "autoUpdate": false,
-    "internal": true,
-    "vendoredAt": "2026-06-11"
-  },
-  {
     "name": "alloy-verify",
     "kind": "skill",
     "source": "first-party/alloy",
@@ -390,28 +346,6 @@
       }
     ],
     "sha256": "128c312f7dab38f851dd7667b85b589e5560f7409cb96de1e907b09f40b8e207",
-    "distilledAt": "2026-06-11",
-    "autoUpdate": false,
-    "internal": true,
-    "vendoredAt": "2026-06-11"
-  },
-  {
-    "name": "alloy-qa",
-    "kind": "skill",
-    "source": "first-party/alloy",
-    "version": "0.1.4",
-    "license": "MIT",
-    "paths": [
-      "skills/alloy-qa/SKILL.md"
-    ],
-    "fusionType": "rewrite",
-    "sources": [
-      {
-        "name": "gstack-qa",
-        "version": "local"
-      }
-    ],
-    "sha256": "8ae301d566042bb103f2e05c1c5f02c5c7385720d7abf71c7dacf8b6f512a106",
     "distilledAt": "2026-06-11",
     "autoUpdate": false,
     "internal": true,

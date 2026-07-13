@@ -1,0 +1,10 @@
+{
+  "domain": "backend",
+  "requiredGates": ["green"],
+  "reminders": [
+    {
+      "pattern": "\\.(kt|kts|sql)$",
+      "note": "Backend file touched — run the test suite before verify; API contract changes need a passing contract/integration test recorded as the green gate."
+    }
+  ]
+}

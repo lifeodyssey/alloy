@@ -31,6 +31,12 @@ interface AlloyManifest {
   excluded: string[]
 }
 
+interface AlloyRules {
+  domain?: string
+  requiredGates?: string[]
+  reminders?: { pattern: string; note: string }[]
+}
+
 type TextPart = {
   type: "text"
   text: string
@@ -45,16 +51,40 @@ const DEFAULT_MCP: Record<string, JsonRecord> = {
   grep_app: { type: "remote", url: "https://mcp.grep.app", enabled: true },
   exa: { type: "remote", url: "https://mcp.exa.ai/mcp", enabled: true },
   "chrome-devtools": { type: "remote", url: "https://mcp.chrome-devtools.dev/mcp", enabled: false },
-  "sequential-thinking": { type: "remote", url: "https://mcp.sequential-thinking.dev/mcp", enabled: false },
-  "figma-official": { type: "remote", url: "https://mcp.figma.com/mcp", enabled: false },
+  "sequential-thinking": { type: "remote", url: "https://mcp.sequential-thinking.dev/mcp", enabled: true },
+  "figma-official": { type: "remote", url: "https://mcp.figma.com/mcp", enabled: true },
   "a11y-mcp": { type: "remote", url: "https://mcp.a11y.dev/mcp", enabled: false },
   "container-use": { type: "remote", url: "https://mcp.container-use.dev/mcp", enabled: false },
 }
 
+function readRules(directory: string): AlloyRules {
+  try {
+    return JSON.parse(readFileSync(join(directory, ".alloy", "rules.json"), "utf8")) as AlloyRules
+  } catch {
+    return {}
+  }
+}
+
+export function computeVerifyBlockers(blockedBy: string[], rules: AlloyRules): string[] {
+  const required = ["tdd_red", "green", ...(rules.requiredGates ?? [])]
+  return required.filter((name) => blockedBy.includes(name))
+}
+
+export function matchReminder(filePath: string, rules: AlloyRules): string | undefined {
+  for (const reminder of rules.reminders ?? []) {
+    try {
+      if (new RegExp(reminder.pattern).test(filePath)) return reminder.note
+    } catch {
+      // invalid pattern in rules.json — ignore
+    }
+  }
+  return undefined
+}
+
 const COMMAND_SKILLS: Record<string, string> = {
-  discuss: "alloy-discuss",
+  discuss: "superpowers:brainstorming",
   plan: "alloy-plan",
-  execute: "alloy-execute",
+  execute: "superpowers:subagent-driven-development",
   verify: "alloy-verify",
   autopilot: "alloy-autopilot",
   "ralph-loop": "ralph-loop",
@@ -357,10 +387,10 @@ function enforceCommandGate(command: string, directory: string) {
     const taskId = activeTaskId(directory)
     if (!taskId) return
     const gate = checkGate(directory, taskId)
-    const missing = ["tdd_red", "green"].filter((name) => gate.blockedBy?.includes(name))
+    const missing = computeVerifyBlockers(gate.blockedBy ?? [], readRules(directory))
     if (missing.length) {
       throw new Error(
-        `Alloy gate: ${taskId} cannot verify — ${missing.join(", ")} still unchecked in progress.md. Complete the red→green TDD loop first.`,
+        `Alloy gate: ${taskId} cannot verify — ${missing.join(", ")} still unchecked in progress.md. Complete the required evidence first.`,
       )
     }
   }
@@ -440,6 +470,12 @@ function isSuccessfulVerificationCommand(command: string) {
 function recordToolExecution(directory: string, input: any, output: any) {
   const taskId = taskIdFromHookInput(input, directory)
   if (!taskId) return
+
+  const touched = String(input?.args?.filePath ?? "")
+  if (touched && ["edit", "write"].includes(String(input?.tool ?? ""))) {
+    const note = matchReminder(touched, readRules(directory))
+    if (note) appendProgressNote(directory, taskId, "Findings", [`- Rule reminder: ${note}`])
+  }
 
   const toolName = cleanProgressText(input?.tool ?? "tool")
   const command = cleanProgressText(input?.args?.command)

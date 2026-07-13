@@ -1,0 +1,10 @@
+{
+  "domain": "frontend",
+  "requiredGates": ["browser_evidence"],
+  "reminders": [
+    {
+      "pattern": "\\.(tsx|jsx|css|scss)$",
+      "note": "Frontend file touched — apply vercel-react-best-practices; run lint/typecheck; verified requires browser evidence (playwright run or screenshot) recorded as the browser_evidence gate."
+    }
+  ]
+}
