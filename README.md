@@ -19,7 +19,19 @@ cd /path/to/target-repo
 bash ~/src/alloy/setup.sh --pack core --target local --models github-copilot
 ```
 
-Or install only the QA surface with APM:
+## APM Packages
+
+| Package | For | Adds on top of base |
+|---|---|---|
+| `packages/apm-base` | everyone | agents, SDD prompts, alloy skills, gate plugin, superpowers + mattpocock upstream skills |
+| `packages/apm-frontend` | frontend devs | vercel/playwright skills, browser-evidence verify gate |
+| `packages/apm-backend` | backend devs | Kotlin/Postgres skills, test-evidence verify gate |
+| `packages/apm-infra` | infra | terraform skill, dry-run-evidence verify gate |
+| `packages/apm-qa` | QA | QA agent, /qa prompt, e2e + Azure DevOps skills |
+
+Install order: base first (3 steps incl. plugin copy + `npx @mindfoldhq/trellis init --opencode`), then your role package. See each package README.
+
+For example, install the QA surface with APM:
 
 ```bash
 # one-time, if apm is not installed
@@ -27,19 +39,20 @@ curl -fsSL https://aka.ms/apm-unix -o /tmp/apm-install.sh
 APM_INSTALL_DIR="$HOME/.local/bin" sh /tmp/apm-install.sh
 export PATH="$HOME/.local/bin:$PATH"
 
-# from a target repo
+# from a target repo; complete the 3 apm-base README steps before installing QA
+apm install /path/to/alloy/packages/apm-base --target opencode
 apm install /path/to/alloy/packages/apm-qa --target opencode
 ```
 
-This APM package installs only:
+The QA role package adds:
 
 - `.opencode/agents/qa.md`
 - `.opencode/commands/qa.md`
 - `.agents/skills/alloy-qa-e2e`, `.agents/skills/azure-devops-context`
 - `.agents/skills/playwright-cli` from upstream `microsoft/playwright-cli` (pinned in `packages/apm-qa/apm.yml`, includes its references)
-- OpenCode MCP config for `context7` and `figma-official`
+- OpenCode MCP config for `figma-official` (`context7` comes from `apm-base`)
 
-Use Alloy's own installer when you also need the OpenCode TypeScript gate plugin (`alloy-plugin.ts`) and full pack wiring.
+Follow `packages/apm-base/README.md` when you also need the OpenCode TypeScript gate plugin (`alloy-plugin.ts`) and full base-package wiring.
 
 Or use the CLI directly from this repo during development:
 
