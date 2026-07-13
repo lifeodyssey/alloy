@@ -12,12 +12,9 @@ includes:
 
 dependencies:
   apm:
+    - lifeodyssey/alloy/packages/apm-base
     - microsoft/playwright-cli#9b118a1a737662fa118d591b5687340b86005d5c
   mcp:
-    - name: context7
-      registry: false
-      transport: http
-      url: https://mcp.context7.com/mcp/
     - name: figma-official
       registry: false
       transport: http

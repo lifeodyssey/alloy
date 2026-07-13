@@ -59,6 +59,16 @@ class ApmPackagesTest(unittest.TestCase):
             rules = json.loads(rules_path.read_text())
             self.assertIn(gate, rules["requiredGates"])
 
+    def test_qa_depends_on_base_and_drops_duplicate_mcp(self):
+        data = self.manifest("apm-qa")
+        if data is None:
+            self.skipTest("pyyaml not installed")
+        deps = data.get("dependencies", {})
+        self.assertTrue(any("apm-base" in d for d in deps.get("apm", [])))
+        mcp_names = [m["name"] for m in deps.get("mcp", [])]
+        self.assertNotIn("context7", mcp_names)  # base already declares it
+        self.assertIn("figma-official", mcp_names)
+
     def test_base_apm_install_smoke(self):
         import tempfile
 
