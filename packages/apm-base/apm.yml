@@ -1,0 +1,48 @@
+name: alloy-base
+version: 0.2.0
+description: "Alloy base package for OpenCode: Planner/Builder agents, SDD prompts, alloy skills, gate plugin files, and upstream method skills (superpowers + mattpocock)."
+license: MIT
+target: opencode
+type: hybrid
+includes:
+  - .apm/agents/planner.agent.md
+  - .apm/agents/builder.agent.md
+  - .apm/prompts/discuss.prompt.md
+  - .apm/prompts/plan.prompt.md
+  - .apm/prompts/execute.prompt.md
+  - .apm/prompts/verify.prompt.md
+  - .apm/prompts/autopilot.prompt.md
+  - .apm/prompts/ralph-loop.prompt.md
+  - .apm/prompts/handoff.prompt.md
+  - .apm/prompts/ultrawork.prompt.md
+  - .apm/skills/alloy-using/
+  - .apm/skills/alloy-plan/
+  - .apm/skills/alloy-tdd/
+  - .apm/skills/alloy-verify/
+  - .apm/skills/alloy-autopilot/
+  - .apm/skills/alloy-map-codebase/
+  - .apm/skills/git-master/
+  - .apm/skills/humanizer/
+  - .apm/files/opencode-plugin/
+
+dependencies:
+  apm:
+    - obra/superpowers/skills/test-driven-development
+    - obra/superpowers/skills/systematic-debugging
+    - obra/superpowers/skills/brainstorming
+    - obra/superpowers/skills/writing-plans
+    - obra/superpowers/skills/subagent-driven-development
+    - obra/superpowers/skills/verification-before-completion
+    - mattpocock/skills/skills/productivity/grill-me
+    - mattpocock/skills/skills/engineering/grill-with-docs
+    - mattpocock/skills/skills/engineering/diagnosing-bugs
+    - mattpocock/skills/skills/productivity/handoff
+  mcp:
+    - name: context7
+      registry: false
+      transport: http
+      url: https://mcp.context7.com/mcp/
+    - name: grep_app
+      registry: false
+      transport: http
+      url: https://mcp.grep.app
