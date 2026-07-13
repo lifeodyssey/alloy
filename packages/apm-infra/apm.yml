@@ -1,0 +1,13 @@
+name: alloy-infra
+version: 0.2.0
+description: "Alloy infra package: base plus Terraform/OpenTofu guidance with dry-run-evidence verify rules."
+license: MIT
+target: opencode
+type: hybrid
+includes:
+  - .apm/skills/terraform-skill/
+  - .apm/files/alloy/rules.json
+
+dependencies:
+  apm:
+    - lifeodyssey/alloy/packages/apm-base
